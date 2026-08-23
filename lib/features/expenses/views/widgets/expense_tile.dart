@@ -56,13 +56,29 @@ class ExpenseTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      _subtitle(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _subtitle(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        if (occurrence.isOverdue) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            'Atrasada',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.error,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -92,11 +108,13 @@ class ExpenseTile extends StatelessWidget {
   }
 
   String _subtitle() {
-    final parts = <String>[occurrence.expense.type.label];
     final installment = occurrence.installmentLabel;
-    if (installment != null) parts.add('Parcela $installment');
+    final parts = <String>[
+      installment != null
+          ? 'Parcela $installment'
+          : occurrence.expense.type.label,
+    ];
     if (wallet != null) parts.add(wallet!.name);
-    if (occurrence.isOverdue) parts.add('Atrasada');
     return parts.join(' · ');
   }
 }
