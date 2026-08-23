@@ -95,10 +95,12 @@ concrete generic (`DropdownButtonFormField<ExpenseType>`).
 - Theme lives in `app/theme/`; the palette is green tones (`AppPalette`) and the app must work in
   light, dark and system mode (`SettingsViewModel` persists the choice).
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
+- Commits follow Conventional Commits **in English and always with a scope** — `feat(wallets):`,
+  `fix(expenses):`, `docs(readme):`. The scope is the feature folder, or `app` for cross-cutting work.
 - Do not add `Co-Authored-By` trailers to commits.
 
 ## Git
 
-The git repository is rooted at `/home/vinicius` (the user's home), not at this project, and it tracks a
-different app (`AndroidStudioProjects/projeto_legal`). Always scope git commands to explicit paths;
-never `git add -A` or `git add .` from here.
+The repository is rooted at this project and has no remote yet. It used to live at `/home/vinicius`
+(the user's home), tracking a different app — that repository is gone, but keep scoping `git add` to
+explicit paths anyway.
