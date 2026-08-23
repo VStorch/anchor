@@ -1,0 +1,111 @@
+import 'package:flutter/foundation.dart';
+
+import '../models/payout.dart';
+import '../models/wallet.dart';
+import '../models/wallet_kind.dart';
+import '../repositories/wallet_repository.dart';
+
+class WalletFormViewModel extends ChangeNotifier {
+  WalletFormViewModel({
+    required WalletRepository repository,
+    Wallet? wallet,
+    int suggestedColorIndex = 0,
+  }) : _repository = repository,
+       _wallet = wallet,
+       _name = wallet?.name ?? '',
+       _kind = wallet?.kind ?? WalletKind.salary,
+       _colorIndex = wallet?.colorIndex ?? suggestedColorIndex,
+       _payouts = List<Payout>.of(wallet?.payouts ?? const <Payout>[]);
+
+  final WalletRepository _repository;
+  final Wallet? _wallet;
+  final List<int> _removedPayoutIds = <int>[];
+
+  String _name;
+  WalletKind _kind;
+  int _colorIndex;
+  List<Payout> _payouts;
+  bool _isSaving = false;
+
+  bool get isEditing => _wallet != null;
+
+  String get name => _name;
+
+  WalletKind get kind => _kind;
+
+  int get colorIndex => _colorIndex;
+
+  List<Payout> get payouts => List<Payout>.unmodifiable(_payouts);
+
+  bool get isSaving => _isSaving;
+
+  double get monthlyTotal =>
+      _payouts.fold(0, (total, payout) => total + payout.amount);
+
+  bool get isValid => _name.trim().isNotEmpty && _payouts.isNotEmpty;
+
+  void setName(String value) {
+    _name = value;
+    notifyListeners();
+  }
+
+  void setKind(WalletKind value) {
+    _kind = value;
+    notifyListeners();
+  }
+
+  void setColorIndex(int value) {
+    _colorIndex = value;
+    notifyListeners();
+  }
+
+  void addPayout({
+    required String label,
+    required double amount,
+    required int dayOfMonth,
+  }) {
+    _payouts = <Payout>[
+      ..._payouts,
+      Payout(
+        walletId: _wallet?.id ?? 0,
+        label: label.trim().isEmpty ? 'Recebimento' : label.trim(),
+        amount: amount,
+        dayOfMonth: dayOfMonth,
+      ),
+    ]..sort((a, b) => a.dayOfMonth.compareTo(b.dayOfMonth));
+    notifyListeners();
+  }
+
+  void removePayoutAt(int index) {
+    final removed = _payouts[index];
+    if (removed.id != null) _removedPayoutIds.add(removed.id!);
+    _payouts = <Payout>[..._payouts]..removeAt(index);
+    notifyListeners();
+  }
+
+  Future<void> save() async {
+    if (!isValid || _isSaving) return;
+    _isSaving = true;
+    notifyListeners();
+
+    final walletId = await _repository.saveWallet(
+      Wallet(
+        id: _wallet?.id,
+        name: _name.trim(),
+        kind: _kind,
+        colorIndex: _colorIndex,
+        createdAt: _wallet?.createdAt ?? DateTime.now(),
+      ),
+    );
+
+    for (final payoutId in _removedPayoutIds) {
+      await _repository.deletePayout(payoutId);
+    }
+    for (final payout in _payouts) {
+      await _repository.savePayout(payout.copyWith(walletId: walletId));
+    }
+
+    _isSaving = false;
+    notifyListeners();
+  }
+}

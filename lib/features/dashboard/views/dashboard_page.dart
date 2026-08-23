@@ -1,0 +1,178 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../app/app_shell.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/month_switcher.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../expenses/models/expense_occurrence.dart';
+import '../../expenses/viewmodels/expenses_view_model.dart';
+import '../../expenses/views/widgets/expense_tile.dart';
+import '../../expenses/views/widgets/pay_expense_sheet.dart';
+import '../../wallets/views/wallet_form_page.dart';
+import '../viewmodels/dashboard_view_model.dart';
+import 'month_agenda_page.dart';
+import 'widgets/balance_card.dart';
+import 'widgets/wallet_strip.dart';
+
+class DashboardPage extends StatelessWidget {
+  const DashboardPage({super.key});
+
+  static const int _upcomingLimit = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<DashboardViewModel>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Anchor'),
+        actions: [
+          IconButton(
+            onPressed: () => MonthAgendaPage.open(context),
+            icon: const Icon(Icons.calendar_month_outlined),
+            tooltip: 'Agenda do mês',
+          ),
+        ],
+      ),
+      body: viewModel.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : viewModel.needsSetup
+          ? _onboarding(context)
+          : _content(context, viewModel),
+    );
+  }
+
+  Widget _onboarding(BuildContext context) {
+    return EmptyState(
+      icon: Icons.anchor_outlined,
+      title: 'Vamos ancorar seu mês',
+      message:
+          'Cadastre de onde vem o seu dinheiro — salário e benefícios — e o Anchor passa a atualizar seu saldo sozinho a cada data de pagamento.',
+      action: FilledButton.icon(
+        onPressed: () => WalletFormPage.open(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Cadastrar meu salário'),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context, DashboardViewModel viewModel) {
+    final summary = viewModel.summary;
+    final upcoming = summary.pendingOccurrences.take(_upcomingLimit).toList();
+
+    return RefreshIndicator(
+      onRefresh: viewModel.refresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        children: [
+          MonthSwitcher(
+            month: viewModel.month,
+            onPrevious: viewModel.goToPreviousMonth,
+            onNext: viewModel.goToNextMonth,
+            onToday: viewModel.goToCurrentMonth,
+          ),
+          const SizedBox(height: 12),
+          BalanceCard(summary: summary),
+          const SizedBox(height: 20),
+          SectionHeader(
+            title: 'Carteiras',
+            subtitle: 'Quanto ainda há em cada fonte',
+            trailing: TextButton(
+              onPressed: () => context.read<AppShellController>().goTo(
+                AppShellController.walletsTab,
+              ),
+              child: const Text('Gerenciar'),
+            ),
+          ),
+          WalletStrip(
+            summaries: viewModel.snapshot.walletSummaries,
+            onTap: () => context.read<AppShellController>().goTo(
+              AppShellController.walletsTab,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SectionHeader(
+            title: 'A pagar',
+            subtitle: summary.overdueOccurrences.isNotEmpty
+                ? '${summary.overdueOccurrences.length} despesa(s) em atraso'
+                : 'Próximos vencimentos do mês',
+            trailing: TextButton(
+              onPressed: () => context.read<AppShellController>().goTo(
+                AppShellController.expensesTab,
+              ),
+              child: const Text('Ver todas'),
+            ),
+          ),
+          if (upcoming.isEmpty)
+            const _AllSettledCard()
+          else
+            ...upcoming.map(
+              (occurrence) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ExpenseTile(
+                  occurrence: occurrence,
+                  wallet: viewModel.snapshot.walletById(occurrence.walletId),
+                  onTap: () => context.read<AppShellController>().goTo(
+                    AppShellController.expensesTab,
+                  ),
+                  onTogglePaid: () => _pay(context, occurrence),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pay(BuildContext context, ExpenseOccurrence occurrence) async {
+    final expenses = context.read<ExpensesViewModel>();
+    final dashboard = context.read<DashboardViewModel>();
+
+    final choice = await PayExpenseSheet.show(
+      context,
+      occurrence: occurrence,
+      walletSummaries: dashboard.snapshot.walletSummaries,
+    );
+    if (choice == null) return;
+
+    await expenses.payOccurrence(
+      occurrence,
+      walletId: choice.walletId,
+      amount: choice.amount,
+    );
+  }
+}
+
+class _AllSettledCard extends StatelessWidget {
+  const _AllSettledCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      color: theme.colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              color: theme.colorScheme.onSecondaryContainer,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Nenhuma conta pendente neste mês.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

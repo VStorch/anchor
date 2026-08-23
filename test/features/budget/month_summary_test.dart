@@ -1,0 +1,182 @@
+import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/budget/models/month_summary.dart';
+import 'package:anchor/features/budget/models/wallet_summary.dart';
+import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/models/expense_payment.dart';
+import 'package:anchor/features/expenses/models/expense_type.dart';
+import 'package:anchor/features/wallets/models/payout.dart';
+import 'package:anchor/features/wallets/models/receipt.dart';
+import 'package:anchor/features/wallets/models/wallet.dart';
+import 'package:anchor/features/wallets/models/wallet_kind.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+const Month august = Month(2026, 8);
+
+Wallet buildWallet({
+  required int id,
+  required WalletKind kind,
+  required double monthly,
+}) {
+  return Wallet(
+    id: id,
+    name: kind == WalletKind.salary ? 'Salário' : 'Vale refeição',
+    kind: kind,
+    colorIndex: 0,
+    createdAt: DateTime(2026),
+    payouts: [
+      Payout(walletId: id, label: 'Entrada', amount: monthly, dayOfMonth: 5),
+    ],
+  );
+}
+
+Expense buildExpense({
+  required int id,
+  required ExpenseType type,
+  required double amount,
+  int? walletId,
+  int? totalInstallments,
+  int settledInstallments = 0,
+}) {
+  return Expense(
+    id: id,
+    name: 'Despesa $id',
+    type: type,
+    amount: amount,
+    dueDay: 10,
+    startMonth: august,
+    totalInstallments: totalInstallments,
+    settledInstallments: settledInstallments,
+    walletId: walletId,
+    createdAt: DateTime(2026, 8),
+  );
+}
+
+void main() {
+  final salary = buildWallet(id: 1, kind: WalletKind.salary, monthly: 3000);
+  final voucher = buildWallet(id: 2, kind: WalletKind.benefit, monthly: 600);
+
+  final expenses = [
+    buildExpense(id: 1, type: ExpenseType.recurring, amount: 500, walletId: 1),
+    buildExpense(
+      id: 2,
+      type: ExpenseType.installment,
+      amount: 200,
+      walletId: 1,
+      totalInstallments: 10,
+      settledInstallments: 4,
+    ),
+    buildExpense(id: 3, type: ExpenseType.single, amount: 300, walletId: 2),
+  ];
+
+  final receipts = [
+    Receipt(
+      walletId: 1,
+      payoutId: 1,
+      month: august,
+      amount: 3000,
+      receivedAt: DateTime(2026, 8, 5),
+    ),
+    Receipt(
+      walletId: 2,
+      payoutId: 2,
+      month: august,
+      amount: 600,
+      receivedAt: DateTime(2026, 8, 5),
+    ),
+    Receipt(
+      walletId: 1,
+      payoutId: 1,
+      month: const Month(2026, 7),
+      amount: 3000,
+      receivedAt: DateTime(2026, 7, 5),
+    ),
+  ];
+
+  final payments = [
+    ExpensePayment(
+      expenseId: 1,
+      walletId: 1,
+      month: august,
+      amount: 500,
+      paidAt: DateTime(2026, 8, 10),
+    ),
+  ];
+
+  MonthSummary buildSummary() => MonthSummary.build(
+    month: august,
+    expenses: expenses,
+    payments: payments,
+    receipts: receipts,
+    wallets: [salary, voucher],
+  );
+
+  group('MonthSummary', () {
+    test('soma apenas as despesas que caem no mês', () {
+      expect(buildSummary().totalExpenses, 1000);
+    });
+
+    test('separa o que já foi pago do que falta', () {
+      final summary = buildSummary();
+
+      expect(summary.totalPaid, 500);
+      expect(summary.totalPending, 500);
+      expect(summary.paidRatio, 0.5);
+    });
+
+    test('considera somente os recebimentos do mês', () {
+      expect(buildSummary().totalReceived, 3600);
+    });
+
+    test('calcula o saldo como recebido menos pago', () {
+      expect(buildSummary().balance, 3100);
+    });
+
+    test('projeta o mês a partir da renda esperada', () {
+      final summary = buildSummary();
+
+      expect(summary.expectedIncome, 3600);
+      expect(summary.projectedBalance, 2600);
+    });
+
+    test('ordena as ocorrências por vencimento', () {
+      final summary = buildSummary();
+
+      expect(summary.occurrences.length, 3);
+      expect(
+        summary.occurrences.map((occurrence) => occurrence.dueDate),
+        isA<Iterable<DateTime>>(),
+      );
+    });
+  });
+
+  group('WalletSummary', () {
+    late List<WalletSummary> summaries;
+
+    setUp(() {
+      summaries = WalletSummary.buildAll(
+        month: august,
+        wallets: [salary, voucher],
+        receipts: receipts,
+        payments: payments,
+        occurrences: buildSummary().occurrences,
+      );
+    });
+
+    test('acumula o saldo de todos os meses', () {
+      expect(summaries.first.balance, 5500);
+    });
+
+    test('mostra o que ainda está comprometido no mês', () {
+      expect(summaries.first.committedInMonth, 700);
+      expect(summaries.first.pendingInMonth, 200);
+    });
+
+    test('isola cada carteira', () {
+      final benefit = summaries.last;
+
+      expect(benefit.receivedInMonth, 600);
+      expect(benefit.spentInMonth, 0);
+      expect(benefit.committedInMonth, 300);
+    });
+  });
+}
