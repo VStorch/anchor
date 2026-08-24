@@ -82,7 +82,7 @@ class AnchorApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          builder: (context, child) => DismissFocusOnTap(child: child!),
+          builder: (context, child) => DismissFocus(child: child!),
           home: const AppShell(),
         ),
       ),

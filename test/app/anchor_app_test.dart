@@ -38,6 +38,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  bool focusOfField(WidgetTester tester) =>
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus;
+
   Future<void> tapTab(WidgetTester tester, IconData icon) async {
     await tester.tap(
       find.descendant(
@@ -133,17 +136,26 @@ void main() {
 
     await tester.tap(find.byType(TextField));
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
-      isTrue,
-    );
+    expect(focusOfField(tester), isTrue);
 
     await tester.tap(find.text('Calendário de recebimento'));
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
-      isFalse,
-    );
+    expect(focusOfField(tester), isFalse);
+  });
+
+  testWidgets('tirar o foco do campo ao rolar a tela', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Cadastrar meu salário'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    expect(focusOfField(tester), isTrue);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -160));
+    await tester.pumpAndSettle();
+    expect(focusOfField(tester), isFalse);
   });
 
   testWidgets('navega entre as abas pela barra inferior', (tester) async {
