@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
@@ -34,7 +35,7 @@ class WalletsPage extends StatelessWidget {
         label: const Text('Nova carteira'),
       ),
       body: viewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingView()
           : viewModel.isEmpty
           ? _emptyState(context)
           : _content(context, viewModel),

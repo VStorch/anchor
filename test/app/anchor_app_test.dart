@@ -1,6 +1,7 @@
 import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/widgets/anchor_logo.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -80,6 +81,17 @@ void main() {
       ),
     );
   }
+
+  testWidgets('mostra a logo enquanto carrega', (tester) async {
+    final settings = SettingsViewModel();
+    await settings.initialize();
+
+    await tester.pumpWidget(AnchorApp(settings: settings, database: database));
+
+    expect(find.byType(AnchorLogo), findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
 
   testWidgets('convida a cadastrar o salário quando não há carteiras', (
     tester,

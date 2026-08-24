@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/stat_tile.dart';
 import '../models/expense_occurrence.dart';
@@ -47,7 +48,7 @@ class ExpensesPage extends StatelessWidget {
             const _FilterBar(),
             Expanded(
               child: viewModel.isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const LoadingView()
                   : viewModel.occurrences.isEmpty
                   ? _emptyState(context, viewModel)
                   : _list(context, viewModel),

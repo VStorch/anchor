@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/app_shell.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../expenses/models/expense_occurrence.dart';
@@ -36,7 +37,7 @@ class DashboardPage extends StatelessWidget {
         ],
       ),
       body: viewModel.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingView()
           : viewModel.needsSetup
           ? _onboarding(context)
           : _content(context, viewModel),

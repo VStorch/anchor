@@ -95,6 +95,9 @@ concrete generic (`DropdownButtonFormField<ExpenseType>`).
 - Theme lives in `app/theme/`; the palette is green tones (`AppPalette`) and the app must work in
   light, dark and system mode (`SettingsViewModel` persists the choice).
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
+- The logo is one anchor drawn with a single stroke weight: `assets/logo/anchor_logo.svg` is the master,
+  `anchor_mark.png` is the white version the app tints per theme, and the launcher icon and both splash
+  screens come from `res/drawable{,-night}/ic_logo_*.xml`. Change one, change them all.
 - Commits follow Conventional Commits **in English and always with a scope** — `feat(wallets):`,
   `fix(expenses):`, `docs(readme):`. The scope is the feature folder, or `app` for cross-cutting work.
 - Do not add `Co-Authored-By` trailers to commits.
