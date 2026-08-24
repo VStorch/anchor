@@ -80,10 +80,7 @@ class ExpensesPage extends StatelessWidget {
 
     return EmptyState(
       icon: Icons.receipt_long_outlined,
-      title: hasAny ? 'Nada por aqui' : 'Nenhuma despesa cadastrada',
-      message: hasAny
-          ? 'Nenhuma despesa se encaixa neste filtro em ${viewModel.month.label}.'
-          : 'Cadastre suas contas fixas, parcelas e gastos avulsos para acompanhar o mês.',
+      title: hasAny ? 'Nada neste filtro' : 'Nenhuma despesa cadastrada',
       action: hasAny
           ? null
           : FilledButton.icon(

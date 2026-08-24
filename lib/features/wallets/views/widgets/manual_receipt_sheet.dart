@@ -59,13 +59,6 @@ class _ManualReceiptSheetState extends State<ManualReceiptSheet> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Use para valores fora do calendário, como um extra ou bônus',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
             const SizedBox(height: 20),
             MoneyField(
               initialValue: _amount,

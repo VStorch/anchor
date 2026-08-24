@@ -73,13 +73,6 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Divida a entrada em quantas datas você quiser',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
             const SizedBox(height: 20),
             TextField(
               controller: _labelController,

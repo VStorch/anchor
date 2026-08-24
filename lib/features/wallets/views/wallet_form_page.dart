@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/money.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
@@ -89,8 +88,8 @@ class _WalletFormView extends StatelessWidget {
           SectionHeader(
             title: 'Calendário de recebimento',
             subtitle: viewModel.payouts.isEmpty
-                ? 'Informe em quais dias do mês esse dinheiro cai'
-                : '${formatMoney(viewModel.monthlyTotal)} por mês no total',
+                ? null
+                : '${formatMoney(viewModel.monthlyTotal)} por mês',
             trailing: IconButton.filledTonal(
               onPressed: () => _addPayout(context, viewModel),
               icon: const Icon(Icons.add),
@@ -98,12 +97,7 @@ class _WalletFormView extends StatelessWidget {
             ),
           ),
           if (viewModel.payouts.isEmpty)
-            const EmptyState(
-              icon: Icons.event_available_outlined,
-              title: 'Nenhuma data ainda',
-              message:
-                  'Você pode dividir a entrada em várias datas, como metade no dia 5 e o restante no dia 20.',
-            )
+            const _NoPayoutsHint()
           else
             ...viewModel.payouts.asMap().entries.map(
               (entry) => _PayoutTile(
@@ -176,6 +170,22 @@ class _WalletFormView extends StatelessWidget {
       label: draft.label,
       amount: draft.amount,
       dayOfMonth: draft.dayOfMonth,
+    );
+  }
+}
+
+class _NoPayoutsHint extends StatelessWidget {
+  const _NoPayoutsHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Text(
+      'Use o + para informar em que dias esse dinheiro cai.',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }
@@ -280,7 +290,7 @@ class _PayoutTile extends StatelessWidget {
             ),
           ),
           title: Text(label),
-          subtitle: Text('${formatMoney(amount)} · todo mês'),
+          subtitle: Text(formatMoney(amount)),
           trailing: IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.close),

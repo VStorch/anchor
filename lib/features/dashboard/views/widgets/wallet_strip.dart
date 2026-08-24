@@ -11,8 +11,10 @@ class WalletStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasPending = summaries.any((summary) => summary.pendingInMonth > 0);
+
     return SizedBox(
-      height: 128,
+      height: hasPending ? 122 : 100,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -75,16 +77,15 @@ class _WalletChip extends StatelessWidget {
                     : wallet.color,
               ),
             ),
-            Text(
-              summary.pendingInMonth > 0
-                  ? '${formatMoney(summary.pendingInMonth)} comprometidos'
-                  : 'sem contas pendentes',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            if (summary.pendingInMonth > 0)
+              Text(
+                '${formatMoney(summary.pendingInMonth)} a pagar',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
           ],
         ),
       ),

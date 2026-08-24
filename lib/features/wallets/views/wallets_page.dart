@@ -45,8 +45,7 @@ class WalletsPage extends StatelessWidget {
     return EmptyState(
       icon: Icons.account_balance_wallet_outlined,
       title: 'Comece pelo dinheiro que entra',
-      message:
-          'Cadastre seu salário e seus benefícios com as datas em que cada valor cai.',
+      message: 'Cadastre seu salário e seus benefícios.',
       action: FilledButton.icon(
         onPressed: () => WalletFormPage.open(context),
         icon: const Icon(Icons.add),
@@ -82,10 +81,8 @@ class WalletsPage extends StatelessWidget {
         ],
         const SizedBox(height: 20),
         SectionHeader(
-          title: 'Entradas de ${viewModel.month.label}',
-          subtitle: viewModel.monthReceipts.isEmpty
-              ? 'Nada recebido neste mês ainda'
-              : null,
+          title: 'Entradas do mês',
+          subtitle: viewModel.monthReceipts.isEmpty ? 'Nada ainda' : null,
         ),
         ...viewModel.monthReceipts.map(
           (receipt) => _ReceiptTile(
@@ -139,7 +136,7 @@ class _TotalBalanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Saldo em todas as carteiras',
+              'Saldo total',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
               ),
@@ -154,7 +151,7 @@ class _TotalBalanceCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '${formatMoney(viewModel.monthlyIncome)} previstos por mês',
+              '${formatMoney(viewModel.monthlyIncome)} por mês',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
               ),
@@ -195,7 +192,7 @@ class _ReceiptTile extends StatelessWidget {
       title: Text(wallet?.name ?? 'Carteira removida'),
       subtitle: Text(
         '${DateFormat.yMMMMd('pt_BR').format(receipt.receivedAt)}'
-        '${receipt.isManual ? ' · entrada manual' : ''}',
+        '${receipt.isManual ? ' · manual' : ''}',
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

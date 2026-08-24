@@ -92,7 +92,7 @@ class _PayExpenseSheetState extends State<PayExpenseSheet> {
             const SizedBox(height: 8),
             if (widget.walletSummaries.isEmpty)
               Text(
-                'Cadastre uma carteira para registrar de onde saiu o dinheiro.',
+                'Nenhuma carteira cadastrada.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

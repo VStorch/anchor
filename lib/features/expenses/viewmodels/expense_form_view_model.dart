@@ -70,14 +70,9 @@ class ExpenseFormViewModel extends ChangeNotifier {
       _amount > 0 &&
       (!isInstallment || remainingInstallments > 0);
 
-  String get typeHint => switch (_type) {
-    ExpenseType.recurring =>
-      'Cobrada todo mês a partir de ${_startMonth.label}.',
-    ExpenseType.installment =>
-      'Faltam $remainingInstallments de $_totalInstallments parcelas, '
-          'terminando em ${lastMonth.label}.',
-    ExpenseType.single => 'Cobrada apenas em ${_startMonth.label}.',
-  };
+  String? get installmentPlan => isInstallment
+      ? 'Faltam $remainingInstallments parcelas até ${lastMonth.label}'
+      : null;
 
   void setName(String value) {
     _name = value;

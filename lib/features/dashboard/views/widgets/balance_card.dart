@@ -21,7 +21,7 @@ class BalanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Saldo de ${summary.month.label}',
+              'Saldo',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
               ),
@@ -34,13 +34,6 @@ class BalanceCard extends StatelessWidget {
                 color: isNegative
                     ? theme.colorScheme.errorContainer
                     : theme.colorScheme.onPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Recebido menos o que já foi pago',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
               ),
             ),
             const SizedBox(height: 20),
@@ -58,21 +51,11 @@ class BalanceCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               summary.totalPending > 0
-                  ? '${formatMoney(summary.totalPending)} ainda a pagar'
-                  : 'Todas as despesas do mês estão pagas',
+                  ? '${formatMoney(summary.totalPending)} a pagar'
+                  : 'Tudo pago',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onPrimary,
                 fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              summary.projectedBalance >= 0
-                  ? 'Pagando tudo, sobram ${formatMoney(summary.projectedBalance)} no mês'
-                  : 'As despesas passam a renda do mês em '
-                        '${formatMoney(summary.projectedBalance.abs())}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
               ),
             ),
             const SizedBox(height: 20),
@@ -92,8 +75,8 @@ class BalanceCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _Figure(
-                    label: 'Já paguei',
-                    value: formatMoney(summary.totalPaid),
+                    label: 'Sobra',
+                    value: formatMoney(summary.projectedBalance),
                   ),
                 ),
               ],

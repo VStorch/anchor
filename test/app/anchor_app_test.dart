@@ -91,7 +91,7 @@ void main() {
     await seedSalaryAndExpense();
     await pumpApp(tester);
 
-    expect(find.text('Saldo de ${Month.current().label}'), findsOneWidget);
+    expect(find.text('Saldo'), findsOneWidget);
     expect(find.textContaining('3.000,00'), findsWidgets);
     expect(find.textContaining('450,00'), findsWidgets);
   });
@@ -130,7 +130,7 @@ void main() {
     await pumpApp(tester);
 
     await tapTab(tester, Icons.account_balance_wallet_outlined);
-    expect(find.text('Saldo em todas as carteiras'), findsOneWidget);
+    expect(find.text('Saldo total'), findsOneWidget);
 
     await tapTab(tester, Icons.tune_outlined);
     expect(find.text('Padrão do sistema'), findsOneWidget);

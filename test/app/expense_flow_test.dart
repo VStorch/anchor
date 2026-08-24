@@ -112,7 +112,7 @@ Future<void> _createInstallmentExpense(WidgetTester tester) async {
     await tester.pumpAndSettle();
   }
 
-  expect(find.textContaining('Faltam 7 de 12 parcelas'), findsOneWidget);
+  expect(find.textContaining('Faltam 7 parcelas'), findsOneWidget);
   expect(find.textContaining('1.750,00'), findsOneWidget);
 
   await tester.tap(find.text('Cadastrar despesa'));

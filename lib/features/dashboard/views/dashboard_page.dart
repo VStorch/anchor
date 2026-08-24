@@ -48,7 +48,7 @@ class DashboardPage extends StatelessWidget {
       icon: Icons.anchor_outlined,
       title: 'Vamos ancorar seu mês',
       message:
-          'Cadastre de onde vem o seu dinheiro — salário e benefícios — e o Anchor passa a atualizar seu saldo sozinho a cada data de pagamento.',
+          'Cadastre de onde vem o seu dinheiro e o saldo se atualiza a cada pagamento.',
       action: FilledButton.icon(
         onPressed: () => WalletFormPage.open(context),
         icon: const Icon(Icons.add),
@@ -77,7 +77,6 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(height: 20),
           SectionHeader(
             title: 'Carteiras',
-            subtitle: 'Quanto ainda há em cada fonte',
             trailing: TextButton(
               onPressed: () => context.read<AppShellController>().goTo(
                 AppShellController.walletsTab,
@@ -95,8 +94,8 @@ class DashboardPage extends StatelessWidget {
           SectionHeader(
             title: 'A pagar',
             subtitle: summary.overdueOccurrences.isNotEmpty
-                ? '${summary.overdueOccurrences.length} despesa(s) em atraso'
-                : 'Próximos vencimentos do mês',
+                ? '${summary.overdueOccurrences.length} em atraso'
+                : null,
             trailing: TextButton(
               onPressed: () => context.read<AppShellController>().goTo(
                 AppShellController.expensesTab,
@@ -164,7 +163,7 @@ class _AllSettledCard extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Nenhuma conta pendente neste mês.',
+                'Nada a pagar neste mês.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSecondaryContainer,
                 ),

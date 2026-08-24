@@ -37,22 +37,11 @@ class WalletCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          wallet.name,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          '${formatMoney(wallet.monthlyIncome)} por mês',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      wallet.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -76,14 +65,14 @@ class WalletCard extends StatelessWidget {
                   ),
                   Expanded(
                     child: _Metric(
-                      label: 'Recebido no mês',
+                      label: 'Recebido',
                       value: formatMoney(summary.receivedInMonth),
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
                   Expanded(
                     child: _Metric(
-                      label: 'Gasto no mês',
+                      label: 'Gasto',
                       value: formatMoney(summary.spentInMonth),
                       color: theme.colorScheme.onSurface,
                     ),

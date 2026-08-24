@@ -92,10 +92,7 @@ class _ExpenseFormView extends StatelessWidget {
           ),
           if (viewModel.isInstallment) ...[
             const SizedBox(height: 24),
-            const SectionHeader(
-              title: 'Parcelamento',
-              subtitle: 'Informe quantas parcelas você já quitou',
-            ),
+            const SectionHeader(title: 'Parcelamento'),
             _InstallmentStepper(
               label: 'Total de parcelas',
               value: viewModel.totalInstallments,
@@ -113,7 +110,6 @@ class _ExpenseFormView extends StatelessWidget {
             title: viewModel.isInstallment
                 ? 'Próxima parcela'
                 : 'Primeira cobrança',
-            subtitle: viewModel.typeHint,
           ),
           _MonthField(viewModel: viewModel),
           const SizedBox(height: 20),
@@ -129,10 +125,6 @@ class _ExpenseFormView extends StatelessWidget {
             onDaySelected: viewModel.setDueDay,
           ),
           const SizedBox(height: 24),
-          const SectionHeader(
-            title: 'Como você costuma pagar',
-            subtitle: 'Sugestão usada ao confirmar o pagamento',
-          ),
           _WalletDropdown(viewModel: viewModel, wallets: wallets),
           const SizedBox(height: 28),
           _TotalPreview(viewModel: viewModel),
@@ -359,6 +351,13 @@ class _TotalPreview extends StatelessWidget {
                     color: theme.colorScheme.onPrimaryContainer,
                   ),
                 ),
+                if (viewModel.installmentPlan != null)
+                  Text(
+                    viewModel.installmentPlan!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
               ],
             ),
           ),

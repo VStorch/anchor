@@ -51,8 +51,6 @@ class MonthAgendaPage extends StatelessWidget {
                 ? const EmptyState(
                     icon: Icons.event_note_outlined,
                     title: 'Mês sem movimentos',
-                    message:
-                        'Quando houver recebimentos ou despesas, eles aparecem aqui organizados por dia.',
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
