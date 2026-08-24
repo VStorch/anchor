@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/database/app_database.dart';
 import '../core/state/data_changes.dart';
 import '../core/state/month_selection.dart';
+import '../core/widgets/dismiss_focus.dart';
 import '../features/budget/services/budget_service.dart';
 import '../features/dashboard/viewmodels/dashboard_view_model.dart';
 import '../features/expenses/repositories/expense_repository.dart';
@@ -81,6 +82,7 @@ class AnchorApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          builder: (context, child) => DismissFocusOnTap(child: child!),
           home: const AppShell(),
         ),
       ),

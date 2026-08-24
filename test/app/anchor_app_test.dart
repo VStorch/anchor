@@ -125,6 +125,27 @@ void main() {
     expect(find.text('Comece pelo dinheiro que entra'), findsOneWidget);
   });
 
+  testWidgets('tirar o foco do campo ao tocar fora dele', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Cadastrar meu salário'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
+
+    await tester.tap(find.text('Calendário de recebimento'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isFalse,
+    );
+  });
+
   testWidgets('navega entre as abas pela barra inferior', (tester) async {
     await seedSalaryAndExpense();
     await pumpApp(tester);
