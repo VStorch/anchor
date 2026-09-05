@@ -35,73 +35,86 @@ class ExpenseTile extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-          child: Row(
-            children: [
-              _DueBadge(occurrence: occurrence, accent: accent),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      expense.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        decoration: occurrence.isPaid
-                            ? TextDecoration.lineThrough
-                            : null,
-                        decorationColor: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            _subtitle(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                _DueBadge(occurrence: occurrence, accent: accent),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        expense.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          decoration: occurrence.isPaid
+                              ? TextDecoration.lineThrough
+                              : null,
+                          decorationColor: theme.colorScheme.onSurfaceVariant,
                         ),
-                        if (occurrence.isOverdue) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            'Atrasada',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.error,
-                              fontWeight: FontWeight.w600,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _subtitle(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
+                          if (occurrence.isOverdue) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              'Atrasada',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ],
+                      ),
+                      if (occurrence.isPartlyPaid) ...[
+                        const SizedBox(height: 8),
+                        _PartialBar(occurrence: occurrence),
                       ],
-                    ),
-                    if (occurrence.isPartlyPaid) ...[
-                      const SizedBox(height: 8),
-                      _PartialBar(occurrence: occurrence),
                     ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatMoney(occurrence.amount),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
                   ),
-                  const SizedBox(height: 2),
-                  _PaidToggle(occurrence: occurrence, onPressed: onTogglePaid),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: 12),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth * 0.42,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatMoney(occurrence.amount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      _PaidToggle(
+                        occurrence: occurrence,
+                        onPressed: onTogglePaid,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -180,9 +193,11 @@ class _DueBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final side = MediaQuery.textScalerOf(context).scale(48).clamp(48.0, 62.0);
+
     return Container(
-      width: 48,
-      height: 48,
+      width: side,
+      height: side,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.12),
@@ -220,19 +235,37 @@ class _PaidToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = occurrence.isPaid
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
 
-    return TextButton.icon(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: occurrence.isPaid
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant,
-      ),
-      icon: Icon(_icon, size: 16),
-      label: Text(_label),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fitsLabel =
+            constraints.maxWidth >= MediaQuery.textScalerOf(context).scale(96);
+
+        if (!fitsLabel) {
+          return IconButton(
+            onPressed: onPressed,
+            visualDensity: VisualDensity.compact,
+            color: color,
+            tooltip: _label,
+            icon: Icon(_icon, size: 20),
+          );
+        }
+
+        return TextButton.icon(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: color,
+          ),
+          icon: Icon(_icon, size: 16),
+          label: Text(_label),
+        );
+      },
     );
   }
 
