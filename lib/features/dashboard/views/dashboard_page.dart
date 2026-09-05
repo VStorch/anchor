@@ -6,10 +6,8 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
-import '../../expenses/models/expense_occurrence.dart';
-import '../../expenses/viewmodels/expenses_view_model.dart';
 import '../../expenses/views/widgets/expense_tile.dart';
-import '../../expenses/views/widgets/pay_expense_sheet.dart';
+import '../../expenses/views/widgets/expense_ledger_sheet.dart';
 import '../../wallets/views/wallet_form_page.dart';
 import '../viewmodels/dashboard_view_model.dart';
 import 'month_agenda_page.dart';
@@ -112,34 +110,17 @@ class DashboardPage extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: ExpenseTile(
                   occurrence: occurrence,
-                  wallet: viewModel.snapshot.walletById(occurrence.walletId),
+                  wallets: viewModel.snapshot.wallets,
                   onTap: () => context.read<AppShellController>().goTo(
                     AppShellController.expensesTab,
                   ),
-                  onTogglePaid: () => _pay(context, occurrence),
+                  onTogglePaid: () =>
+                      ExpenseLedgerSheet.show(context, occurrence: occurrence),
                 ),
               ),
             ),
         ],
       ),
-    );
-  }
-
-  Future<void> _pay(BuildContext context, ExpenseOccurrence occurrence) async {
-    final expenses = context.read<ExpensesViewModel>();
-    final dashboard = context.read<DashboardViewModel>();
-
-    final choice = await PayExpenseSheet.show(
-      context,
-      occurrence: occurrence,
-      walletSummaries: dashboard.snapshot.walletSummaries,
-    );
-    if (choice == null) return;
-
-    await expenses.payOccurrence(
-      occurrence,
-      walletId: choice.walletId,
-      amount: choice.amount,
     );
   }
 }

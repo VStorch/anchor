@@ -86,7 +86,7 @@ class _AgendaDay {
       final incomes = <_AgendaIncome>[];
       for (final wallet in snapshot.wallets) {
         for (final payout in wallet.payouts) {
-          if (payout.dayOfMonth == day) {
+          if (payout.day == day) {
             incomes.add(_AgendaIncome(wallet: wallet, payout: payout));
           }
         }

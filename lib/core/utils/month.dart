@@ -45,6 +45,19 @@ class Month implements Comparable<Month> {
   DateTime dayOf(int dayOfMonth) =>
       DateTime(year, month, min(dayOfMonth, lengthInDays));
 
+  DateTime businessDay(int position) {
+    var found = 0;
+    var lastBusinessDay = 1;
+
+    for (var day = 1; day <= lengthInDays; day++) {
+      if (DateTime(year, month, day).weekday > DateTime.friday) continue;
+      lastBusinessDay = day;
+      if (++found == position) return DateTime(year, month, day);
+    }
+
+    return DateTime(year, month, lastBusinessDay);
+  }
+
   @override
   int compareTo(Month other) =>
       (year * 12 + month) - (other.year * 12 + other.month);

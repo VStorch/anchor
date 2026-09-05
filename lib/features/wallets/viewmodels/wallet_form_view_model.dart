@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/payout.dart';
+import '../models/payout_schedule.dart';
 import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
 import '../repositories/wallet_repository.dart';
@@ -62,17 +63,47 @@ class WalletFormViewModel extends ChangeNotifier {
   void addPayout({
     required String label,
     required double amount,
-    required int dayOfMonth,
-  }) {
-    _payouts = <Payout>[
-      ..._payouts,
-      Payout(
-        walletId: _wallet?.id ?? 0,
-        label: label.trim().isEmpty ? 'Recebimento' : label.trim(),
+    required int day,
+    required PayoutSchedule schedule,
+  }) => _replacePayouts(<Payout>[
+    ..._payouts,
+    _draft(label: label, amount: amount, day: day, schedule: schedule),
+  ]);
+
+  void updatePayoutAt(
+    int index, {
+    required String label,
+    required double amount,
+    required int day,
+    required PayoutSchedule schedule,
+  }) => _replacePayouts(
+    <Payout>[..._payouts]
+      ..[index] = _draft(
+        id: _payouts[index].id,
+        label: label,
         amount: amount,
-        dayOfMonth: dayOfMonth,
+        day: day,
+        schedule: schedule,
       ),
-    ]..sort((a, b) => a.dayOfMonth.compareTo(b.dayOfMonth));
+  );
+
+  Payout _draft({
+    int? id,
+    required String label,
+    required double amount,
+    required int day,
+    required PayoutSchedule schedule,
+  }) => Payout(
+    id: id,
+    walletId: _wallet?.id ?? 0,
+    label: label.trim().isEmpty ? 'Recebimento' : label.trim(),
+    amount: amount,
+    day: day,
+    schedule: schedule,
+  );
+
+  void _replacePayouts(List<Payout> payouts) {
+    _payouts = payouts..sort((a, b) => a.day.compareTo(b.day));
     notifyListeners();
   }
 

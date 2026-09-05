@@ -5,6 +5,7 @@ import '../../../core/state/data_changes.dart';
 import '../../../core/utils/month.dart';
 import '../models/payout.dart';
 import '../models/receipt.dart';
+import '../models/receipt_status.dart';
 import '../models/wallet.dart';
 
 class WalletRepository {
@@ -12,6 +13,17 @@ class WalletRepository {
 
   final AppDatabase _database;
   final DataChanges _changes;
+
+  Future<int> _upsert(
+    Database db,
+    String table,
+    Map<String, Object?> values,
+    int? id,
+  ) async {
+    if (id == null) return db.insert(table, values);
+    await db.update(table, values, where: 'id = ?', whereArgs: [id]);
+    return id;
+  }
 
   Future<List<Wallet>> fetchWallets() async {
     final db = await _database.database;
@@ -44,13 +56,14 @@ class WalletRepository {
 
   Future<int> saveWallet(Wallet wallet) async {
     final db = await _database.database;
-    final id = await db.insert(
+    final id = await _upsert(
+      db,
       AppDatabase.walletsTable,
       wallet.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      wallet.id,
     );
     _changes.publish();
-    return wallet.id ?? id;
+    return id;
   }
 
   Future<void> deleteWallet(int id) async {
@@ -61,11 +74,7 @@ class WalletRepository {
 
   Future<void> savePayout(Payout payout) async {
     final db = await _database.database;
-    await db.insert(
-      AppDatabase.payoutsTable,
-      payout.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _upsert(db, AppDatabase.payoutsTable, payout.toMap(), payout.id);
     _changes.publish();
   }
 
@@ -91,21 +100,26 @@ class WalletRepository {
 
   Future<void> saveReceipt(Receipt receipt) async {
     final db = await _database.database;
-    await db.insert(
-      AppDatabase.receiptsTable,
-      receipt.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _upsert(db, AppDatabase.receiptsTable, receipt.toMap(), receipt.id);
     _changes.publish();
   }
 
-  Future<void> deleteReceipt(int id) async {
+  Future<void> discardReceipt(Receipt receipt) async {
     final db = await _database.database;
-    await db.delete(
-      AppDatabase.receiptsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    if (receipt.isManual) {
+      await db.delete(
+        AppDatabase.receiptsTable,
+        where: 'id = ?',
+        whereArgs: [receipt.id],
+      );
+    } else {
+      await db.update(
+        AppDatabase.receiptsTable,
+        <String, Object?>{'status': ReceiptStatus.skipped.id},
+        where: 'id = ?',
+        whereArgs: [receipt.id],
+      );
+    }
     _changes.publish();
   }
 
@@ -114,7 +128,7 @@ class WalletRepository {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final currentMonth = Month.current();
-    var created = 0;
+    var changed = 0;
 
     for (final wallet in wallets) {
       if (!wallet.hasSchedule) continue;
@@ -127,7 +141,7 @@ class WalletRepository {
         for (final payout in wallet.payouts) {
           if (payout.id == null) continue;
 
-          final payoutDate = month.dayOf(payout.dayOfMonth);
+          final payoutDate = payout.dateIn(month);
           if (payoutDate.isAfter(today)) continue;
 
           final insertedId = await db.insert(
@@ -138,15 +152,37 @@ class WalletRepository {
               month: month,
               amount: payout.amount,
               receivedAt: payoutDate,
+              status: ReceiptStatus.predicted,
             ).toMap(),
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
-          if (insertedId != 0) created++;
+          if (insertedId != 0) {
+            changed++;
+            continue;
+          }
+
+          changed += await db.update(
+            AppDatabase.receiptsTable,
+            <String, Object?>{
+              'amount': payout.amount,
+              'received_at': payoutDate.toIso8601String(),
+            },
+            where:
+                'payout_id = ? AND month_key = ? AND status = ? '
+                'AND (amount != ? OR received_at != ?)',
+            whereArgs: [
+              payout.id,
+              month.key,
+              ReceiptStatus.predicted.id,
+              payout.amount,
+              payoutDate.toIso8601String(),
+            ],
+          );
         }
       }
     }
 
-    if (created > 0) _changes.publish();
-    return created;
+    if (changed > 0) _changes.publish();
+    return changed;
   }
 }

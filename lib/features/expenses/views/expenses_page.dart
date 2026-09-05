@@ -10,8 +10,9 @@ import '../models/expense_occurrence.dart';
 import '../viewmodels/expenses_view_model.dart';
 import 'expense_form_page.dart';
 import 'widgets/expense_actions_sheet.dart';
+import 'widgets/expense_ledger_sheet.dart';
 import 'widgets/expense_tile.dart';
-import 'widgets/pay_expense_sheet.dart';
+import 'widgets/month_table.dart';
 
 class ExpensesPage extends StatelessWidget {
   const ExpensesPage({super.key});
@@ -51,6 +52,8 @@ class ExpensesPage extends StatelessWidget {
                   ? const LoadingView()
                   : viewModel.occurrences.isEmpty
                   ? _emptyState(context, viewModel)
+                  : viewModel.layout == ExpenseLayout.table
+                  ? _table(context, viewModel)
                   : _list(context, viewModel),
             ),
           ],
@@ -68,11 +71,22 @@ class ExpensesPage extends StatelessWidget {
         final occurrence = viewModel.occurrences[index];
         return ExpenseTile(
           occurrence: occurrence,
-          wallet: viewModel.snapshot.walletById(occurrence.walletId),
+          wallets: viewModel.snapshot.wallets,
           onTap: () => _openActions(context, viewModel, occurrence),
-          onTogglePaid: () => _togglePaid(context, viewModel, occurrence),
+          onTogglePaid: () =>
+              ExpenseLedgerSheet.show(context, occurrence: occurrence),
         );
       },
+    );
+  }
+
+  Widget _table(BuildContext context, ExpensesViewModel viewModel) {
+    return MonthTable(
+      occurrences: viewModel.occurrences,
+      onOpen: (occurrence) =>
+          ExpenseLedgerSheet.show(context, occurrence: occurrence),
+      onAmountChanged: viewModel.setMonthAmount,
+      onPaidChanged: viewModel.setPaidAmount,
     );
   }
 
@@ -96,30 +110,6 @@ class ExpensesPage extends StatelessWidget {
     );
   }
 
-  Future<void> _togglePaid(
-    BuildContext context,
-    ExpensesViewModel viewModel,
-    ExpenseOccurrence occurrence,
-  ) async {
-    if (occurrence.isPaid) {
-      await viewModel.undoPayment(occurrence);
-      return;
-    }
-
-    final choice = await PayExpenseSheet.show(
-      context,
-      occurrence: occurrence,
-      walletSummaries: viewModel.snapshot.walletSummaries,
-    );
-    if (choice == null) return;
-
-    await viewModel.payOccurrence(
-      occurrence,
-      walletId: choice.walletId,
-      amount: choice.amount,
-    );
-  }
-
   Future<void> _openActions(
     BuildContext context,
     ExpensesViewModel viewModel,
@@ -132,6 +122,8 @@ class ExpensesPage extends StatelessWidget {
     if (action == null || !context.mounted) return;
 
     switch (action) {
+      case ExpenseAction.pay:
+        await ExpenseLedgerSheet.show(context, occurrence: occurrence);
       case ExpenseAction.edit:
         await ExpenseFormPage.open(
           context,
@@ -140,7 +132,7 @@ class ExpensesPage extends StatelessWidget {
           expense: occurrence.expense,
         );
       case ExpenseAction.undoPayment:
-        await viewModel.undoPayment(occurrence);
+        await viewModel.clearPayments(occurrence);
       case ExpenseAction.endRecurring:
         await viewModel.endRecurringExpense(
           occurrence.expense,
@@ -205,21 +197,45 @@ class _FilterBar extends StatelessWidget {
 
     return SizedBox(
       height: 56,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        children: ExpenseFilter.values
-            .map(
-              (filter) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(filter.label),
-                  selected: viewModel.filter == filter,
-                  onSelected: (_) => viewModel.applyFilter(filter),
-                ),
+      child: Row(
+        children: [
+          Expanded(
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: ExpenseFilter.values
+                  .map(
+                    (filter) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(filter.label),
+                        selected: viewModel.filter == filter,
+                        onSelected: (_) => viewModel.applyFilter(filter),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: IconButton(
+              onPressed: () => viewModel.applyLayout(
+                viewModel.layout == ExpenseLayout.list
+                    ? ExpenseLayout.table
+                    : ExpenseLayout.list,
               ),
-            )
-            .toList(),
+              icon: Icon(
+                viewModel.layout == ExpenseLayout.list
+                    ? Icons.table_rows_outlined
+                    : Icons.view_list_outlined,
+              ),
+              tooltip: viewModel.layout == ExpenseLayout.list
+                  ? 'Ver como tabela'
+                  : 'Ver como lista',
+            ),
+          ),
+        ],
       ),
     );
   }

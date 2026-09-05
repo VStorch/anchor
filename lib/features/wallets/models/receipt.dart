@@ -1,4 +1,5 @@
 import '../../../core/utils/month.dart';
+import 'receipt_status.dart';
 
 class Receipt {
   const Receipt({
@@ -8,6 +9,7 @@ class Receipt {
     required this.month,
     required this.amount,
     required this.receivedAt,
+    this.status = ReceiptStatus.confirmed,
   });
 
   factory Receipt.fromMap(Map<String, Object?> map) => Receipt(
@@ -17,6 +19,7 @@ class Receipt {
     month: Month.fromKey(map['month_key'] as String),
     amount: (map['amount'] as num).toDouble(),
     receivedAt: DateTime.parse(map['received_at'] as String),
+    status: ReceiptStatus.fromId(map['status'] as String),
   );
 
   final int? id;
@@ -25,8 +28,13 @@ class Receipt {
   final Month month;
   final double amount;
   final DateTime receivedAt;
+  final ReceiptStatus status;
 
   bool get isManual => payoutId == null;
+
+  bool get isPredicted => status == ReceiptStatus.predicted;
+
+  bool get counts => status != ReceiptStatus.skipped;
 
   Map<String, Object?> toMap() => <String, Object?>{
     if (id != null) 'id': id,
@@ -35,5 +43,20 @@ class Receipt {
     'month_key': month.key,
     'amount': amount,
     'received_at': receivedAt.toIso8601String(),
+    'status': status.id,
   };
+
+  Receipt copyWith({
+    double? amount,
+    DateTime? receivedAt,
+    ReceiptStatus? status,
+  }) => Receipt(
+    id: id,
+    walletId: walletId,
+    payoutId: payoutId,
+    month: isManual && receivedAt != null ? Month.fromDate(receivedAt) : month,
+    amount: amount ?? this.amount,
+    receivedAt: receivedAt ?? this.receivedAt,
+    status: status ?? this.status,
+  );
 }

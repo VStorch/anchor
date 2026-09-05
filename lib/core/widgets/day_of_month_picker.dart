@@ -6,13 +6,13 @@ class DayOfMonthPicker extends StatelessWidget {
     required this.selectedDay,
     required this.onDaySelected,
     this.highlightedDays = const <int>{},
+    this.dayCount = 31,
   });
-
-  static const int _daysInGrid = 31;
 
   final int selectedDay;
   final ValueChanged<int> onDaySelected;
   final Set<int> highlightedDays;
+  final int dayCount;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class DayOfMonthPicker extends StatelessWidget {
         mainAxisSpacing: 6,
         crossAxisSpacing: 6,
       ),
-      itemCount: _daysInGrid,
+      itemCount: dayCount,
       itemBuilder: (context, index) {
         final day = index + 1;
         final isSelected = day == selectedDay;

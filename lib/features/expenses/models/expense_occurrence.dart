@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import 'expense.dart';
 import 'expense_payment.dart';
@@ -8,19 +11,38 @@ class ExpenseOccurrence {
     required this.expense,
     required this.month,
     this.installmentNumber,
-    this.payment,
+    this.monthAmount,
+    this.payments = const <ExpensePayment>[],
   });
 
   final Expense expense;
   final Month month;
   final int? installmentNumber;
-  final ExpensePayment? payment;
+  final double? monthAmount;
+  final List<ExpensePayment> payments;
 
-  bool get isPaid => payment != null;
+  double get amount => monthAmount ?? expense.amount;
 
-  double get amount => payment?.amount ?? expense.amount;
+  bool get hasCustomAmount => monthAmount != null;
 
-  int? get walletId => payment?.walletId ?? expense.walletId;
+  double get paidAmount =>
+      payments.fold(0, (total, payment) => total + payment.amount);
+
+  double get remaining => max(0, amount - paidAmount);
+
+  bool get isPaid => coversAmount(paidAmount, amount);
+
+  bool get isPartlyPaid => paidAmount > 0 && !isPaid;
+
+  double get paidRatio => amount <= 0 ? 1 : (paidAmount / amount).clamp(0, 1);
+
+  int? get plannedWalletId => expense.walletId;
+
+  List<int> get paidWalletIds => payments
+      .map((payment) => payment.walletId)
+      .whereType<int>()
+      .toSet()
+      .toList();
 
   DateTime get dueDate => month.dayOf(expense.dueDay);
 
@@ -35,11 +57,15 @@ class ExpenseOccurrence {
       installmentNumber != null &&
       installmentNumber == expense.totalInstallments;
 
-  ExpenseOccurrence withPayment(ExpensePayment? payment) => ExpenseOccurrence(
+  ExpenseOccurrence withLedger({
+    double? monthAmount,
+    List<ExpensePayment> payments = const <ExpensePayment>[],
+  }) => ExpenseOccurrence(
     expense: expense,
     month: month,
     installmentNumber: installmentNumber,
-    payment: payment,
+    monthAmount: monthAmount,
+    payments: payments,
   );
 
   static DateTime get _today {

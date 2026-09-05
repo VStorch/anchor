@@ -13,7 +13,7 @@ import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_form_page.dart';
-import 'widgets/manual_receipt_sheet.dart';
+import 'widgets/receipt_sheet.dart';
 import 'widgets/wallet_card.dart';
 
 class WalletsPage extends StatelessWidget {
@@ -89,7 +89,7 @@ class WalletsPage extends StatelessWidget {
           (receipt) => _ReceiptTile(
             receipt: receipt,
             wallet: viewModel.walletById(receipt.walletId),
-            onDelete: () => viewModel.deleteReceipt(receipt),
+            onTap: () => _editReceipt(context, receipt),
           ),
         ),
       ],
@@ -109,13 +109,37 @@ class WalletsPage extends StatelessWidget {
 
   Future<void> _registerReceipt(BuildContext context, Wallet wallet) async {
     final viewModel = context.read<WalletsViewModel>();
-    final receipt = await ManualReceiptSheet.show(context, wallet: wallet);
-    if (receipt == null) return;
+    final edit = await ReceiptSheet.show(context, wallet: wallet);
+    if (edit == null || edit.isDiscarded) return;
 
     await viewModel.registerReceipt(
       wallet: wallet,
-      amount: receipt.amount,
-      receivedAt: receipt.receivedAt,
+      amount: edit.amount,
+      receivedAt: edit.receivedAt,
+    );
+  }
+
+  Future<void> _editReceipt(BuildContext context, Receipt receipt) async {
+    final viewModel = context.read<WalletsViewModel>();
+    final wallet = viewModel.walletById(receipt.walletId);
+    if (wallet == null) return;
+
+    final edit = await ReceiptSheet.show(
+      context,
+      wallet: wallet,
+      receipt: receipt,
+    );
+    if (edit == null) return;
+
+    if (edit.isDiscarded) {
+      await viewModel.discardReceipt(receipt);
+      return;
+    }
+
+    await viewModel.confirmReceipt(
+      receipt,
+      amount: edit.amount,
+      receivedAt: edit.receivedAt,
     );
   }
 }
@@ -168,50 +192,43 @@ class _ReceiptTile extends StatelessWidget {
   const _ReceiptTile({
     required this.receipt,
     required this.wallet,
-    required this.onDelete,
+    required this.onTap,
   });
 
   final Receipt receipt;
   final Wallet? wallet;
-  final VoidCallback onDelete;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = wallet?.color ?? theme.colorScheme.primary;
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      onTap: onTap,
       leading: CircleAvatar(
-        backgroundColor: (wallet?.color ?? theme.colorScheme.primary)
-            .withValues(alpha: 0.16),
+        backgroundColor: color.withValues(alpha: 0.16),
         child: Icon(
-          Icons.arrow_downward,
+          receipt.isPredicted ? Icons.schedule : Icons.arrow_downward,
           size: 18,
-          color: wallet?.color ?? theme.colorScheme.primary,
+          color: color,
         ),
       ),
       title: Text(wallet?.name ?? 'Carteira removida'),
       subtitle: Text(
         '${DateFormat.yMMMMd('pt_BR').format(receipt.receivedAt)}'
+        '${receipt.isPredicted ? ' · a confirmar' : ''}'
         '${receipt.isManual ? ' · manual' : ''}',
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            formatMoney(receipt.amount),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          if (receipt.isManual)
-            IconButton(
-              onPressed: onDelete,
-              icon: const Icon(Icons.close, size: 18),
-              tooltip: 'Remover entrada',
-            ),
-        ],
+      trailing: Text(
+        formatMoney(receipt.amount),
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: receipt.isPredicted
+              ? theme.colorScheme.onSurfaceVariant
+              : theme.colorScheme.primary,
+        ),
       ),
     );
   }

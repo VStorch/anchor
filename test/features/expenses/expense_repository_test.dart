@@ -2,6 +2,7 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/models/expense_month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
@@ -46,30 +47,88 @@ void main() {
     expect(expense.startMonth, const Month(2026, 8));
   });
 
-  test('mantém um único pagamento por mês da mesma despesa', () async {
-    final expense = await saveInstallment();
+  test(
+    'guarda vários pagamentos do mesmo mês em carteiras diferentes',
+    () async {
+      final expense = await saveInstallment();
 
+      await repository.savePayment(
+        ExpensePayment(
+          expenseId: expense.id!,
+          walletId: null,
+          month: const Month(2026, 8),
+          amount: 150,
+          paidAt: DateTime(2026, 8, 12),
+        ),
+      );
+      await repository.savePayment(
+        ExpensePayment(
+          expenseId: expense.id!,
+          month: const Month(2026, 8),
+          amount: 100,
+          paidAt: DateTime(2026, 8, 13),
+        ),
+      );
+
+      final payments = await repository.fetchPayments();
+
+      expect(payments, hasLength(2));
+      expect(payments.fold<double>(0, (total, p) => total + p.amount), 250);
+    },
+  );
+
+  test('editar um pagamento existente não cria linha nova', () async {
+    final expense = await saveInstallment();
     await repository.savePayment(
       ExpensePayment(
         expenseId: expense.id!,
         month: const Month(2026, 8),
-        amount: 250,
+        amount: 150,
         paidAt: DateTime(2026, 8, 12),
       ),
     );
+
+    final saved = (await repository.fetchPayments()).single;
     await repository.savePayment(
       ExpensePayment(
+        id: saved.id,
         expenseId: expense.id!,
         month: const Month(2026, 8),
-        amount: 300,
-        paidAt: DateTime(2026, 8, 13),
+        amount: 200,
+        paidAt: saved.paidAt,
       ),
     );
 
     final payments = await repository.fetchPayments();
 
     expect(payments, hasLength(1));
-    expect(payments.single.amount, 300);
+    expect(payments.single.amount, 200);
+  });
+
+  test('o valor do mês sobrescreve o anterior e volta ao ser limpo', () async {
+    final expense = await saveInstallment();
+
+    await repository.saveMonthAmount(
+      ExpenseMonth(
+        expenseId: expense.id!,
+        month: const Month(2026, 8),
+        amount: 300,
+      ),
+    );
+    await repository.saveMonthAmount(
+      ExpenseMonth(
+        expenseId: expense.id!,
+        month: const Month(2026, 8),
+        amount: 280,
+      ),
+    );
+
+    expect(await repository.fetchMonthAmounts(), hasLength(1));
+    expect((await repository.fetchMonthAmounts()).single.amount, 280);
+
+    await repository.clearMonthAmount(expense.id!, const Month(2026, 8));
+
+    expect(await repository.fetchMonthAmounts(), isEmpty);
   });
 
   test('desfazer o pagamento remove apenas o mês informado', () async {
@@ -86,11 +145,36 @@ void main() {
       );
     }
 
-    await repository.deletePayment(expense.id!, const Month(2026, 8));
+    await repository.deletePaymentsOf(expense.id!, const Month(2026, 8));
     final payments = await repository.fetchPayments();
 
     expect(payments, hasLength(1));
     expect(payments.single.month, const Month(2026, 9));
+  });
+
+  test('editar a despesa preserva os pagamentos e o valor do mês', () async {
+    final expense = await saveInstallment();
+    await repository.savePayment(
+      ExpensePayment(
+        expenseId: expense.id!,
+        month: const Month(2026, 8),
+        amount: 250,
+        paidAt: DateTime(2026, 8, 12),
+      ),
+    );
+    await repository.saveMonthAmount(
+      ExpenseMonth(
+        expenseId: expense.id!,
+        month: const Month(2026, 8),
+        amount: 260,
+      ),
+    );
+
+    await repository.saveExpense(expense.copyWith(name: 'Geladeira nova'));
+
+    expect((await repository.fetchExpenses()).single.name, 'Geladeira nova');
+    expect(await repository.fetchPayments(), hasLength(1));
+    expect(await repository.fetchMonthAmounts(), hasLength(1));
   });
 
   test('excluir a despesa apaga o histórico de pagamentos', () async {
@@ -108,5 +192,20 @@ void main() {
 
     expect(await repository.fetchExpenses(), isEmpty);
     expect(await repository.fetchPayments(), isEmpty);
+  });
+
+  test('excluir a despesa apaga o valor personalizado do mês', () async {
+    final expense = await saveInstallment();
+    await repository.saveMonthAmount(
+      ExpenseMonth(
+        expenseId: expense.id!,
+        month: const Month(2026, 8),
+        amount: 300,
+      ),
+    );
+
+    await repository.deleteExpense(expense.id!);
+
+    expect(await repository.fetchMonthAmounts(), isEmpty);
   });
 }

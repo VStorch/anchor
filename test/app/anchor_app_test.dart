@@ -67,7 +67,7 @@ void main() {
       ),
     );
     await wallets.savePayout(
-      Payout(walletId: walletId, label: 'Mensal', amount: 3000, dayOfMonth: 1),
+      Payout(walletId: walletId, label: 'Mensal', amount: 3000, day: 1),
     );
     await expenses.saveExpense(
       Expense(

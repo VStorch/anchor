@@ -44,6 +44,26 @@ class WalletCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (summary.unconfirmedInMonth > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Chip(
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: theme.colorScheme.tertiaryContainer,
+                        side: BorderSide.none,
+                        avatar: Icon(
+                          Icons.schedule,
+                          size: 14,
+                          color: theme.colorScheme.onTertiaryContainer,
+                        ),
+                        label: Text(
+                          '${summary.unconfirmedInMonth} a confirmar',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onTertiaryContainer,
+                          ),
+                        ),
+                      ),
+                    ),
                   IconButton(
                     onPressed: onRegisterReceipt,
                     icon: const Icon(Icons.add_card_outlined),
@@ -102,7 +122,7 @@ class WalletCard extends StatelessWidget {
                           visualDensity: VisualDensity.compact,
                           backgroundColor: wallet.color.withValues(alpha: 0.10),
                           label: Text(
-                            'dia ${payout.dayOfMonth} · ${formatMoney(payout.amount)}',
+                            '${payout.scheduleLabel} · ${formatMoney(payout.amount)}',
                             style: theme.textTheme.labelSmall,
                           ),
                         ),

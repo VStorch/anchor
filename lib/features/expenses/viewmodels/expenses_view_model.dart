@@ -6,6 +6,7 @@ import '../../budget/models/budget_snapshot.dart';
 import '../../budget/models/month_summary.dart';
 import '../../budget/services/budget_service.dart';
 import '../models/expense.dart';
+import '../models/expense_month.dart';
 import '../models/expense_occurrence.dart';
 import '../models/expense_payment.dart';
 import '../repositories/expense_repository.dart';
@@ -19,6 +20,8 @@ enum ExpenseFilter {
 
   final String label;
 }
+
+enum ExpenseLayout { list, table }
 
 class ExpensesViewModel extends ReactiveViewModel {
   ExpensesViewModel({
@@ -41,6 +44,7 @@ class ExpensesViewModel extends ReactiveViewModel {
     MonthSummary.empty(Month.current()),
   );
   ExpenseFilter _filter = ExpenseFilter.all;
+  ExpenseLayout _layout = ExpenseLayout.list;
 
   BudgetSnapshot get snapshot => _snapshot;
 
@@ -49,6 +53,8 @@ class ExpensesViewModel extends ReactiveViewModel {
   Month get month => _monthSelection.current;
 
   ExpenseFilter get filter => _filter;
+
+  ExpenseLayout get layout => _layout;
 
   List<Expense> get registeredExpenses => _snapshot.expenses;
 
@@ -69,29 +75,86 @@ class ExpensesViewModel extends ReactiveViewModel {
     safeNotify();
   }
 
+  void applyLayout(ExpenseLayout layout) {
+    if (_layout == layout) return;
+    _layout = layout;
+    safeNotify();
+  }
+
   void goToPreviousMonth() => _monthSelection.goToPrevious();
 
   void goToNextMonth() => _monthSelection.goToNext();
 
-  Future<void> payOccurrence(
+  ExpenseOccurrence? occurrenceOf(int expenseId) =>
+      summary.occurrenceOf(expenseId);
+
+  Future<void> savePaymentLine(
+    ExpenseOccurrence occurrence, {
+    int? id,
+    required int? walletId,
+    required double amount,
+  }) => _expenseRepository.savePayment(
+    ExpensePayment(
+      id: id,
+      expenseId: occurrence.expense.id!,
+      walletId: walletId,
+      month: occurrence.month,
+      amount: amount,
+      paidAt: DateTime.now(),
+    ),
+  );
+
+  Future<void> settle(
     ExpenseOccurrence occurrence, {
     required int? walletId,
-    double? amount,
   }) async {
-    await _expenseRepository.savePayment(
-      ExpensePayment(
-        id: occurrence.payment?.id,
-        expenseId: occurrence.expense.id!,
-        walletId: walletId,
-        month: occurrence.month,
-        amount: amount ?? occurrence.expense.amount,
-        paidAt: DateTime.now(),
-      ),
+    if (occurrence.remaining <= 0) return;
+    await savePaymentLine(
+      occurrence,
+      walletId: walletId,
+      amount: occurrence.remaining,
     );
   }
 
-  Future<void> undoPayment(ExpenseOccurrence occurrence) => _expenseRepository
-      .deletePayment(occurrence.expense.id!, occurrence.month);
+  Future<void> setPaidAmount(
+    ExpenseOccurrence occurrence,
+    double amount,
+  ) async {
+    if (amount <= 0) return clearPayments(occurrence);
+
+    final existing = occurrence.payments;
+    if (existing.length > 1) return;
+
+    await savePaymentLine(
+      occurrence,
+      id: existing.isEmpty ? null : existing.single.id,
+      walletId: existing.isEmpty
+          ? occurrence.plannedWalletId
+          : existing.single.walletId,
+      amount: amount,
+    );
+  }
+
+  Future<void> removePayment(ExpensePayment payment) =>
+      _expenseRepository.deletePayment(payment.id!);
+
+  Future<void> clearPayments(ExpenseOccurrence occurrence) => _expenseRepository
+      .deletePaymentsOf(occurrence.expense.id!, occurrence.month);
+
+  Future<void> setMonthAmount(ExpenseOccurrence occurrence, double amount) =>
+      _expenseRepository.saveMonthAmount(
+        ExpenseMonth(
+          expenseId: occurrence.expense.id!,
+          month: occurrence.month,
+          amount: amount,
+        ),
+      );
+
+  Future<void> resetMonthAmount(ExpenseOccurrence occurrence) =>
+      _expenseRepository.clearMonthAmount(
+        occurrence.expense.id!,
+        occurrence.month,
+      );
 
   Future<void> deleteExpense(Expense expense) =>
       _expenseRepository.deleteExpense(expense.id!);

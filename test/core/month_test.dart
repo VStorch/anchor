@@ -29,5 +29,19 @@ void main() {
       expect(const Month(2026, 2).dayOf(31), DateTime(2026, 2, 28));
       expect(const Month(2026, 1).dayOf(15), DateTime(2026, 1, 15));
     });
+
+    test('encontra o quinto dia útil pulando o fim de semana', () {
+      expect(const Month(2026, 9).businessDay(5), DateTime(2026, 9, 7));
+      expect(const Month(2026, 11).businessDay(5), DateTime(2026, 11, 6));
+    });
+
+    test('ignora o fim de semana no começo do mês', () {
+      expect(const Month(2026, 8).businessDay(1), DateTime(2026, 8, 3));
+      expect(const Month(2026, 8).businessDay(5), DateTime(2026, 8, 7));
+    });
+
+    test('para no último dia útil quando o mês não tem tantos', () {
+      expect(const Month(2026, 8).businessDay(30), DateTime(2026, 8, 31));
+    });
   });
 }

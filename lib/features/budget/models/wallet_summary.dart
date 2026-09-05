@@ -11,6 +11,7 @@ class WalletSummary {
     required this.spentInMonth,
     required this.committedInMonth,
     required this.balance,
+    required this.unconfirmedInMonth,
   });
 
   static List<WalletSummary> buildAll({
@@ -21,30 +22,44 @@ class WalletSummary {
     required List<ExpenseOccurrence> occurrences,
   }) {
     return wallets.map((wallet) {
-      final walletReceipts = receipts.where((r) => r.walletId == wallet.id);
-      final walletPayments = payments.where((p) => p.walletId == wallet.id);
+      final walletReceipts = receipts.where(
+        (receipt) => receipt.walletId == wallet.id && receipt.counts,
+      );
+      final walletPayments = payments.where(
+        (payment) => payment.walletId == wallet.id,
+      );
+      final monthReceipts = walletReceipts.where(
+        (receipt) => receipt.month == month,
+      );
 
-      final totalIn = walletReceipts.fold<double>(
-        0,
-        (sum, r) => sum + r.amount,
-      );
-      final totalOut = walletPayments.fold<double>(
-        0,
-        (sum, p) => sum + p.amount,
-      );
+      final spentInMonth = walletPayments
+          .where((payment) => payment.month == month)
+          .fold<double>(0, (total, payment) => total + payment.amount);
+
+      final plannedRemainder = occurrences
+          .where((occurrence) => occurrence.plannedWalletId == wallet.id)
+          .fold<double>(0, (total, occurrence) => total + occurrence.remaining);
 
       return WalletSummary(
         wallet: wallet,
-        receivedInMonth: walletReceipts
-            .where((r) => r.month == month)
-            .fold(0, (sum, r) => sum + r.amount),
-        spentInMonth: walletPayments
-            .where((p) => p.month == month)
-            .fold(0, (sum, p) => sum + p.amount),
-        committedInMonth: occurrences
-            .where((o) => o.walletId == wallet.id)
-            .fold(0, (sum, o) => sum + o.amount),
-        balance: totalIn - totalOut,
+        receivedInMonth: monthReceipts.fold(
+          0,
+          (total, receipt) => total + receipt.amount,
+        ),
+        spentInMonth: spentInMonth,
+        committedInMonth: spentInMonth + plannedRemainder,
+        balance:
+            walletReceipts.fold<double>(
+              0,
+              (total, receipt) => total + receipt.amount,
+            ) -
+            walletPayments.fold<double>(
+              0,
+              (total, payment) => total + payment.amount,
+            ),
+        unconfirmedInMonth: monthReceipts
+            .where((receipt) => receipt.isPredicted)
+            .length,
       );
     }).toList();
   }
@@ -54,6 +69,7 @@ class WalletSummary {
   final double spentInMonth;
   final double committedInMonth;
   final double balance;
+  final int unconfirmedInMonth;
 
   double get pendingInMonth => committedInMonth - spentInMonth;
 

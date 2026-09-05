@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/section_header.dart';
+import '../models/payout.dart';
 import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
 import '../repositories/wallet_repository.dart';
@@ -101,10 +102,8 @@ class _WalletFormView extends StatelessWidget {
           else
             ...viewModel.payouts.asMap().entries.map(
               (entry) => _PayoutTile(
-                index: entry.key,
-                label: entry.value.label,
-                amount: entry.value.amount,
-                dayOfMonth: entry.value.dayOfMonth,
+                payout: entry.value,
+                onTap: () => _editPayout(context, viewModel, entry.key),
                 onRemove: () => viewModel.removePayoutAt(entry.key),
               ),
             ),
@@ -169,7 +168,29 @@ class _WalletFormView extends StatelessWidget {
     viewModel.addPayout(
       label: draft.label,
       amount: draft.amount,
-      dayOfMonth: draft.dayOfMonth,
+      day: draft.day,
+      schedule: draft.schedule,
+    );
+  }
+
+  Future<void> _editPayout(
+    BuildContext context,
+    WalletFormViewModel viewModel,
+    int index,
+  ) async {
+    final draft = await PayoutEditorSheet.show(
+      context,
+      existing: viewModel.payouts,
+      payout: viewModel.payouts[index],
+    );
+    if (draft == null) return;
+
+    viewModel.updatePayoutAt(
+      index,
+      label: draft.label,
+      amount: draft.amount,
+      day: draft.day,
+      schedule: draft.schedule,
     );
   }
 }
@@ -258,17 +279,13 @@ class _ColorSelector extends StatelessWidget {
 
 class _PayoutTile extends StatelessWidget {
   const _PayoutTile({
-    required this.index,
-    required this.label,
-    required this.amount,
-    required this.dayOfMonth,
+    required this.payout,
+    required this.onTap,
     required this.onRemove,
   });
 
-  final int index;
-  final String label;
-  final double amount;
-  final int dayOfMonth;
+  final Payout payout;
+  final VoidCallback onTap;
   final VoidCallback onRemove;
 
   @override
@@ -279,18 +296,21 @@ class _PayoutTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Card(
         child: ListTile(
+          onTap: onTap,
           leading: CircleAvatar(
             backgroundColor: theme.colorScheme.primaryContainer,
             child: Text(
-              '$dayOfMonth',
+              '${payout.day}',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          title: Text(label),
-          subtitle: Text(formatMoney(amount)),
+          title: Text(payout.label),
+          subtitle: Text(
+            '${formatMoney(payout.amount)} · ${payout.scheduleLabel}',
+          ),
           trailing: IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.close),

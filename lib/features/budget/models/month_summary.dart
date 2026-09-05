@@ -1,5 +1,6 @@
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense.dart';
+import '../../expenses/models/expense_month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
 import '../../wallets/models/receipt.dart';
@@ -19,24 +20,40 @@ class MonthSummary {
     required List<ExpensePayment> payments,
     required List<Receipt> receipts,
     required List<Wallet> wallets,
+    List<ExpenseMonth> monthAmounts = const <ExpenseMonth>[],
   }) {
-    final paymentsByExpense = <int, ExpensePayment>{
-      for (final payment in payments)
-        if (payment.month == month) payment.expenseId: payment,
+    final paymentsByExpense = <int, List<ExpensePayment>>{};
+    for (final payment in payments) {
+      if (payment.month != month) continue;
+      paymentsByExpense
+          .putIfAbsent(payment.expenseId, () => <ExpensePayment>[])
+          .add(payment);
+    }
+
+    final amountByExpense = <int, double>{
+      for (final entry in monthAmounts)
+        if (entry.month == month) entry.expenseId: entry.amount,
     };
 
     final occurrences = <ExpenseOccurrence>[];
     for (final expense in expenses) {
       final occurrence = expense.occurrenceIn(month);
       if (occurrence == null) continue;
-      occurrences.add(occurrence.withPayment(paymentsByExpense[expense.id]));
+      occurrences.add(
+        occurrence.withLedger(
+          monthAmount: amountByExpense[expense.id],
+          payments: paymentsByExpense[expense.id] ?? const <ExpensePayment>[],
+        ),
+      );
     }
     occurrences.sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
     return MonthSummary(
       month: month,
       occurrences: occurrences,
-      receipts: receipts.where((receipt) => receipt.month == month).toList(),
+      receipts: receipts
+          .where((receipt) => receipt.month == month && receipt.counts)
+          .toList(),
       wallets: wallets,
     );
   }
@@ -64,11 +81,21 @@ class MonthSummary {
   List<ExpenseOccurrence> get overdueOccurrences =>
       occurrences.where((occurrence) => occurrence.isOverdue).toList();
 
+  ExpenseOccurrence? occurrenceOf(int expenseId) {
+    for (final occurrence in occurrences) {
+      if (occurrence.expense.id == expenseId) return occurrence;
+    }
+    return null;
+  }
+
+  List<Receipt> get unconfirmedReceipts =>
+      receipts.where((receipt) => receipt.isPredicted).toList();
+
   double get totalExpenses =>
       occurrences.fold(0, (total, occurrence) => total + occurrence.amount);
 
   double get totalPaid =>
-      paidOccurrences.fold(0, (total, occurrence) => total + occurrence.amount);
+      occurrences.fold(0, (total, occurrence) => total + occurrence.paidAmount);
 
   double get totalPending => totalExpenses - totalPaid;
 

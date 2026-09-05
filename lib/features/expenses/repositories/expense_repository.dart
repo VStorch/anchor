@@ -4,6 +4,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/state/data_changes.dart';
 import '../../../core/utils/month.dart';
 import '../models/expense.dart';
+import '../models/expense_month.dart';
 import '../models/expense_payment.dart';
 
 class ExpenseRepository {
@@ -23,11 +24,18 @@ class ExpenseRepository {
 
   Future<void> saveExpense(Expense expense) async {
     final db = await _database.database;
-    await db.insert(
-      AppDatabase.expensesTable,
-      expense.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final values = expense.toMap();
+
+    if (expense.id == null) {
+      await db.insert(AppDatabase.expensesTable, values);
+    } else {
+      await db.update(
+        AppDatabase.expensesTable,
+        values,
+        where: 'id = ?',
+        whereArgs: [expense.id],
+      );
+    }
     _changes.publish();
   }
 
@@ -43,24 +51,68 @@ class ExpenseRepository {
 
   Future<List<ExpensePayment>> fetchPayments() async {
     final db = await _database.database;
-    final rows = await db.query(AppDatabase.expensePaymentsTable);
+    final rows = await db.query(
+      AppDatabase.expensePaymentsTable,
+      orderBy: 'paid_at ASC, id ASC',
+    );
     return rows.map(ExpensePayment.fromMap).toList();
   }
 
   Future<void> savePayment(ExpensePayment payment) async {
     final db = await _database.database;
-    await db.insert(
+    if (payment.id == null) {
+      await db.insert(AppDatabase.expensePaymentsTable, payment.toMap());
+    } else {
+      await db.update(
+        AppDatabase.expensePaymentsTable,
+        payment.toMap(),
+        where: 'id = ?',
+        whereArgs: [payment.id],
+      );
+    }
+    _changes.publish();
+  }
+
+  Future<void> deletePayment(int id) async {
+    final db = await _database.database;
+    await db.delete(
       AppDatabase.expensePaymentsTable,
-      payment.toMap(),
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.publish();
+  }
+
+  Future<void> deletePaymentsOf(int expenseId, Month month) async {
+    final db = await _database.database;
+    await db.delete(
+      AppDatabase.expensePaymentsTable,
+      where: 'expense_id = ? AND month_key = ?',
+      whereArgs: [expenseId, month.key],
+    );
+    _changes.publish();
+  }
+
+  Future<List<ExpenseMonth>> fetchMonthAmounts() async {
+    final db = await _database.database;
+    final rows = await db.query(AppDatabase.expenseMonthsTable);
+    return rows.map(ExpenseMonth.fromMap).toList();
+  }
+
+  Future<void> saveMonthAmount(ExpenseMonth monthAmount) async {
+    final db = await _database.database;
+    await db.insert(
+      AppDatabase.expenseMonthsTable,
+      monthAmount.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     _changes.publish();
   }
 
-  Future<void> deletePayment(int expenseId, Month month) async {
+  Future<void> clearMonthAmount(int expenseId, Month month) async {
     final db = await _database.database;
     await db.delete(
-      AppDatabase.expensePaymentsTable,
+      AppDatabase.expenseMonthsTable,
       where: 'expense_id = ? AND month_key = ?',
       whereArgs: [expenseId, month.key],
     );

@@ -10,11 +10,14 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
+  static const int version = 2;
+
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
   static const String receiptsTable = 'receipts';
   static const String expensesTable = 'expenses';
   static const String expensePaymentsTable = 'expense_payments';
+  static const String expenseMonthsTable = 'expense_months';
 
   final DatabaseFactory _factory;
   final String? _filePath;
@@ -35,17 +38,24 @@ class AppDatabase {
     return _factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 1,
+        version: version,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
-        onCreate: (db, _) async {
-          final batch = db.batch();
-          for (final statement in _schema) {
-            batch.execute(statement);
+        onCreate: (db, _) => _run(db, _schema),
+        onUpgrade: (db, from, to) async {
+          for (var target = from + 1; target <= to; target++) {
+            await _run(db, _migrations[target] ?? const <String>[]);
           }
-          await batch.commit(noResult: true);
         },
       ),
     );
+  }
+
+  static Future<void> _run(Database db, List<String> statements) async {
+    final batch = db.batch();
+    for (final statement in statements) {
+      batch.execute(statement);
+    }
+    await batch.commit(noResult: true);
   }
 
   static const List<String> _schema = <String>[
@@ -64,7 +74,8 @@ class AppDatabase {
       wallet_id INTEGER NOT NULL REFERENCES $walletsTable(id) ON DELETE CASCADE,
       label TEXT NOT NULL,
       amount REAL NOT NULL,
-      day_of_month INTEGER NOT NULL
+      day_of_month INTEGER NOT NULL,
+      schedule_kind TEXT NOT NULL DEFAULT 'day_of_month'
     )
     ''',
     '''
@@ -74,7 +85,8 @@ class AppDatabase {
       payout_id INTEGER REFERENCES $payoutsTable(id) ON DELETE SET NULL,
       month_key TEXT NOT NULL,
       amount REAL NOT NULL,
-      received_at TEXT NOT NULL
+      received_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'confirmed'
     )
     ''',
     'CREATE UNIQUE INDEX idx_receipt_payout_month ON $receiptsTable(payout_id, month_key)',
@@ -103,6 +115,33 @@ class AppDatabase {
       paid_at TEXT NOT NULL
     )
     ''',
-    'CREATE UNIQUE INDEX idx_payment_expense_month ON $expensePaymentsTable(expense_id, month_key)',
+    'CREATE INDEX idx_payment_expense_month ON $expensePaymentsTable(expense_id, month_key)',
+    '''
+    CREATE TABLE $expenseMonthsTable (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      expense_id INTEGER NOT NULL REFERENCES $expensesTable(id) ON DELETE CASCADE,
+      month_key TEXT NOT NULL,
+      amount REAL NOT NULL
+    )
+    ''',
+    'CREATE UNIQUE INDEX idx_expense_month ON $expenseMonthsTable(expense_id, month_key)',
   ];
+
+  static const Map<int, List<String>> _migrations = <int, List<String>>{
+    2: <String>[
+      "ALTER TABLE $payoutsTable ADD COLUMN schedule_kind TEXT NOT NULL DEFAULT 'day_of_month'",
+      "ALTER TABLE $receiptsTable ADD COLUMN status TEXT NOT NULL DEFAULT 'confirmed'",
+      'DROP INDEX idx_payment_expense_month',
+      'CREATE INDEX idx_payment_expense_month ON $expensePaymentsTable(expense_id, month_key)',
+      '''
+      CREATE TABLE $expenseMonthsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        expense_id INTEGER NOT NULL REFERENCES $expensesTable(id) ON DELETE CASCADE,
+        month_key TEXT NOT NULL,
+        amount REAL NOT NULL
+      )
+      ''',
+      'CREATE UNIQUE INDEX idx_expense_month ON $expenseMonthsTable(expense_id, month_key)',
+    ],
+  };
 }

@@ -2,6 +2,7 @@ import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/models/month_summary.dart';
 import 'package:anchor/features/budget/models/wallet_summary.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/models/expense_month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
@@ -23,9 +24,7 @@ Wallet buildWallet({
     kind: kind,
     colorIndex: 0,
     createdAt: DateTime(2026),
-    payouts: [
-      Payout(walletId: id, label: 'Entrada', amount: monthly, dayOfMonth: 5),
-    ],
+    payouts: [Payout(walletId: id, label: 'Entrada', amount: monthly, day: 5)],
   );
 }
 
@@ -146,6 +145,58 @@ void main() {
         summary.occurrences.map((occurrence) => occurrence.dueDate),
         isA<Iterable<DateTime>>(),
       );
+    });
+  });
+
+  group('MonthSummary com pagamento dividido', () {
+    final split = [
+      ExpensePayment(
+        expenseId: 3,
+        walletId: 2,
+        month: august,
+        amount: 200,
+        paidAt: DateTime(2026, 8, 10),
+      ),
+      ExpensePayment(
+        expenseId: 3,
+        walletId: 1,
+        month: august,
+        amount: 100,
+        paidAt: DateTime(2026, 8, 11),
+      ),
+    ];
+
+    MonthSummary buildSplit({List<ExpenseMonth> monthAmounts = const []}) =>
+        MonthSummary.build(
+          month: august,
+          expenses: expenses,
+          payments: [...payments, ...split],
+          receipts: receipts,
+          wallets: [salary, voucher],
+          monthAmounts: monthAmounts,
+        );
+
+    test('soma as duas carteiras na mesma despesa', () {
+      final occurrence = buildSplit().occurrenceOf(3)!;
+
+      expect(occurrence.paidAmount, 300);
+      expect(occurrence.isPaid, isTrue);
+      expect(occurrence.paidWalletIds, [2, 1]);
+    });
+
+    test('conta o valor dividido no total pago do mês', () {
+      expect(buildSplit().totalPaid, 800);
+      expect(buildSplit().totalPending, 200);
+    });
+
+    test('o valor do mês entra no total no lugar do valor da regra', () {
+      final summary = buildSplit(
+        monthAmounts: [ExpenseMonth(expenseId: 3, month: august, amount: 250)],
+      );
+
+      expect(summary.totalExpenses, 950);
+      expect(summary.occurrenceOf(3)!.amount, 250);
+      expect(summary.occurrenceOf(3)!.isPaid, isTrue);
     });
   });
 

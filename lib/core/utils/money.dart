@@ -14,6 +14,8 @@ double parseMoney(String text) {
   return int.parse(digits) / 100;
 }
 
+bool coversAmount(double paid, double total) => paid >= total - 0.005;
+
 class MoneyInputFormatter extends TextInputFormatter {
   static const int _maxDigits = 12;
 

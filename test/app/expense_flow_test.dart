@@ -1,5 +1,14 @@
 import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
+import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/features/expenses/views/widgets/expense_ledger_sheet.dart';
+import 'package:anchor/features/wallets/models/payout.dart';
+import 'package:anchor/features/wallets/models/wallet.dart';
+import 'package:anchor/features/wallets/models/wallet_kind.dart';
+import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:anchor/core/widgets/money_field.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -40,6 +49,125 @@ void main() {
     await _createInstallmentExpense(tester);
     await _payFirstExpense(tester);
   });
+
+  testWidgets('divide o pagamento do mercado entre o vale e o salário', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await _seedMarketExpense(database);
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(AnchorApp(settings: settings, database: database));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pagar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpenseLedgerSheet), findsOneWidget);
+    expect(_inSheet('Falta'), findsOneWidget);
+    expect(_inSheet('600,00'), findsWidgets);
+
+    await _addLedgerPayment(tester, wallet: 'Vale mercado', digits: '40000');
+    expect(_inSheet('Falta'), findsOneWidget);
+    expect(_inSheet('200,00'), findsWidgets);
+
+    await _addLedgerPayment(tester, wallet: 'Salário', digits: '20000');
+
+    expect(_inSheet('Quitada'), findsOneWidget);
+    expect(_inSheet('Falta'), findsNothing);
+    expect(find.text('Desfazer pagamentos'), findsOneWidget);
+
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Paga'), findsOneWidget);
+  });
+}
+
+Future<void> _seedMarketExpense(AppDatabase database) async {
+  final changes = DataChanges();
+  final wallets = WalletRepository(database, changes);
+  final expenses = ExpenseRepository(database, changes);
+  final today = DateTime.now();
+
+  final salaryId = await wallets.saveWallet(
+    Wallet(
+      name: 'Salário',
+      kind: WalletKind.salary,
+      colorIndex: 0,
+      createdAt: DateTime(today.year, today.month),
+    ),
+  );
+  await wallets.savePayout(
+    Payout(walletId: salaryId, label: 'Mensal', amount: 3000, day: 1),
+  );
+
+  final voucherId = await wallets.saveWallet(
+    Wallet(
+      name: 'Vale mercado',
+      kind: WalletKind.benefit,
+      colorIndex: 1,
+      createdAt: DateTime(today.year, today.month),
+    ),
+  );
+  await wallets.savePayout(
+    Payout(walletId: voucherId, label: 'Mensal', amount: 600, day: 1),
+  );
+
+  await expenses.saveExpense(
+    Expense(
+      name: 'Mercado',
+      type: ExpenseType.recurring,
+      amount: 600,
+      dueDay: 10,
+      startMonth: Month.current(),
+      walletId: voucherId,
+      createdAt: DateTime.now(),
+    ),
+  );
+}
+
+Finder _inSheet(String text) => find.descendant(
+  of: find.byType(ExpenseLedgerSheet),
+  matching: find.textContaining(text),
+);
+
+Future<void> _addLedgerPayment(
+  WidgetTester tester, {
+  required String wallet,
+  required String digits,
+}) async {
+  await tester.tap(find.text('Adicionar pagamento'));
+  await tester.pumpAndSettle();
+
+  await tester.tap(
+    find.descendant(of: find.byType(ChoiceChip), matching: find.text(wallet)),
+  );
+  await tester.pumpAndSettle();
+
+  await tester.enterText(
+    find.descendant(
+      of: find.byType(MoneyField),
+      matching: find.byType(TextField),
+    ),
+    digits,
+  );
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.text('Lançar'));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _createSalaryWallet(WidgetTester tester) async {
@@ -126,12 +254,14 @@ Future<void> _payFirstExpense(WidgetTester tester) async {
   await tester.tap(find.text('Pagar'));
   await tester.pumpAndSettle();
 
-  expect(find.text('Pagar Geladeira'), findsOneWidget);
+  expect(find.byType(ExpenseLedgerSheet), findsOneWidget);
 
-  await tester.tap(find.text('Salário').last);
+  await tester.tap(find.text('Quitar com Salário'));
   await tester.pumpAndSettle();
 
-  await tester.tap(find.text('Confirmar pagamento'));
+  expect(_inSheet('Quitada'), findsOneWidget);
+
+  await tester.tapAt(const Offset(10, 10));
   await tester.pumpAndSettle();
 
   expect(find.text('Paga'), findsOneWidget);

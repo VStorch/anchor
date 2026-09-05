@@ -7,6 +7,7 @@ import '../../budget/models/month_summary.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../budget/services/budget_service.dart';
 import '../models/receipt.dart';
+import '../models/receipt_status.dart';
 import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
 import '../repositories/wallet_repository.dart';
@@ -40,7 +41,9 @@ class WalletsViewModel extends ReactiveViewModel {
       summaries.where((summary) => summary.wallet.kind == kind).toList();
 
   List<Receipt> get monthReceipts => _snapshot.receipts
-      .where((receipt) => receipt.month == _monthSelection.current)
+      .where(
+        (receipt) => receipt.month == _monthSelection.current && receipt.counts,
+      )
       .toList();
 
   bool get isEmpty => summaries.isEmpty;
@@ -80,8 +83,20 @@ class WalletsViewModel extends ReactiveViewModel {
     ),
   );
 
-  Future<void> deleteReceipt(Receipt receipt) =>
-      _walletRepository.deleteReceipt(receipt.id!);
+  Future<void> confirmReceipt(
+    Receipt receipt, {
+    required double amount,
+    required DateTime receivedAt,
+  }) => _walletRepository.saveReceipt(
+    receipt.copyWith(
+      amount: amount,
+      receivedAt: receivedAt,
+      status: ReceiptStatus.confirmed,
+    ),
+  );
+
+  Future<void> discardReceipt(Receipt receipt) =>
+      _walletRepository.discardReceipt(receipt);
 
   Wallet? walletById(int id) => _snapshot.walletById(id);
 

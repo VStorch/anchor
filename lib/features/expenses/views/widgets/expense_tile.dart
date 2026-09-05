@@ -9,13 +9,13 @@ class ExpenseTile extends StatelessWidget {
   const ExpenseTile({
     super.key,
     required this.occurrence,
-    required this.wallet,
+    required this.wallets,
     required this.onTap,
     required this.onTogglePaid,
   });
 
   final ExpenseOccurrence occurrence;
-  final Wallet? wallet;
+  final List<Wallet> wallets;
   final VoidCallback onTap;
   final VoidCallback onTogglePaid;
 
@@ -80,6 +80,10 @@ class ExpenseTile extends StatelessWidget {
                         ],
                       ],
                     ),
+                    if (occurrence.isPartlyPaid) ...[
+                      const SizedBox(height: 8),
+                      _PartialBar(occurrence: occurrence),
+                    ],
                   ],
                 ),
               ),
@@ -94,10 +98,7 @@ class ExpenseTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  _PaidToggle(
-                    isPaid: occurrence.isPaid,
-                    onPressed: onTogglePaid,
-                  ),
+                  _PaidToggle(occurrence: occurrence, onPressed: onTogglePaid),
                 ],
               ),
             ],
@@ -113,9 +114,59 @@ class ExpenseTile extends StatelessWidget {
       installment != null
           ? 'Parcela $installment'
           : occurrence.expense.type.label,
+      ..._walletNames(),
     ];
-    if (wallet != null) parts.add(wallet!.name);
     return parts.join(' · ');
+  }
+
+  List<String> _walletNames() {
+    final ids = occurrence.paidWalletIds.isNotEmpty
+        ? occurrence.paidWalletIds
+        : <int>[
+            if (occurrence.plannedWalletId != null) occurrence.plannedWalletId!,
+          ];
+
+    return ids
+        .map(
+          (id) => wallets.where((wallet) => wallet.id == id).firstOrNull?.name,
+        )
+        .whereType<String>()
+        .toList();
+  }
+}
+
+class _PartialBar extends StatelessWidget {
+  const _PartialBar({required this.occurrence});
+
+  final ExpenseOccurrence occurrence;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: occurrence.paidRatio,
+            minHeight: 4,
+            color: theme.colorScheme.primary,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${formatMoney(occurrence.paidAmount)} pagos · faltam ${formatMoney(occurrence.remaining)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -161,9 +212,9 @@ class _DueBadge extends StatelessWidget {
 }
 
 class _PaidToggle extends StatelessWidget {
-  const _PaidToggle({required this.isPaid, required this.onPressed});
+  const _PaidToggle({required this.occurrence, required this.onPressed});
 
-  final bool isPaid;
+  final ExpenseOccurrence occurrence;
   final VoidCallback onPressed;
 
   @override
@@ -176,12 +227,24 @@ class _PaidToggle extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: isPaid
+        foregroundColor: occurrence.isPaid
             ? theme.colorScheme.primary
             : theme.colorScheme.onSurfaceVariant,
       ),
-      icon: Icon(isPaid ? Icons.check_circle : Icons.circle_outlined, size: 16),
-      label: Text(isPaid ? 'Paga' : 'Pagar'),
+      icon: Icon(_icon, size: 16),
+      label: Text(_label),
     );
   }
+
+  IconData get _icon => occurrence.isPaid
+      ? Icons.check_circle
+      : occurrence.isPartlyPaid
+      ? Icons.incomplete_circle
+      : Icons.circle_outlined;
+
+  String get _label => occurrence.isPaid
+      ? 'Paga'
+      : occurrence.isPartlyPaid
+      ? 'Parcial'
+      : 'Pagar';
 }

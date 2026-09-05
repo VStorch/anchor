@@ -3,25 +3,33 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/day_of_month_picker.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../models/payout.dart';
+import '../../models/payout_schedule.dart';
 
 class PayoutDraft {
   const PayoutDraft({
     required this.label,
     required this.amount,
-    required this.dayOfMonth,
+    required this.day,
+    required this.schedule,
   });
 
   final String label;
   final double amount;
-  final int dayOfMonth;
+  final int day;
+  final PayoutSchedule schedule;
 }
 
 class PayoutEditorSheet extends StatefulWidget {
-  const PayoutEditorSheet({super.key, this.takenDays = const <int>{}});
+  const PayoutEditorSheet({
+    super.key,
+    this.payout,
+    this.takenDays = const <int>{},
+  });
 
   static Future<PayoutDraft?> show(
     BuildContext context, {
     required List<Payout> existing,
+    Payout? payout,
   }) {
     return showModalBottomSheet<PayoutDraft>(
       context: context,
@@ -29,11 +37,16 @@ class PayoutEditorSheet extends StatefulWidget {
       useSafeArea: true,
       showDragHandle: true,
       builder: (_) => PayoutEditorSheet(
-        takenDays: existing.map((payout) => payout.dayOfMonth).toSet(),
+        payout: payout,
+        takenDays: existing
+            .where((other) => other != payout)
+            .map((other) => other.day)
+            .toSet(),
       ),
     );
   }
 
+  final Payout? payout;
   final Set<int> takenDays;
 
   @override
@@ -41,9 +54,18 @@ class PayoutEditorSheet extends StatefulWidget {
 }
 
 class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
-  final TextEditingController _labelController = TextEditingController();
-  double _amount = 0;
-  int _day = 5;
+  late final TextEditingController _labelController = TextEditingController(
+    text: widget.payout?.label ?? '',
+  );
+  late double _amount = widget.payout?.amount ?? 0;
+  late int _day = widget.payout?.day ?? 5;
+  late PayoutSchedule _schedule =
+      widget.payout?.schedule ?? PayoutSchedule.dayOfMonth;
+
+  bool get _isEditing => widget.payout != null;
+
+  int get _dayCount =>
+      _schedule == PayoutSchedule.businessDay ? Payout.maxBusinessDay : 31;
 
   @override
   void dispose() {
@@ -68,7 +90,7 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Novo recebimento',
+              _isEditing ? 'Editar recebimento' : 'Novo recebimento',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -89,8 +111,23 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
               onChanged: (value) => setState(() => _amount = value),
             ),
             const SizedBox(height: 20),
+            SegmentedButton<PayoutSchedule>(
+              segments: PayoutSchedule.values
+                  .map(
+                    (schedule) => ButtonSegment(
+                      value: schedule,
+                      label: Text(schedule.label),
+                    ),
+                  )
+                  .toList(),
+              selected: {_schedule},
+              onSelectionChanged: _changeSchedule,
+            ),
+            const SizedBox(height: 20),
             Text(
-              'Dia do recebimento',
+              _schedule == PayoutSchedule.businessDay
+                  ? 'Cai no $_dayº dia útil'
+                  : 'Cai no dia $_day',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -98,25 +135,36 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
             const SizedBox(height: 12),
             DayOfMonthPicker(
               selectedDay: _day,
+              dayCount: _dayCount,
               highlightedDays: widget.takenDays,
               onDaySelected: (day) => setState(() => _day = day),
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: _amount > 0
-                  ? () => Navigator.of(context).pop(
-                      PayoutDraft(
-                        label: _labelController.text,
-                        amount: _amount,
-                        dayOfMonth: _day,
-                      ),
-                    )
-                  : null,
-              child: const Text('Adicionar ao calendário'),
+              onPressed: _amount > 0 ? _submit : null,
+              child: Text(
+                _isEditing ? 'Salvar recebimento' : 'Adicionar ao calendário',
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  void _changeSchedule(Set<PayoutSchedule> selection) {
+    setState(() {
+      _schedule = selection.first;
+      if (_day > _dayCount) _day = _dayCount;
+    });
+  }
+
+  void _submit() => Navigator.of(context).pop(
+    PayoutDraft(
+      label: _labelController.text,
+      amount: _amount,
+      day: _day,
+      schedule: _schedule,
+    ),
+  );
 }

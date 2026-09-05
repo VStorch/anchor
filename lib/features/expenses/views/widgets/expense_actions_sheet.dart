@@ -4,7 +4,7 @@ import '../../../../core/utils/money.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/expense_type.dart';
 
-enum ExpenseAction { edit, undoPayment, endRecurring, delete }
+enum ExpenseAction { pay, edit, undoPayment, endRecurring, delete }
 
 class ExpenseActionsSheet extends StatelessWidget {
   const ExpenseActionsSheet({super.key, required this.occurrence});
@@ -47,7 +47,8 @@ class ExpenseActionsSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${expense.type.label} · ${formatMoney(occurrence.amount)}'
-                  '${occurrence.installmentLabel != null ? ' · parcela ${occurrence.installmentLabel}' : ''}',
+                  '${occurrence.installmentLabel != null ? ' · parcela ${occurrence.installmentLabel}' : ''}'
+                  '${occurrence.isPartlyPaid ? ' · ${formatMoney(occurrence.paidAmount)} pagos' : ''}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -57,14 +58,22 @@ class ExpenseActionsSheet extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.payments_outlined),
+            title: Text(
+              occurrence.isPaid ? 'Ver pagamentos' : 'Lançar pagamento',
+            ),
+            subtitle: const Text('Divide entre carteiras e ajusta o valor'),
+            onTap: () => Navigator.of(context).pop(ExpenseAction.pay),
+          ),
+          ListTile(
             leading: const Icon(Icons.edit_outlined),
             title: const Text('Editar despesa'),
             onTap: () => Navigator.of(context).pop(ExpenseAction.edit),
           ),
-          if (occurrence.isPaid)
+          if (occurrence.paidAmount > 0)
             ListTile(
               leading: const Icon(Icons.undo),
-              title: const Text('Desfazer pagamento'),
+              title: const Text('Desfazer pagamentos'),
               onTap: () => Navigator.of(context).pop(ExpenseAction.undoPayment),
             ),
           if (expense.type == ExpenseType.recurring)
