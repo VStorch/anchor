@@ -97,8 +97,8 @@ void main() {
   });
 
   testWidgets('edita o valor do mês pela tabela', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2200);
-    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
 
     await _seedMarketExpense(database);
@@ -121,6 +121,14 @@ void main() {
 
     expect(find.byType(MonthTable), findsOneWidget);
     expect(find.text('Total'), findsOneWidget);
+
+    final screenWidth =
+        tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    expect(
+      tester.getRect(find.text('Falta')).right,
+      lessThanOrEqualTo(screenWidth),
+      reason: 'a coluna Falta precisa caber na largura do celular',
+    );
 
     await tester.tap(
       find

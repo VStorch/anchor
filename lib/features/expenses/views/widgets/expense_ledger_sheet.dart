@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/money.dart';
@@ -69,7 +70,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Vence em ${occurrence.dueDate.day} de ${occurrence.month.label}'
+              'Vence em ${DateFormat.yMMMMd('pt_BR').format(occurrence.dueDate)}'
               '${occurrence.installmentLabel != null ? ' · parcela ${occurrence.installmentLabel}' : ''}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

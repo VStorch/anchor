@@ -16,7 +16,7 @@ class MonthTable extends StatefulWidget {
     required this.onPaidChanged,
   });
 
-  static const double _minWidth = 460;
+  static const double _minWidth = 380;
 
   final List<ExpenseOccurrence> occurrences;
   final ValueChanged<ExpenseOccurrence> onOpen;
@@ -41,13 +41,13 @@ class _MonthTableState extends State<MonthTable> {
         child: SizedBox(
           width: max(constraints.maxWidth, MonthTable._minWidth),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
             child: Table(
               columnWidths: const <int, TableColumnWidth>{
                 0: FlexColumnWidth(),
-                1: FixedColumnWidth(108),
-                2: FixedColumnWidth(108),
-                3: FixedColumnWidth(100),
+                1: FixedColumnWidth(88),
+                2: FixedColumnWidth(88),
+                3: FixedColumnWidth(84),
               },
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
