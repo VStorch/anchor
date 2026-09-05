@@ -10,11 +10,16 @@ falta pagar no mês.
 - **Três tipos de despesa**: recorrente (sem prazo), parcelada e avulsa.
 - **Parcelamentos já em andamento**: informe o total de parcelas e quantas já foram quitadas — o app
   continua a contagem de onde você parou.
+- **Valor por mês**: a conta de luz ou o mercado podem custar diferente neste mês sem mexer no cadastro.
+- **Pagamento dividido**: a mesma despesa pode ser paga em partes, cada uma de uma carteira — R$ 400 no
+  vale mercado e R$ 200 no salário, por exemplo.
 - **Carteiras**: salário e benefícios (vale refeição, vale mercado...), cada um com um calendário
   próprio de recebimento (por exemplo, uma parte no dia 5 e outra no dia 20).
-- **Crédito automático**: a cada data de recebimento que passa, o valor entra na carteira sozinho.
-- **Pagamento por origem**: ao quitar uma despesa você escolhe de qual carteira o dinheiro saiu.
+- **Calendário por dia útil**: o recebimento pode ser marcado como "5º dia útil" em vez de um dia fixo.
+- **Entradas previstas**: a cada data que passa o valor entra na carteira sozinho, marcado como
+  previsto; você confirma com o dia e o valor que caíram de verdade.
 - **Resumo do mês**: total recebido, total de despesas, o que já foi pago e o que falta.
+- **Tabela do mês**: as despesas em grade, com valor e pago editáveis na própria célula.
 - **Agenda do mês**: entradas e vencimentos organizados por dia.
 - **Tema**: claro, escuro ou padrão do sistema, em tons de verde.
 
