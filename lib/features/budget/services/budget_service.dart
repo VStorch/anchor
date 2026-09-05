@@ -25,7 +25,6 @@ class BudgetService {
       expenses: expenses,
       payments: payments,
       receipts: receipts,
-      wallets: wallets,
       monthAmounts: monthAmounts,
       outflows: outflows,
     );

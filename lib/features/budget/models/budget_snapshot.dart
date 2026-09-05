@@ -33,6 +33,9 @@ class BudgetSnapshot {
 
   bool get hasWallets => wallets.isNotEmpty;
 
+  double get walletsBalance =>
+      walletSummaries.fold(0, (total, summary) => total + summary.balance);
+
   WalletSummary? summaryFor(int? walletId) {
     if (walletId == null) return null;
     for (final summary in walletSummaries) {

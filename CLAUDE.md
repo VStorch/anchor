@@ -40,6 +40,13 @@ Wiring is `provider`; persistence is `sqflite`.
 
 ### The two cross-cutting pieces
 
+The dashboard card headlines `BudgetSnapshot.walletsBalance` — the money that exists — and the three
+figures under it (`Entrou`/`Saiu`/`Sobrou`) are all month-scoped and all measured from what actually
+happened, so `totalReceived - totalSpent == balance` reconciles on screen. `MonthSummary` therefore
+carries no notion of planned income; the payout calendar's total lives on `Wallet.monthlyIncome` and
+is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a real
+one in the same block.**
+
 - **`features/budget/`** is not a screen. It is the aggregation layer every other feature reads:
   `BudgetService.loadSnapshot(month)` reads all four repositories and returns a `BudgetSnapshot`
   (`MonthSummary` + `WalletSummary` per wallet + raw lists). Dashboard, Expenses and Wallets all render
@@ -105,8 +112,7 @@ no holiday table, so a month with a holiday early on needs the receipt corrected
 A receipt also carries a `ReceiptKind`. `adjustment` is how the user says "this wallet really holds X"
 — `adjustBalance` stores only the difference, so a balance that existed before the app did is one
 entry. Adjustments count in `WalletSummary.balance` but never in `receivedInMonth` or
-`MonthSummary.totalReceived`, which is why the dashboard card is labelled "Saldo do mês": it is the
-month's result, not the wallets' balance.
+`MonthSummary.totalReceived`.
 
 A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts in the
 balance, and the UI marks it "a confirmar"), the user confirms it with the real day and amount, and

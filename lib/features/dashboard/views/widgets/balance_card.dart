@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/utils/money.dart';
-import '../../../budget/models/month_summary.dart';
+import '../../../budget/models/budget_snapshot.dart';
 
 class BalanceCard extends StatelessWidget {
-  const BalanceCard({super.key, required this.summary});
+  const BalanceCard({super.key, required this.snapshot});
 
-  final MonthSummary summary;
+  final BudgetSnapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isNegative = summary.balance < 0;
+    final summary = snapshot.summary;
+    final balance = snapshot.walletsBalance;
+    final monthName = DateFormat.MMMM('pt_BR').format(summary.month.firstDay);
 
     return Card(
       color: theme.colorScheme.primary,
@@ -21,17 +24,19 @@ class BalanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Saldo do mês',
+              'Saldo total',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              formatMoney(summary.balance),
+              formatMoney(balance),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: isNegative
+                color: balance < 0
                     ? theme.colorScheme.errorContainer
                     : theme.colorScheme.onPrimary,
               ),
@@ -51,8 +56,9 @@ class BalanceCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               summary.totalPending > 0
-                  ? '${formatMoney(summary.totalPending)} a pagar'
-                  : 'Tudo pago',
+                  ? '${formatMoney(summary.totalPending)} a pagar em $monthName'
+                  : 'Tudo pago em $monthName',
+              maxLines: 2,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onPrimary,
                 fontWeight: FontWeight.w600,
@@ -69,14 +75,14 @@ class BalanceCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _Figure(
-                    label: 'Despesas',
-                    value: formatMoney(summary.totalExpenses),
+                    label: 'Saiu',
+                    value: formatMoney(summary.totalSpent),
                   ),
                 ),
                 Expanded(
                   child: _Figure(
-                    label: 'Sobra',
-                    value: formatMoney(summary.projectedBalance),
+                    label: 'Sobrou',
+                    value: formatMoney(summary.balance),
                   ),
                 ),
               ],
@@ -103,6 +109,8 @@ class _Figure extends StatelessWidget {
       children: [
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
           ),
@@ -110,6 +118,8 @@ class _Figure extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: theme.colorScheme.onPrimary,

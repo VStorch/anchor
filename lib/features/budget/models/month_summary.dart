@@ -5,7 +5,6 @@ import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
 import '../../wallets/models/outflow.dart';
 import '../../wallets/models/receipt.dart';
-import '../../wallets/models/wallet.dart';
 
 class MonthSummary {
   const MonthSummary({
@@ -13,7 +12,6 @@ class MonthSummary {
     required this.occurrences,
     required this.receipts,
     required this.outflows,
-    required this.wallets,
   });
 
   factory MonthSummary.build({
@@ -21,7 +19,6 @@ class MonthSummary {
     required List<Expense> expenses,
     required List<ExpensePayment> payments,
     required List<Receipt> receipts,
-    required List<Wallet> wallets,
     List<ExpenseMonth> monthAmounts = const <ExpenseMonth>[],
     List<Outflow> outflows = const <Outflow>[],
   }) {
@@ -58,7 +55,6 @@ class MonthSummary {
           .where((receipt) => receipt.month == month && receipt.counts)
           .toList(),
       outflows: outflows.where((outflow) => outflow.month == month).toList(),
-      wallets: wallets,
     );
   }
 
@@ -67,14 +63,12 @@ class MonthSummary {
     occurrences: const <ExpenseOccurrence>[],
     receipts: const <Receipt>[],
     outflows: const <Outflow>[],
-    wallets: const <Wallet>[],
   );
 
   final Month month;
   final List<ExpenseOccurrence> occurrences;
   final List<Receipt> receipts;
   final List<Outflow> outflows;
-  final List<Wallet> wallets;
 
   bool get isEmpty =>
       occurrences.isEmpty && receipts.isEmpty && outflows.isEmpty;
@@ -116,12 +110,7 @@ class MonthSummary {
       .where((receipt) => !receipt.isAdjustment)
       .fold(0, (total, receipt) => total + receipt.amount);
 
-  double get expectedIncome =>
-      wallets.fold(0, (total, wallet) => total + wallet.monthlyIncome);
-
   double get balance => totalReceived - totalSpent;
-
-  double get projectedBalance => expectedIncome - totalExpenses;
 
   double get paidRatio =>
       totalExpenses <= 0 ? 0 : (totalPaid / totalExpenses).clamp(0, 1);

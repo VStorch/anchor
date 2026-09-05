@@ -24,7 +24,8 @@ falta pagar no mês.
   previsto; você confirma com o dia e o valor que caíram de verdade.
 - **Movimentações do mês**: tudo que entrou e saiu de cada carteira numa lista só — entradas,
   pagamentos de contas e gastos avulsos.
-- **Resumo do mês**: total recebido, total de despesas, o que já foi pago e o que falta.
+- **Resumo do mês**: o saldo que você tem de verdade em destaque e, abaixo, o que entrou, o que saiu
+  e o que sobrou no mês — os três medidos pelo que aconteceu, não pelo previsto.
 - **Tabela do mês**: as despesas em grade, com valor e pago editáveis na própria célula.
 - **Agenda do mês**: entradas e vencimentos organizados por dia.
 - **Tema**: claro, escuro ou padrão do sistema, em tons de verde.

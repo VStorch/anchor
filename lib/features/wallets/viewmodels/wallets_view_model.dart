@@ -82,8 +82,7 @@ class WalletsViewModel extends ReactiveViewModel {
 
   bool get isEmpty => summaries.isEmpty;
 
-  double get totalBalance =>
-      summaries.fold(0, (total, summary) => total + summary.balance);
+  double get totalBalance => _snapshot.walletsBalance;
 
   double get monthlyIncome => summaries.fold(
     0,

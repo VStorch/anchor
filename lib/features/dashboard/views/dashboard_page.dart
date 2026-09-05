@@ -72,7 +72,7 @@ class DashboardPage extends StatelessWidget {
             onToday: viewModel.goToCurrentMonth,
           ),
           const SizedBox(height: 12),
-          BalanceCard(summary: summary),
+          BalanceCard(snapshot: viewModel.snapshot),
           const SizedBox(height: 20),
           SectionHeader(
             title: 'Carteiras',

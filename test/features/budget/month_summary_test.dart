@@ -108,7 +108,6 @@ void main() {
     expenses: expenses,
     payments: payments,
     receipts: receipts,
-    wallets: [salary, voucher],
   );
 
   group('MonthSummary', () {
@@ -130,13 +129,6 @@ void main() {
 
     test('calcula o saldo como recebido menos pago', () {
       expect(buildSummary().balance, 3100);
-    });
-
-    test('projeta o mês a partir da renda esperada', () {
-      final summary = buildSummary();
-
-      expect(summary.expectedIncome, 3600);
-      expect(summary.projectedBalance, 2600);
     });
 
     test('ordena as ocorrências por vencimento', () {
@@ -174,7 +166,6 @@ void main() {
           expenses: expenses,
           payments: [...payments, ...split],
           receipts: receipts,
-          wallets: [salary, voucher],
           monthAmounts: monthAmounts,
         );
 
@@ -219,7 +210,6 @@ void main() {
       expenses: expenses,
       payments: payments,
       receipts: withAdjustment,
-      wallets: [salary, voucher],
     );
 
     test('não conta como entrada do mês', () {
@@ -261,7 +251,6 @@ void main() {
       expenses: expenses,
       payments: payments,
       receipts: receipts,
-      wallets: [salary, voucher],
       outflows: outflows,
     );
 

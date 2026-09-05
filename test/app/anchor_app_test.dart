@@ -102,13 +102,18 @@ void main() {
     expect(find.text('Cadastrar meu salário'), findsOneWidget);
   });
 
-  testWidgets('lança o salário recebido no saldo do mês', (tester) async {
+  testWidgets('a capa mostra o saldo real e o resultado do mês', (
+    tester,
+  ) async {
     await seedSalaryAndExpense();
     await pumpApp(tester);
 
-    expect(find.text('Saldo do mês'), findsOneWidget);
+    expect(find.text('Saldo total'), findsWidgets);
+    expect(find.text('Entrou'), findsOneWidget);
+    expect(find.text('Saiu'), findsOneWidget);
+    expect(find.text('Sobrou'), findsOneWidget);
     expect(find.textContaining('3.000,00'), findsWidgets);
-    expect(find.textContaining('450,00'), findsWidgets);
+    expect(find.textContaining('450,00 a pagar em'), findsOneWidget);
   });
 
   testWidgets('lista a despesa do mês na aba Despesas', (tester) async {

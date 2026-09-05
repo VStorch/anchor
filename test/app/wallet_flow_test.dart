@@ -3,6 +3,7 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:anchor/core/widgets/money_field.dart';
+import 'package:anchor/features/dashboard/views/widgets/balance_card.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
@@ -76,6 +77,49 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> goToDashboard(WidgetTester tester) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.pie_chart_outline),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('o ajuste de saldo muda a capa sem virar entrada do mês', (
+    tester,
+  ) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Saldo').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '520000',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajustar saldo'));
+    await tester.pumpAndSettle();
+
+    await goToDashboard(tester);
+
+    final card = find.byType(BalanceCard);
+
+    expect(
+      find.descendant(of: card, matching: find.textContaining('5.200,00')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.textContaining('3.000,00')),
+      findsWidgets,
+    );
+  });
+
   testWidgets('confirma a entrada prevista com o valor real', (tester) async {
     await seedSalary();
     await pumpApp(tester);
@@ -130,7 +174,7 @@ void main() {
 
     expect(find.textContaining('5.200,00'), findsWidgets);
     expect(find.text('Ajuste de saldo'), findsOneWidget);
-    expect(find.text('Saldo do mês'), findsNothing);
+    expect(find.text('Recebido'), findsWidgets);
   });
 
   testWidgets('lança um gasto avulso pelo cartão da carteira', (tester) async {
