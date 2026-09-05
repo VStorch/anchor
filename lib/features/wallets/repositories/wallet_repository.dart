@@ -82,12 +82,12 @@ class WalletRepository {
 
   Future<void> deletePayout(int id) async {
     final db = await _database.database;
-    await db.delete(AppDatabase.payoutsTable, where: 'id = ?', whereArgs: [id]);
     await db.delete(
       AppDatabase.receiptsTable,
-      where: 'payout_id = ?',
-      whereArgs: [id],
+      where: 'payout_id = ? AND status = ?',
+      whereArgs: [id, ReceiptStatus.predicted.id],
     );
+    await db.delete(AppDatabase.payoutsTable, where: 'id = ?', whereArgs: [id]);
     _changes.publish();
   }
 

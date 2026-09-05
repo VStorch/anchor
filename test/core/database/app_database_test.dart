@@ -130,6 +130,13 @@ void main() {
       'amount': 600.0,
       'paid_at': DateTime(2026, 8, 10).toIso8601String(),
     });
+    await db.insert('expense_payments', <String, Object?>{
+      'expense_id': 1,
+      'wallet_id': null,
+      'month_key': '2026-07',
+      'amount': 50.0,
+      'paid_at': DateTime(2026, 7, 10).toIso8601String(),
+    });
 
     await db.close();
   });
@@ -156,7 +163,10 @@ void main() {
     expect(receipt.status, ReceiptStatus.confirmed);
     expect(receipt.kind, ReceiptKind.income);
     expect((await expenses.fetchExpenses()).single.name, 'Mercado');
-    expect((await expenses.fetchPayments()).single.amount, 600);
+    expect(
+      (await expenses.fetchPayments()).map((payment) => payment.amount),
+      containsAll(<double>[600, 50]),
+    );
     expect(await expenses.fetchMonthAmounts(), isEmpty);
   });
 
@@ -181,6 +191,22 @@ void main() {
         .single;
 
     expect(adjustment.amount, 2000);
+  });
+
+  test('a migração dá carteira ao pagamento que não tinha', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final payments = await ExpenseRepository(
+      database,
+      DataChanges(),
+    ).fetchPayments();
+
+    expect(payments, hasLength(2));
+    expect(payments.every((payment) => payment.walletId == 1), isTrue);
   });
 
   test('o banco migrado aceita um gasto avulso', () async {
@@ -223,6 +249,6 @@ void main() {
       ),
     );
 
-    expect(await repository.fetchPayments(), hasLength(2));
+    expect(await repository.fetchPayments(), hasLength(3));
   });
 }

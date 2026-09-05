@@ -292,6 +292,51 @@ void main() {
     expect(await repository.fetchReceipts(), isEmpty);
   });
 
+  test('remover o recebimento preserva as entradas já confirmadas', () async {
+    final today = DateTime.now();
+    final walletId = await createSalary(
+      createdAt: DateTime(today.year, today.month, 1),
+    );
+    await repository.savePayout(
+      Payout(walletId: walletId, label: 'Salário', amount: 3000, day: 1),
+    );
+    await repository.registerDuePayouts(await repository.fetchWallets());
+
+    await repository.saveReceipt(
+      (await repository.fetchReceipts()).single.copyWith(
+        amount: 2980,
+        status: ReceiptStatus.confirmed,
+      ),
+    );
+
+    final payout = (await repository.fetchWallets()).single.payouts.single;
+    await repository.deletePayout(payout.id!);
+
+    final receipts = await repository.fetchReceipts();
+
+    expect((await repository.fetchWallets()).single.payouts, isEmpty);
+    expect(receipts, hasLength(1));
+    expect(receipts.single.amount, 2980);
+    expect(receipts.single.payoutId, isNull);
+    expect(receipts.single.isManual, isTrue);
+  });
+
+  test('remover o recebimento leva junto o que ainda era previsto', () async {
+    final today = DateTime.now();
+    final walletId = await createSalary(
+      createdAt: DateTime(today.year, today.month, 1),
+    );
+    await repository.savePayout(
+      Payout(walletId: walletId, label: 'Salário', amount: 3000, day: 1),
+    );
+    await repository.registerDuePayouts(await repository.fetchWallets());
+
+    final payout = (await repository.fetchWallets()).single.payouts.single;
+    await repository.deletePayout(payout.id!);
+
+    expect(await repository.fetchReceipts(), isEmpty);
+  });
+
   test('o gasto avulso sai do saldo da carteira', () async {
     final walletId = await createSalary(createdAt: DateTime.now());
 

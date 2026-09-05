@@ -129,10 +129,16 @@ class ExpensesViewModel extends ReactiveViewModel {
       occurrence,
       id: existing.isEmpty ? null : existing.single.id,
       walletId: existing.isEmpty
-          ? occurrence.plannedWalletId
-          : existing.single.walletId,
+          ? defaultWalletIdFor(occurrence)
+          : existing.single.walletId ?? defaultWalletIdFor(occurrence),
       amount: amount,
     );
+  }
+
+  int? defaultWalletIdFor(ExpenseOccurrence occurrence) {
+    final planned = occurrence.plannedWalletId;
+    if (_snapshot.walletById(planned) != null) return planned;
+    return _snapshot.wallets.isEmpty ? null : _snapshot.wallets.first.id;
   }
 
   Future<void> removePayment(ExpensePayment payment) =>

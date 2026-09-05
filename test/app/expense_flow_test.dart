@@ -15,6 +15,7 @@ import 'package:anchor/core/widgets/money_field.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
+import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -153,6 +154,97 @@ void main() {
     expect(find.textContaining('143,20'), findsWidgets);
     expect(find.textContaining('600,00'), findsNothing);
   });
+
+  testWidgets('o pagamento de despesa sem carteira sai de alguma carteira', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await _seedWalletlessExpense(database);
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(AnchorApp(settings: settings, database: database));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Ver como tabela'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(of: find.byType(MonthTable), matching: find.text('—')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MonthTable),
+        matching: find.byType(TextField),
+      ),
+      '10000',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.account_balance_wallet_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byType(WalletCard);
+
+    expect(
+      find.descendant(of: card, matching: find.textContaining('100,00')),
+      findsOneWidget,
+      reason: 'o gasto precisa aparecer na carteira',
+    );
+    expect(
+      find.descendant(of: card, matching: find.textContaining('2.900,00')),
+      findsOneWidget,
+    );
+  });
+}
+
+Future<void> _seedWalletlessExpense(AppDatabase database) async {
+  final changes = DataChanges();
+  final wallets = WalletRepository(database, changes);
+  final expenses = ExpenseRepository(database, changes);
+  final today = DateTime.now();
+
+  final salaryId = await wallets.saveWallet(
+    Wallet(
+      name: 'Salário',
+      kind: WalletKind.salary,
+      colorIndex: 0,
+      createdAt: DateTime(today.year, today.month),
+    ),
+  );
+  await wallets.savePayout(
+    Payout(walletId: salaryId, label: 'Mensal', amount: 3000, day: 1),
+  );
+
+  await expenses.saveExpense(
+    Expense(
+      name: 'Internet',
+      type: ExpenseType.recurring,
+      amount: 100,
+      dueDay: 10,
+      startMonth: Month.current(),
+      createdAt: DateTime.now(),
+    ),
+  );
 }
 
 Future<void> _seedMarketExpense(AppDatabase database) async {

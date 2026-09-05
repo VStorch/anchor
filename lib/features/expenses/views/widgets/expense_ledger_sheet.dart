@@ -102,7 +102,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
               _PaymentEditor(
                 key: const ValueKey('new-payment'),
                 wallets: wallets,
-                initialWalletId: _defaultWalletId(occurrence, wallets),
+                initialWalletId: viewModel.defaultWalletIdFor(occurrence),
                 initialAmount: occurrence.remaining,
                 onCancel: () => setState(() => _isAddingPayment = false),
                 onConfirm: (walletId, amount) async {
@@ -272,7 +272,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
       );
     }
 
-    final walletId = _defaultWalletId(occurrence, wallets);
+    final walletId = viewModel.defaultWalletIdFor(occurrence);
     final wallet = _walletById(wallets, walletId);
 
     return Column(
@@ -292,12 +292,6 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
         ),
       ],
     );
-  }
-
-  int? _defaultWalletId(ExpenseOccurrence occurrence, List<Wallet> wallets) {
-    final planned = occurrence.plannedWalletId;
-    if (_walletById(wallets, planned) != null) return planned;
-    return wallets.isEmpty ? null : wallets.first.id;
   }
 
   Wallet? _walletById(List<Wallet> wallets, int? id) {

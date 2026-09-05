@@ -85,7 +85,11 @@ mutated:
 - **`expense_payments`** holds *many* rows per expense per month — one per wallet the money came from.
   That is how "R$ 400 do vale + R$ 200 do salário" is stored. Quitada means
   `sum(payments) >= occurrence.amount`, compared with the half-cent tolerance in `coversAmount`
-  (`core/utils/money.dart`).
+  (`core/utils/money.dart`). **A payment must carry a wallet whenever one exists** — go through
+  `ExpensesViewModel.defaultWalletIdFor`, which falls back to the first wallet when the expense was
+  saved as "Definir na hora". A `wallet_id` of null counts in `totalPaid` but in no wallet's balance,
+  so the app says "pago" while the money leaves nowhere; schema v5 backfills the rows that predate
+  the rule.
 - **`expense_months`** holds the amount this particular month really cost (light bill, groceries). A
   missing row means "use the rule's amount"; deleting the row is the "back to the rule" action.
 
@@ -117,8 +121,14 @@ entry. Adjustments count in `WalletSummary.balance` but never in `receivedInMont
 A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts in the
 balance, and the UI marks it "a confirmar"), the user confirms it with the real day and amount, and
 `skipped` is how a calendar receipt is dismissed — deleting the row would only make
-`registerDuePayouts` recreate it. Rows still `predicted` are re-synced to the payout's current amount
+`registerDuePayouts` recreate it. Deleting the payout itself keeps the money it already brought in:
+`deletePayout` removes only the rows still `predicted` and lets `ON DELETE SET NULL` turn the
+confirmed ones into manual receipts. Deleting them outright rewrote the balance of every past month. Rows still `predicted` are re-synced to the payout's current amount
 and date, which is what makes editing the salary fix the current month.
+
+`MonthAgendaPage` reads the receipts first and the payout calendar only for what has no receipt yet,
+so a salary confirmed on the 4th shows on the 4th. Never place a payout by `payout.day` — that is the
+*ordinal* under `PayoutSchedule.businessDay`; ask `payout.dateIn(month)`.
 
 `Month` (`core/utils/month.dart`) is the value object used everywhere instead of `DateTime` — it has
 comparison operators, `monthsSince`, `dayOf` (clamps day 31 to the real month length) and

@@ -7,8 +7,6 @@ import '../../../core/utils/month.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../budget/models/budget_snapshot.dart';
-import '../../expenses/models/expense_occurrence.dart';
-import '../../wallets/models/payout.dart';
 import '../../wallets/models/wallet.dart';
 import '../viewmodels/dashboard_view_model.dart';
 
@@ -65,59 +63,115 @@ class MonthAgendaPage extends StatelessWidget {
   }
 }
 
-class _AgendaIncome {
-  const _AgendaIncome({required this.wallet, required this.payout});
+enum _EntryKind { income, expectedIncome, bill, paidBill, spending }
 
-  final Wallet wallet;
-  final Payout payout;
+class _AgendaEntry {
+  const _AgendaEntry({
+    required this.day,
+    required this.title,
+    required this.amount,
+    required this.kind,
+    this.wallet,
+  });
+
+  final int day;
+  final String title;
+  final double amount;
+  final _EntryKind kind;
+  final Wallet? wallet;
+
+  IconData get icon => switch (kind) {
+    _EntryKind.income => Icons.arrow_downward,
+    _EntryKind.expectedIncome => Icons.schedule,
+    _EntryKind.bill => Icons.arrow_upward,
+    _EntryKind.paidBill => Icons.check_circle_outline,
+    _EntryKind.spending => Icons.shopping_bag_outlined,
+  };
+
+  Color colorOf(ColorScheme colors) => switch (kind) {
+    _EntryKind.income ||
+    _EntryKind.expectedIncome => wallet?.color ?? colors.primary,
+    _EntryKind.bill => colors.error,
+    _EntryKind.paidBill => colors.primary,
+    _EntryKind.spending => colors.onSurfaceVariant,
+  };
 }
 
 class _AgendaDay {
-  const _AgendaDay({
-    required this.date,
-    required this.incomes,
-    required this.expenses,
-  });
+  const _AgendaDay({required this.date, required this.entries});
 
   static List<_AgendaDay> buildMonth(Month month, BudgetSnapshot snapshot) {
-    final days = <_AgendaDay>[];
-
-    for (var day = 1; day <= month.lengthInDays; day++) {
-      final incomes = <_AgendaIncome>[];
-      for (final wallet in snapshot.wallets) {
-        for (final payout in wallet.payouts) {
-          if (payout.day == day) {
-            incomes.add(_AgendaIncome(wallet: wallet, payout: payout));
-          }
-        }
-      }
-
-      final expenses = snapshot.summary.occurrences
-          .where((occurrence) => occurrence.dueDate.day == day)
-          .toList();
-
-      if (incomes.isEmpty && expenses.isEmpty) continue;
-      days.add(
-        _AgendaDay(
-          date: month.dayOf(day),
-          incomes: incomes,
-          expenses: expenses,
+    final entries = <_AgendaEntry>[
+      ..._incomes(month, snapshot),
+      for (final occurrence in snapshot.summary.occurrences)
+        _AgendaEntry(
+          day: occurrence.dueDate.day,
+          title: occurrence.expense.name,
+          amount: occurrence.amount,
+          kind: occurrence.isPaid ? _EntryKind.paidBill : _EntryKind.bill,
         ),
-      );
-    }
+      for (final outflow in snapshot.summary.outflows)
+        _AgendaEntry(
+          day: outflow.spentAt.day,
+          title: outflow.label,
+          amount: outflow.amount,
+          kind: _EntryKind.spending,
+          wallet: snapshot.walletById(outflow.walletId),
+        ),
+    ];
 
+    final days = <_AgendaDay>[];
+    for (var day = 1; day <= month.lengthInDays; day++) {
+      final ofDay = entries.where((entry) => entry.day == day).toList();
+      if (ofDay.isEmpty) continue;
+      days.add(_AgendaDay(date: month.dayOf(day), entries: ofDay));
+    }
     return days;
   }
 
+  static List<_AgendaEntry> _incomes(Month month, BudgetSnapshot snapshot) {
+    final monthReceipts = snapshot.receipts
+        .where((receipt) => receipt.month == month)
+        .toList();
+
+    return <_AgendaEntry>[
+      for (final receipt in monthReceipts)
+        if (receipt.counts && !receipt.isAdjustment)
+          _AgendaEntry(
+            day: receipt.receivedAt.day,
+            title: _incomeTitle(receipt.payoutId, snapshot),
+            amount: receipt.amount,
+            kind: receipt.isPredicted
+                ? _EntryKind.expectedIncome
+                : _EntryKind.income,
+            wallet: snapshot.walletById(receipt.walletId),
+          ),
+      for (final wallet in snapshot.wallets)
+        for (final payout in wallet.payouts)
+          if (!monthReceipts.any((receipt) => receipt.payoutId == payout.id))
+            _AgendaEntry(
+              day: payout.dateIn(month).day,
+              title: payout.label,
+              amount: payout.amount,
+              kind: _EntryKind.expectedIncome,
+              wallet: wallet,
+            ),
+    ];
+  }
+
+  static String _incomeTitle(int? payoutId, BudgetSnapshot snapshot) {
+    if (payoutId == null) return 'Entrada';
+
+    for (final wallet in snapshot.wallets) {
+      for (final payout in wallet.payouts) {
+        if (payout.id == payoutId) return payout.label;
+      }
+    }
+    return 'Entrada';
+  }
+
   final DateTime date;
-  final List<_AgendaIncome> incomes;
-  final List<ExpenseOccurrence> expenses;
-
-  double get totalIn =>
-      incomes.fold(0, (total, income) => total + income.payout.amount);
-
-  double get totalOut =>
-      expenses.fold(0, (total, expense) => total + expense.amount);
+  final List<_AgendaEntry> entries;
 }
 
 class _AgendaDayTile extends StatelessWidget {
@@ -129,6 +183,7 @@ class _AgendaDayTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isToday = DateUtils.isSameDay(day.date, DateTime.now());
+    final side = MediaQuery.textScalerOf(context).scale(44).clamp(44.0, 58.0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -138,8 +193,8 @@ class _AgendaDayTile extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: side,
+                height: side,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -173,28 +228,9 @@ class _AgendaDayTile extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ...day.incomes.map(
-                      (income) => _AgendaLine(
-                        icon: Icons.arrow_downward,
-                        color: income.wallet.color,
-                        title: '${income.wallet.name} · ${income.payout.label}',
-                        amount: formatMoney(income.payout.amount),
-                      ),
-                    ),
-                    ...day.expenses.map(
-                      (occurrence) => _AgendaLine(
-                        icon: occurrence.isPaid
-                            ? Icons.check_circle_outline
-                            : Icons.arrow_upward,
-                        color: occurrence.isPaid
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.error,
-                        title: occurrence.expense.name,
-                        amount: formatMoney(occurrence.amount),
-                      ),
-                    ),
-                  ],
+                  children: day.entries
+                      .map((entry) => _AgendaLine(entry: entry))
+                      .toList(),
                 ),
               ),
             ),
@@ -206,38 +242,31 @@ class _AgendaDayTile extends StatelessWidget {
 }
 
 class _AgendaLine extends StatelessWidget {
-  const _AgendaLine({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.amount,
-  });
+  const _AgendaLine({required this.entry});
 
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String amount;
+  final _AgendaEntry entry;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = entry.colorOf(theme.colorScheme);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: color),
+          Icon(entry.icon, size: 16, color: color),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              title,
+              entry.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium,
             ),
           ),
           Text(
-            amount,
+            formatMoney(entry.amount),
             style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w700,
               color: color,

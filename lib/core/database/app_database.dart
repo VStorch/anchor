@@ -10,7 +10,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 4;
+  static const int version = 5;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -171,6 +171,16 @@ class AppDatabase {
       )
       ''',
       'CREATE INDEX idx_outflow_wallet_month ON $outflowsTable(wallet_id, month_key)',
+    ],
+    5: <String>[
+      '''
+      UPDATE $expensePaymentsTable
+      SET wallet_id = (
+        SELECT wallet_id FROM $expensesTable
+        WHERE $expensesTable.id = $expensePaymentsTable.expense_id
+      )
+      WHERE wallet_id IS NULL
+      ''',
     ],
   };
 }
