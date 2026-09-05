@@ -5,6 +5,7 @@ import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/views/widgets/expense_ledger_sheet.dart';
+import 'package:anchor/features/expenses/views/widgets/month_table.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
@@ -93,6 +94,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Paga'), findsOneWidget);
+  });
+
+  testWidgets('edita o valor do mês pela tabela', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await _seedMarketExpense(database);
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(AnchorApp(settings: settings, database: database));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Ver como tabela'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MonthTable), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
+
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(MonthTable),
+            matching: find.textContaining('600,00'),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MonthTable),
+        matching: find.byType(TextField),
+      ),
+      '14320',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('143,20'), findsWidgets);
+    expect(find.textContaining('600,00'), findsNothing);
   });
 }
 
