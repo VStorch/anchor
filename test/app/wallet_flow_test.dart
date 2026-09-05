@@ -9,6 +9,7 @@ import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/wallets/views/widgets/balance_adjustment_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:anchor/features/wallets/views/widgets/receipt_sheet.dart';
@@ -100,6 +101,35 @@ void main() {
 
     expect(find.textContaining('3.120,45'), findsWidgets);
     expect(find.textContaining('a confirmar'), findsNothing);
+  });
+
+  testWidgets('ajusta o saldo da carteira na mão', (tester) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Saldo').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BalanceAdjustmentSheet), findsOneWidget);
+    expect(find.text('Saldo de Salário'), findsOneWidget);
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '520000',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('a mais'), findsOneWidget);
+
+    await tester.tap(find.text('Ajustar saldo'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('5.200,00'), findsWidgets);
+    expect(find.textContaining('ajuste de saldo'), findsOneWidget);
+    expect(find.text('Saldo do mês'), findsNothing);
   });
 
   testWidgets('muda o salário para o quinto dia útil', (tester) async {

@@ -10,7 +10,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 2;
+  static const int version = 3;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -86,7 +86,8 @@ class AppDatabase {
       month_key TEXT NOT NULL,
       amount REAL NOT NULL,
       received_at TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'confirmed'
+      status TEXT NOT NULL DEFAULT 'confirmed',
+      kind TEXT NOT NULL DEFAULT 'income'
     )
     ''',
     'CREATE UNIQUE INDEX idx_receipt_payout_month ON $receiptsTable(payout_id, month_key)',
@@ -142,6 +143,9 @@ class AppDatabase {
       )
       ''',
       'CREATE UNIQUE INDEX idx_expense_month ON $expenseMonthsTable(expense_id, month_key)',
+    ],
+    3: <String>[
+      "ALTER TABLE $receiptsTable ADD COLUMN kind TEXT NOT NULL DEFAULT 'income'",
     ],
   };
 }

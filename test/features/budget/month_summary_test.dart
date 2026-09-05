@@ -7,6 +7,7 @@ import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/receipt.dart';
+import 'package:anchor/features/wallets/models/receipt_kind.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -197,6 +198,44 @@ void main() {
       expect(summary.totalExpenses, 950);
       expect(summary.occurrenceOf(3)!.amount, 250);
       expect(summary.occurrenceOf(3)!.isPaid, isTrue);
+    });
+  });
+
+  group('ajuste de saldo', () {
+    final withAdjustment = [
+      ...receipts,
+      Receipt(
+        walletId: 1,
+        month: august,
+        amount: 2000,
+        receivedAt: DateTime(2026, 8, 2),
+        kind: ReceiptKind.adjustment,
+      ),
+    ];
+
+    MonthSummary buildAdjusted() => MonthSummary.build(
+      month: august,
+      expenses: expenses,
+      payments: payments,
+      receipts: withAdjustment,
+      wallets: [salary, voucher],
+    );
+
+    test('não conta como entrada do mês', () {
+      expect(buildAdjusted().totalReceived, 3600);
+    });
+
+    test('entra no saldo da carteira', () {
+      final summaries = WalletSummary.buildAll(
+        month: august,
+        wallets: [salary, voucher],
+        receipts: withAdjustment,
+        payments: payments,
+        occurrences: buildAdjusted().occurrences,
+      );
+
+      expect(summaries.first.balance, 7500);
+      expect(summaries.first.receivedInMonth, 3000);
     });
   });
 

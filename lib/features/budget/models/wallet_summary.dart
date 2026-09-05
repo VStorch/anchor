@@ -31,6 +31,9 @@ class WalletSummary {
       final monthReceipts = walletReceipts.where(
         (receipt) => receipt.month == month,
       );
+      final monthIncome = monthReceipts.where(
+        (receipt) => !receipt.isAdjustment,
+      );
 
       final spentInMonth = walletPayments
           .where((payment) => payment.month == month)
@@ -42,7 +45,7 @@ class WalletSummary {
 
       return WalletSummary(
         wallet: wallet,
-        receivedInMonth: monthReceipts.fold(
+        receivedInMonth: monthIncome.fold(
           0,
           (total, receipt) => total + receipt.amount,
         ),
@@ -57,7 +60,7 @@ class WalletSummary {
               0,
               (total, payment) => total + payment.amount,
             ),
-        unconfirmedInMonth: monthReceipts
+        unconfirmedInMonth: monthIncome
             .where((receipt) => receipt.isPredicted)
             .length,
       );

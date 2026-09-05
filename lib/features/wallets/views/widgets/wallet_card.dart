@@ -9,11 +9,13 @@ class WalletCard extends StatelessWidget {
     required this.summary,
     required this.onTap,
     required this.onRegisterReceipt,
+    required this.onAdjustBalance,
   });
 
   final WalletSummary summary;
   final VoidCallback onTap;
   final VoidCallback onRegisterReceipt;
+  final VoidCallback onAdjustBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -39,14 +41,15 @@ class WalletCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       wallet.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   if (summary.unconfirmedInMonth > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
+                    Flexible(
                       child: Chip(
                         visualDensity: VisualDensity.compact,
                         backgroundColor: theme.colorScheme.tertiaryContainer,
@@ -58,6 +61,8 @@ class WalletCard extends StatelessWidget {
                         ),
                         label: Text(
                           '${summary.unconfirmedInMonth} a confirmar',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onTertiaryContainer,
                           ),
@@ -81,6 +86,7 @@ class WalletCard extends StatelessWidget {
                       color: summary.balance < 0
                           ? theme.colorScheme.error
                           : wallet.color,
+                      onTap: onAdjustBalance,
                     ),
                   ),
                   Expanded(
@@ -143,34 +149,62 @@ class _Metric extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.onTap,
   });
 
   final String label;
   final String value;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.edit_outlined,
+                size: 12,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 2),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
       ],
+    );
+
+    if (onTap == null) return content;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Padding(padding: const EdgeInsets.all(2), child: content),
     );
   }
 }

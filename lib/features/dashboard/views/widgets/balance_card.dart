@@ -21,7 +21,7 @@ class BalanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Saldo',
+              'Saldo do mês',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
               ),

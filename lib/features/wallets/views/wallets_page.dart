@@ -13,6 +13,7 @@ import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_form_page.dart';
+import 'widgets/balance_adjustment_sheet.dart';
 import 'widgets/receipt_sheet.dart';
 import 'widgets/wallet_card.dart';
 
@@ -103,6 +104,7 @@ class WalletsPage extends StatelessWidget {
         summary: summary,
         onTap: () => WalletFormPage.open(context, wallet: summary.wallet),
         onRegisterReceipt: () => _registerReceipt(context, summary.wallet),
+        onAdjustBalance: () => _adjustBalance(context, summary),
       ),
     );
   }
@@ -117,6 +119,21 @@ class WalletsPage extends StatelessWidget {
       amount: edit.amount,
       receivedAt: edit.receivedAt,
     );
+  }
+
+  Future<void> _adjustBalance(
+    BuildContext context,
+    WalletSummary summary,
+  ) async {
+    final viewModel = context.read<WalletsViewModel>();
+    final balance = await BalanceAdjustmentSheet.show(
+      context,
+      wallet: summary.wallet,
+      currentBalance: summary.balance,
+    );
+    if (balance == null) return;
+
+    await viewModel.adjustBalance(summary, balance);
   }
 
   Future<void> _editReceipt(BuildContext context, Receipt receipt) async {
@@ -210,7 +227,11 @@ class _ReceiptTile extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: color.withValues(alpha: 0.16),
         child: Icon(
-          receipt.isPredicted ? Icons.schedule : Icons.arrow_downward,
+          receipt.isAdjustment
+              ? Icons.tune
+              : receipt.isPredicted
+              ? Icons.schedule
+              : Icons.arrow_downward,
           size: 18,
           color: color,
         ),
@@ -219,10 +240,19 @@ class _ReceiptTile extends StatelessWidget {
       subtitle: Text(
         '${DateFormat.yMMMMd('pt_BR').format(receipt.receivedAt)}'
         '${receipt.isPredicted ? ' · a confirmar' : ''}'
-        '${receipt.isManual ? ' · manual' : ''}',
+        '${receipt.isAdjustment
+            ? ' · ajuste de saldo'
+            : receipt.isManual
+            ? ' · manual'
+            : ''}',
       ),
       trailing: Text(
-        formatMoney(receipt.amount),
+        '${receipt.amount < 0
+            ? ''
+            : receipt.isAdjustment
+            ? '+'
+            : ''}'
+        '${formatMoney(receipt.amount)}',
         style: theme.textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w700,
           color: receipt.isPredicted

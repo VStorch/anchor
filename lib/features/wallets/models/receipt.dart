@@ -1,4 +1,5 @@
 import '../../../core/utils/month.dart';
+import 'receipt_kind.dart';
 import 'receipt_status.dart';
 
 class Receipt {
@@ -10,6 +11,7 @@ class Receipt {
     required this.amount,
     required this.receivedAt,
     this.status = ReceiptStatus.confirmed,
+    this.kind = ReceiptKind.income,
   });
 
   factory Receipt.fromMap(Map<String, Object?> map) => Receipt(
@@ -20,6 +22,7 @@ class Receipt {
     amount: (map['amount'] as num).toDouble(),
     receivedAt: DateTime.parse(map['received_at'] as String),
     status: ReceiptStatus.fromId(map['status'] as String),
+    kind: ReceiptKind.fromId(map['kind'] as String),
   );
 
   final int? id;
@@ -29,8 +32,11 @@ class Receipt {
   final double amount;
   final DateTime receivedAt;
   final ReceiptStatus status;
+  final ReceiptKind kind;
 
   bool get isManual => payoutId == null;
+
+  bool get isAdjustment => kind == ReceiptKind.adjustment;
 
   bool get isPredicted => status == ReceiptStatus.predicted;
 
@@ -44,6 +50,7 @@ class Receipt {
     'amount': amount,
     'received_at': receivedAt.toIso8601String(),
     'status': status.id,
+    'kind': kind.id,
   };
 
   Receipt copyWith({

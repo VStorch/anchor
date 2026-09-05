@@ -106,7 +106,7 @@ void main() {
     await seedSalaryAndExpense();
     await pumpApp(tester);
 
-    expect(find.text('Saldo'), findsOneWidget);
+    expect(find.text('Saldo do mês'), findsOneWidget);
     expect(find.textContaining('3.000,00'), findsWidgets);
     expect(find.textContaining('450,00'), findsWidgets);
   });

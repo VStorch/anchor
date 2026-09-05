@@ -6,6 +6,7 @@ import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
+import 'package:anchor/features/wallets/models/receipt_kind.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,9 +153,33 @@ void main() {
     expect(wallet.payouts.single.day, 5);
     expect(wallet.payouts.single.schedule, PayoutSchedule.dayOfMonth);
     expect(receipt.status, ReceiptStatus.confirmed);
+    expect(receipt.kind, ReceiptKind.income);
     expect((await expenses.fetchExpenses()).single.name, 'Mercado');
     expect((await expenses.fetchPayments()).single.amount, 600);
     expect(await expenses.fetchMonthAmounts(), isEmpty);
+  });
+
+  test('o banco migrado aceita um ajuste de saldo', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final repository = WalletRepository(database, DataChanges());
+    final wallet = (await repository.fetchWallets()).single;
+
+    await repository.adjustBalance(
+      wallet: wallet,
+      currentBalance: 3000,
+      targetBalance: 5000,
+    );
+
+    final adjustment = (await repository.fetchReceipts())
+        .where((receipt) => receipt.isAdjustment)
+        .single;
+
+    expect(adjustment.amount, 2000);
   });
 
   test('o banco migrado aceita dois pagamentos no mesmo mês', () async {

@@ -88,8 +88,9 @@ class MonthSummary {
     return null;
   }
 
-  List<Receipt> get unconfirmedReceipts =>
-      receipts.where((receipt) => receipt.isPredicted).toList();
+  List<Receipt> get unconfirmedReceipts => receipts
+      .where((receipt) => receipt.isPredicted && !receipt.isAdjustment)
+      .toList();
 
   double get totalExpenses =>
       occurrences.fold(0, (total, occurrence) => total + occurrence.amount);
@@ -99,8 +100,9 @@ class MonthSummary {
 
   double get totalPending => totalExpenses - totalPaid;
 
-  double get totalReceived =>
-      receipts.fold(0, (total, receipt) => total + receipt.amount);
+  double get totalReceived => receipts
+      .where((receipt) => !receipt.isAdjustment)
+      .fold(0, (total, receipt) => total + receipt.amount);
 
   double get expectedIncome =>
       wallets.fold(0, (total, wallet) => total + wallet.monthlyIncome);

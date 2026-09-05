@@ -94,6 +94,12 @@ A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, 
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday only —
 no holiday table, so a month with a holiday early on needs the receipt corrected by hand.
 
+A receipt also carries a `ReceiptKind`. `adjustment` is how the user says "this wallet really holds X"
+— `adjustBalance` stores only the difference, so a balance that existed before the app did is one
+entry. Adjustments count in `WalletSummary.balance` but never in `receivedInMonth` or
+`MonthSummary.totalReceived`, which is why the dashboard card is labelled "Saldo do mês": it is the
+month's result, not the wallets' balance.
+
 A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts in the
 balance, and the UI marks it "a confirmar"), the user confirms it with the real day and amount, and
 `skipped` is how a calendar receipt is dismissed — deleting the row would only make
@@ -128,6 +134,10 @@ concrete generic (`DropdownButtonFormField<ExpenseType>`).
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
 - `FilledButton` is themed full-width (`minimumSize: Size.fromHeight(52)`), so it only goes inside a
   `Row` wrapped in `Expanded` — loose in a row it asks for infinite width and the layout throws.
+- Nothing gets a hardcoded width or height that holds text: scale it with
+  `MediaQuery.textScalerOf(context)` (the due badge, the wallet chips) or cap it against the incoming
+  constraints (the expense tile's amount column). `test/app/responsive_test.dart` walks every tab at
+  320dp and at 1.5x font — an overflow there fails the suite, which is how the layout stays honest.
 - The logo is one anchor drawn with a single stroke weight: `assets/logo/anchor_logo.svg` is the master,
   `anchor_mark.png` is the white version the app tints per theme, and the launcher icon and both splash
   screens come from `res/drawable{,-night}/ic_logo_*.xml`. Change one, change them all.

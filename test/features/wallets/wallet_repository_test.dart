@@ -3,6 +3,7 @@ import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
+import 'package:anchor/features/wallets/models/receipt_kind.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
@@ -229,6 +230,65 @@ void main() {
     expect(saved.name, 'Salário CLT');
     expect(saved.payouts, hasLength(1));
     expect(await repository.fetchReceipts(), hasLength(1));
+  });
+
+  test('ajustar o saldo lança só a diferença', () async {
+    final walletId = await createSalary(createdAt: DateTime.now());
+    final wallet = (await repository.fetchWallets()).single;
+
+    await repository.adjustBalance(
+      wallet: wallet,
+      currentBalance: 0,
+      targetBalance: 2000,
+    );
+    await repository.adjustBalance(
+      wallet: wallet,
+      currentBalance: 2000,
+      targetBalance: 1750.30,
+    );
+
+    final receipts = await repository.fetchReceipts();
+
+    expect(walletId, wallet.id);
+    expect(receipts, hasLength(2));
+    expect(receipts.every((receipt) => receipt.isAdjustment), isTrue);
+    expect(
+      receipts.fold<double>(0, (total, receipt) => total + receipt.amount),
+      closeTo(1750.30, 0.001),
+    );
+  });
+
+  test('ajustar para o saldo que já está não lança nada', () async {
+    await createSalary(createdAt: DateTime.now());
+    final wallet = (await repository.fetchWallets()).single;
+
+    await repository.adjustBalance(
+      wallet: wallet,
+      currentBalance: 1200,
+      targetBalance: 1200,
+    );
+
+    expect(await repository.fetchReceipts(), isEmpty);
+  });
+
+  test('o ajuste de saldo é uma entrada manual removível', () async {
+    await createSalary(createdAt: DateTime.now());
+    final wallet = (await repository.fetchWallets()).single;
+
+    await repository.adjustBalance(
+      wallet: wallet,
+      currentBalance: 0,
+      targetBalance: 500,
+    );
+
+    final adjustment = (await repository.fetchReceipts()).single;
+
+    expect(adjustment.kind, ReceiptKind.adjustment);
+    expect(adjustment.isManual, isTrue);
+
+    await repository.discardReceipt(adjustment);
+
+    expect(await repository.fetchReceipts(), isEmpty);
   });
 
   test('apagar a carteira leva junto o calendário e as entradas', () async {

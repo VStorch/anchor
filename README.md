@@ -16,6 +16,8 @@ falta pagar no mês.
 - **Carteiras**: salário e benefícios (vale refeição, vale mercado...), cada um com um calendário
   próprio de recebimento (por exemplo, uma parte no dia 5 e outra no dia 20).
 - **Calendário por dia útil**: o recebimento pode ser marcado como "5º dia útil" em vez de um dia fixo.
+- **Saldo ajustável**: toque no saldo da carteira e informe quanto ela tem de verdade — útil para
+  começar a usar o app com o dinheiro que você já tinha. Só a diferença é lançada, como ajuste.
 - **Entradas previstas**: a cada data que passa o valor entra na carteira sozinho, marcado como
   previsto; você confirma com o dia e o valor que caíram de verdade.
 - **Resumo do mês**: total recebido, total de despesas, o que já foi pago e o que falta.

@@ -98,6 +98,13 @@ class WalletsViewModel extends ReactiveViewModel {
   Future<void> discardReceipt(Receipt receipt) =>
       _walletRepository.discardReceipt(receipt);
 
+  Future<void> adjustBalance(WalletSummary summary, double targetBalance) =>
+      _walletRepository.adjustBalance(
+        wallet: summary.wallet,
+        currentBalance: summary.balance,
+        targetBalance: targetBalance,
+      );
+
   Wallet? walletById(int id) => _snapshot.walletById(id);
 
   @override

@@ -5,6 +5,7 @@ import '../../../core/state/data_changes.dart';
 import '../../../core/utils/month.dart';
 import '../models/payout.dart';
 import '../models/receipt.dart';
+import '../models/receipt_kind.dart';
 import '../models/receipt_status.dart';
 import '../models/wallet.dart';
 
@@ -102,6 +103,26 @@ class WalletRepository {
     final db = await _database.database;
     await _upsert(db, AppDatabase.receiptsTable, receipt.toMap(), receipt.id);
     _changes.publish();
+  }
+
+  Future<void> adjustBalance({
+    required Wallet wallet,
+    required double currentBalance,
+    required double targetBalance,
+  }) async {
+    final difference = targetBalance - currentBalance;
+    if (difference.abs() < 0.005) return;
+
+    final now = DateTime.now();
+    await saveReceipt(
+      Receipt(
+        walletId: wallet.id!,
+        month: Month.fromDate(now),
+        amount: difference,
+        receivedAt: now,
+        kind: ReceiptKind.adjustment,
+      ),
+    );
   }
 
   Future<void> discardReceipt(Receipt receipt) async {
