@@ -5,6 +5,7 @@ import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/receipt.dart';
 import 'package:anchor/features/wallets/models/receipt_kind.dart';
@@ -236,6 +237,65 @@ void main() {
 
       expect(summaries.first.balance, 7500);
       expect(summaries.first.receivedInMonth, 3000);
+    });
+  });
+
+  group('gasto avulso', () {
+    final outflows = [
+      Outflow(
+        walletId: 2,
+        description: 'Mercado',
+        amount: 120,
+        spentAt: DateTime(2026, 8, 12),
+      ),
+      Outflow(
+        walletId: 2,
+        description: 'Padaria',
+        amount: 30,
+        spentAt: DateTime(2026, 7, 12),
+      ),
+    ];
+
+    MonthSummary buildWithOutflows() => MonthSummary.build(
+      month: august,
+      expenses: expenses,
+      payments: payments,
+      receipts: receipts,
+      wallets: [salary, voucher],
+      outflows: outflows,
+    );
+
+    test('conta só os gastos do mês', () {
+      expect(buildWithOutflows().totalOutflows, 120);
+    });
+
+    test('soma ao que foi pago das contas', () {
+      final summary = buildWithOutflows();
+
+      expect(summary.totalSpent, 620);
+      expect(summary.balance, 2980);
+    });
+
+    test('não entra no total das contas do mês', () {
+      final summary = buildWithOutflows();
+
+      expect(summary.totalExpenses, 1000);
+      expect(summary.totalPending, 500);
+    });
+
+    test('desconta do saldo e do gasto da carteira', () {
+      final benefit = WalletSummary.buildAll(
+        month: august,
+        wallets: [salary, voucher],
+        receipts: receipts,
+        payments: payments,
+        occurrences: buildWithOutflows().occurrences,
+        outflows: outflows,
+      ).last;
+
+      expect(benefit.spentInMonth, 120);
+      expect(benefit.balance, 450);
+      expect(benefit.committedInMonth, 420);
     });
   });
 

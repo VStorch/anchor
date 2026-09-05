@@ -3,6 +3,7 @@ import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
+import '../../wallets/models/outflow.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
 
@@ -11,6 +12,7 @@ class MonthSummary {
     required this.month,
     required this.occurrences,
     required this.receipts,
+    required this.outflows,
     required this.wallets,
   });
 
@@ -21,6 +23,7 @@ class MonthSummary {
     required List<Receipt> receipts,
     required List<Wallet> wallets,
     List<ExpenseMonth> monthAmounts = const <ExpenseMonth>[],
+    List<Outflow> outflows = const <Outflow>[],
   }) {
     final paymentsByExpense = <int, List<ExpensePayment>>{};
     for (final payment in payments) {
@@ -54,6 +57,7 @@ class MonthSummary {
       receipts: receipts
           .where((receipt) => receipt.month == month && receipt.counts)
           .toList(),
+      outflows: outflows.where((outflow) => outflow.month == month).toList(),
       wallets: wallets,
     );
   }
@@ -62,15 +66,18 @@ class MonthSummary {
     month: month,
     occurrences: const <ExpenseOccurrence>[],
     receipts: const <Receipt>[],
+    outflows: const <Outflow>[],
     wallets: const <Wallet>[],
   );
 
   final Month month;
   final List<ExpenseOccurrence> occurrences;
   final List<Receipt> receipts;
+  final List<Outflow> outflows;
   final List<Wallet> wallets;
 
-  bool get isEmpty => occurrences.isEmpty && receipts.isEmpty;
+  bool get isEmpty =>
+      occurrences.isEmpty && receipts.isEmpty && outflows.isEmpty;
 
   List<ExpenseOccurrence> get pendingOccurrences =>
       occurrences.where((occurrence) => !occurrence.isPaid).toList();
@@ -100,6 +107,11 @@ class MonthSummary {
 
   double get totalPending => totalExpenses - totalPaid;
 
+  double get totalOutflows =>
+      outflows.fold(0, (total, outflow) => total + outflow.amount);
+
+  double get totalSpent => totalPaid + totalOutflows;
+
   double get totalReceived => receipts
       .where((receipt) => !receipt.isAdjustment)
       .fold(0, (total, receipt) => total + receipt.amount);
@@ -107,7 +119,7 @@ class MonthSummary {
   double get expectedIncome =>
       wallets.fold(0, (total, wallet) => total + wallet.monthlyIncome);
 
-  double get balance => totalReceived - totalPaid;
+  double get balance => totalReceived - totalSpent;
 
   double get projectedBalance => expectedIncome - totalExpenses;
 

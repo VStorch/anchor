@@ -87,8 +87,16 @@ mutated:
 
 A **wallet** (`features/wallets/`) is a money source — salary or a benefit (VR/VA/mercado). It owns
 `payouts` (the flexible calendar) which generate `receipts` (credits). A wallet's balance is *all*
-receipts minus *all* payments charged to it, so it carries across months; the month figures on
-`WalletSummary` are separate.
+receipts minus *all* payments charged to it **and all its `outflows`**, so it carries across months;
+the month figures on `WalletSummary` are separate.
+
+An **outflow** (`outflows`) is money spent straight from a wallet with no expense rule behind it —
+the everyday spending that drains a benefit card. It exists because an `expense` is a *rule* with a
+due day, which is the wrong shape for "gastei R$ 47 no mercado hoje". Outflows lower the wallet
+balance and `spentInMonth`, and count in `MonthSummary.totalSpent` (hence in `balance`), but never in
+`totalExpenses`/`totalPaid` — those stay about the bills, so `totalPending` keeps meaning "what is
+still owed on the rules". The Carteiras tab lists receipts, expense payments and outflows together
+as `WalletMovement`; only receipts and outflows are editable there.
 
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday only —

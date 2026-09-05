@@ -12,6 +12,7 @@ import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:anchor/features/wallets/views/widgets/balance_adjustment_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
+import 'package:anchor/features/wallets/views/widgets/outflow_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/receipt_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -128,15 +129,83 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('5.200,00'), findsWidgets);
-    expect(find.textContaining('ajuste de saldo'), findsOneWidget);
+    expect(find.text('Ajuste de saldo'), findsOneWidget);
     expect(find.text('Saldo do mês'), findsNothing);
+  });
+
+  testWidgets('lança um gasto avulso pelo cartão da carteira', (tester) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Gasto'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OutflowSheet), findsOneWidget);
+    expect(find.text('Gasto em Salário'), findsOneWidget);
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '4790',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'No que foi'),
+      'Mercado',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Registrar gasto'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mercado'), findsOneWidget);
+    expect(find.textContaining('2.952,10'), findsWidgets);
+  });
+
+  testWidgets('corrige um gasto avulso já lançado', (tester) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Gasto'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '4790',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'No que foi'),
+      'Mercado',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar gasto'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mercado'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Salvar gasto'), findsOneWidget);
+
+    await tester.tap(find.text('Remover'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mercado'), findsNothing);
+    expect(find.textContaining('3.000,00'), findsWidgets);
   });
 
   testWidgets('muda o salário para o quinto dia útil', (tester) async {
     await seedSalary();
     await pumpApp(tester);
 
-    await tester.tap(find.byType(WalletCard));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Mensal'));

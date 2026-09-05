@@ -1,6 +1,7 @@
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/receipt_kind.dart';
@@ -289,6 +290,56 @@ void main() {
     await repository.discardReceipt(adjustment);
 
     expect(await repository.fetchReceipts(), isEmpty);
+  });
+
+  test('o gasto avulso sai do saldo da carteira', () async {
+    final walletId = await createSalary(createdAt: DateTime.now());
+
+    await repository.saveOutflow(
+      Outflow(
+        walletId: walletId,
+        description: 'Mercado',
+        amount: 47.90,
+        spentAt: DateTime.now(),
+      ),
+    );
+
+    final outflow = (await repository.fetchOutflows()).single;
+
+    expect(outflow.amount, 47.90);
+    expect(outflow.description, 'Mercado');
+    expect(outflow.month, Month.current());
+  });
+
+  test('o gasto sem descrição ganha um rótulo', () async {
+    final walletId = await createSalary(createdAt: DateTime.now());
+
+    await repository.saveOutflow(
+      Outflow(
+        walletId: walletId,
+        description: '   ',
+        amount: 20,
+        spentAt: DateTime.now(),
+      ),
+    );
+
+    expect((await repository.fetchOutflows()).single.label, 'Gasto');
+  });
+
+  test('apagar a carteira leva junto os gastos avulsos', () async {
+    final walletId = await createSalary(createdAt: DateTime.now());
+    await repository.saveOutflow(
+      Outflow(
+        walletId: walletId,
+        description: 'Mercado',
+        amount: 47.90,
+        spentAt: DateTime.now(),
+      ),
+    );
+
+    await repository.deleteWallet(walletId);
+
+    expect(await repository.fetchOutflows(), isEmpty);
   });
 
   test('apagar a carteira leva junto o calendário e as entradas', () async {

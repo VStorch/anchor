@@ -6,10 +6,12 @@ import '../../budget/models/budget_snapshot.dart';
 import '../../budget/models/month_summary.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../budget/services/budget_service.dart';
+import '../models/outflow.dart';
 import '../models/receipt.dart';
 import '../models/receipt_status.dart';
 import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
+import '../models/wallet_movement.dart';
 import '../repositories/wallet_repository.dart';
 
 class WalletsViewModel extends ReactiveViewModel {
@@ -40,11 +42,43 @@ class WalletsViewModel extends ReactiveViewModel {
   List<WalletSummary> summariesOf(WalletKind kind) =>
       summaries.where((summary) => summary.wallet.kind == kind).toList();
 
-  List<Receipt> get monthReceipts => _snapshot.receipts
-      .where(
-        (receipt) => receipt.month == _monthSelection.current && receipt.counts,
-      )
-      .toList();
+  List<WalletMovement> get monthMovements {
+    final month = _monthSelection.current;
+    final movements = <WalletMovement>[
+      for (final receipt in _snapshot.receipts)
+        if (receipt.month == month && receipt.counts)
+          WalletMovement.fromReceipt(receipt, title: _receiptTitle(receipt)),
+      for (final outflow in _snapshot.summary.outflows)
+        WalletMovement.fromOutflow(outflow),
+      for (final payment in _snapshot.payments)
+        if (payment.month == month && payment.walletId != null)
+          WalletMovement(
+            date: payment.paidAt,
+            title: _expenseName(payment.expenseId),
+            walletId: payment.walletId!,
+            amount: -payment.amount,
+          ),
+    ];
+
+    movements.sort((a, b) => b.date.compareTo(a.date));
+    return movements;
+  }
+
+  String _receiptTitle(Receipt receipt) {
+    if (receipt.isAdjustment) return 'Ajuste de saldo';
+
+    for (final payout in walletById(receipt.walletId)?.payouts ?? const []) {
+      if (payout.id == receipt.payoutId) return payout.label;
+    }
+    return 'Entrada';
+  }
+
+  String _expenseName(int expenseId) {
+    for (final expense in _snapshot.expenses) {
+      if (expense.id == expenseId) return expense.name;
+    }
+    return 'Despesa';
+  }
 
   bool get isEmpty => summaries.isEmpty;
 
@@ -97,6 +131,29 @@ class WalletsViewModel extends ReactiveViewModel {
 
   Future<void> discardReceipt(Receipt receipt) =>
       _walletRepository.discardReceipt(receipt);
+
+  Future<void> saveOutflow({
+    required Wallet wallet,
+    Outflow? outflow,
+    required String description,
+    required double amount,
+    required DateTime spentAt,
+  }) => _walletRepository.saveOutflow(
+    outflow?.copyWith(
+          description: description,
+          amount: amount,
+          spentAt: spentAt,
+        ) ??
+        Outflow(
+          walletId: wallet.id!,
+          description: description,
+          amount: amount,
+          spentAt: spentAt,
+        ),
+  );
+
+  Future<void> deleteOutflow(Outflow outflow) =>
+      _walletRepository.deleteOutflow(outflow.id!);
 
   Future<void> adjustBalance(WalletSummary summary, double targetBalance) =>
       _walletRepository.adjustBalance(

@@ -127,7 +127,12 @@ void main() {
     await pumpApp(tester);
 
     await tapTab(tester, Icons.account_balance_wallet_outlined);
-    await tester.tap(find.byType(WalletCard));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Excluir carteira'));

@@ -9,12 +9,14 @@ class WalletCard extends StatelessWidget {
     required this.summary,
     required this.onTap,
     required this.onRegisterReceipt,
+    required this.onRegisterOutflow,
     required this.onAdjustBalance,
   });
 
   final WalletSummary summary;
   final VoidCallback onTap;
   final VoidCallback onRegisterReceipt;
+  final VoidCallback onRegisterOutflow;
   final VoidCallback onAdjustBalance;
 
   @override
@@ -69,14 +71,9 @@ class WalletCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  IconButton(
-                    onPressed: onRegisterReceipt,
-                    icon: const Icon(Icons.add_card_outlined),
-                    tooltip: 'Registrar entrada',
-                  ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -89,18 +86,22 @@ class WalletCard extends StatelessWidget {
                       onTap: onAdjustBalance,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _Metric(
                       label: 'Recebido',
                       value: formatMoney(summary.receivedInMonth),
                       color: theme.colorScheme.onSurface,
+                      onTap: onRegisterReceipt,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _Metric(
                       label: 'Gasto',
                       value: formatMoney(summary.spentInMonth),
                       color: theme.colorScheme.onSurface,
+                      onTap: onRegisterOutflow,
                     ),
                   ),
                 ],
@@ -149,25 +150,30 @@ class _Metric extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
-    this.onTap,
+    required this.onTap,
   });
 
   final String label;
   final String value;
   final Color color;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -175,36 +181,20 @@ class _Metric extends StatelessWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.edit_outlined,
-                size: 12,
-                color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
               ),
             ],
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: color,
           ),
         ),
-      ],
-    );
-
-    if (onTap == null) return content;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Padding(padding: const EdgeInsets.all(2), child: content),
+      ),
     );
   }
 }

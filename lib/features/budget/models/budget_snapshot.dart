@@ -1,4 +1,5 @@
 import '../../expenses/models/expense.dart';
+import '../../expenses/models/expense_payment.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
 import 'month_summary.dart';
@@ -11,6 +12,7 @@ class BudgetSnapshot {
     required this.expenses,
     required this.wallets,
     required this.receipts,
+    required this.payments,
   });
 
   factory BudgetSnapshot.empty(MonthSummary summary) => BudgetSnapshot(
@@ -19,6 +21,7 @@ class BudgetSnapshot {
     expenses: const <Expense>[],
     wallets: const <Wallet>[],
     receipts: const <Receipt>[],
+    payments: const <ExpensePayment>[],
   );
 
   final MonthSummary summary;
@@ -26,6 +29,7 @@ class BudgetSnapshot {
   final List<Expense> expenses;
   final List<Wallet> wallets;
   final List<Receipt> receipts;
+  final List<ExpensePayment> payments;
 
   bool get hasWallets => wallets.isNotEmpty;
 

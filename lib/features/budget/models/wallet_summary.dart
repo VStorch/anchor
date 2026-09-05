@@ -1,6 +1,7 @@
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
+import '../../wallets/models/outflow.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
 
@@ -20,6 +21,7 @@ class WalletSummary {
     required List<Receipt> receipts,
     required List<ExpensePayment> payments,
     required List<ExpenseOccurrence> occurrences,
+    List<Outflow> outflows = const <Outflow>[],
   }) {
     return wallets.map((wallet) {
       final walletReceipts = receipts.where(
@@ -35,9 +37,17 @@ class WalletSummary {
         (receipt) => !receipt.isAdjustment,
       );
 
-      final spentInMonth = walletPayments
-          .where((payment) => payment.month == month)
-          .fold<double>(0, (total, payment) => total + payment.amount);
+      final walletOutflows = outflows.where(
+        (outflow) => outflow.walletId == wallet.id,
+      );
+
+      final spentInMonth =
+          walletPayments
+              .where((payment) => payment.month == month)
+              .fold<double>(0, (total, payment) => total + payment.amount) +
+          walletOutflows
+              .where((outflow) => outflow.month == month)
+              .fold<double>(0, (total, outflow) => total + outflow.amount);
 
       final plannedRemainder = occurrences
           .where((occurrence) => occurrence.plannedWalletId == wallet.id)
@@ -59,6 +69,10 @@ class WalletSummary {
             walletPayments.fold<double>(
               0,
               (total, payment) => total + payment.amount,
+            ) -
+            walletOutflows.fold<double>(
+              0,
+              (total, outflow) => total + outflow.amount,
             ),
         unconfirmedInMonth: monthIncome
             .where((receipt) => receipt.isPredicted)

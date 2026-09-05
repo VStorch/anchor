@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/state/data_changes.dart';
 import '../../../core/utils/month.dart';
+import '../models/outflow.dart';
 import '../models/payout.dart';
 import '../models/receipt.dart';
 import '../models/receipt_kind.dart';
@@ -141,6 +142,31 @@ class WalletRepository {
         whereArgs: [receipt.id],
       );
     }
+    _changes.publish();
+  }
+
+  Future<List<Outflow>> fetchOutflows() async {
+    final db = await _database.database;
+    final rows = await db.query(
+      AppDatabase.outflowsTable,
+      orderBy: 'spent_at DESC',
+    );
+    return rows.map(Outflow.fromMap).toList();
+  }
+
+  Future<void> saveOutflow(Outflow outflow) async {
+    final db = await _database.database;
+    await _upsert(db, AppDatabase.outflowsTable, outflow.toMap(), outflow.id);
+    _changes.publish();
+  }
+
+  Future<void> deleteOutflow(int id) async {
+    final db = await _database.database;
+    await db.delete(
+      AppDatabase.outflowsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     _changes.publish();
   }
 

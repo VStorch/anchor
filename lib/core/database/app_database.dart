@@ -10,7 +10,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 3;
+  static const int version = 4;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -18,6 +18,7 @@ class AppDatabase {
   static const String expensesTable = 'expenses';
   static const String expensePaymentsTable = 'expense_payments';
   static const String expenseMonthsTable = 'expense_months';
+  static const String outflowsTable = 'outflows';
 
   final DatabaseFactory _factory;
   final String? _filePath;
@@ -126,6 +127,17 @@ class AppDatabase {
     )
     ''',
     'CREATE UNIQUE INDEX idx_expense_month ON $expenseMonthsTable(expense_id, month_key)',
+    '''
+    CREATE TABLE $outflowsTable (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet_id INTEGER NOT NULL REFERENCES $walletsTable(id) ON DELETE CASCADE,
+      month_key TEXT NOT NULL,
+      description TEXT NOT NULL,
+      amount REAL NOT NULL,
+      spent_at TEXT NOT NULL
+    )
+    ''',
+    'CREATE INDEX idx_outflow_wallet_month ON $outflowsTable(wallet_id, month_key)',
   ];
 
   static const Map<int, List<String>> _migrations = <int, List<String>>{
@@ -146,6 +158,19 @@ class AppDatabase {
     ],
     3: <String>[
       "ALTER TABLE $receiptsTable ADD COLUMN kind TEXT NOT NULL DEFAULT 'income'",
+    ],
+    4: <String>[
+      '''
+      CREATE TABLE $outflowsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wallet_id INTEGER NOT NULL REFERENCES $walletsTable(id) ON DELETE CASCADE,
+        month_key TEXT NOT NULL,
+        description TEXT NOT NULL,
+        amount REAL NOT NULL,
+        spent_at TEXT NOT NULL
+      )
+      ''',
+      'CREATE INDEX idx_outflow_wallet_month ON $outflowsTable(wallet_id, month_key)',
     ],
   };
 }

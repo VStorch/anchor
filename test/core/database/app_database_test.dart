@@ -5,6 +5,7 @@ import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/receipt_kind.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
@@ -180,6 +181,28 @@ void main() {
         .single;
 
     expect(adjustment.amount, 2000);
+  });
+
+  test('o banco migrado aceita um gasto avulso', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final repository = WalletRepository(database, DataChanges());
+    final wallet = (await repository.fetchWallets()).single;
+
+    await repository.saveOutflow(
+      Outflow(
+        walletId: wallet.id!,
+        description: 'Mercado',
+        amount: 47.90,
+        spentAt: DateTime(2026, 8, 12),
+      ),
+    );
+
+    expect((await repository.fetchOutflows()).single.amount, 47.90);
   });
 
   test('o banco migrado aceita dois pagamentos no mesmo mês', () async {

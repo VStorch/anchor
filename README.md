@@ -16,10 +16,14 @@ falta pagar no mês.
 - **Carteiras**: salário e benefícios (vale refeição, vale mercado...), cada um com um calendário
   próprio de recebimento (por exemplo, uma parte no dia 5 e outra no dia 20).
 - **Calendário por dia útil**: o recebimento pode ser marcado como "5º dia útil" em vez de um dia fixo.
+- **Gasto avulso**: o dia a dia que consome o vale (mercado, almoço, farmácia) entra direto na
+  carteira, sem virar despesa cadastrada — toque em "Gasto" no cartão dela.
 - **Saldo ajustável**: toque no saldo da carteira e informe quanto ela tem de verdade — útil para
   começar a usar o app com o dinheiro que você já tinha. Só a diferença é lançada, como ajuste.
 - **Entradas previstas**: a cada data que passa o valor entra na carteira sozinho, marcado como
   previsto; você confirma com o dia e o valor que caíram de verdade.
+- **Movimentações do mês**: tudo que entrou e saiu de cada carteira numa lista só — entradas,
+  pagamentos de contas e gastos avulsos.
 - **Resumo do mês**: total recebido, total de despesas, o que já foi pago e o que falta.
 - **Tabela do mês**: as despesas em grade, com valor e pago editáveis na própria célula.
 - **Agenda do mês**: entradas e vencimentos organizados por dia.

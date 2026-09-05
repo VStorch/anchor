@@ -8,12 +8,15 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
+import '../models/outflow.dart';
 import '../models/receipt.dart';
 import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
+import '../models/wallet_movement.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_form_page.dart';
 import 'widgets/balance_adjustment_sheet.dart';
+import 'widgets/outflow_sheet.dart';
 import 'widgets/receipt_sheet.dart';
 import 'widgets/wallet_card.dart';
 
@@ -83,14 +86,14 @@ class WalletsPage extends StatelessWidget {
         ],
         const SizedBox(height: 20),
         SectionHeader(
-          title: 'Entradas do mês',
-          subtitle: viewModel.monthReceipts.isEmpty ? 'Nada ainda' : null,
+          title: 'Movimentações do mês',
+          subtitle: viewModel.monthMovements.isEmpty ? 'Nada ainda' : null,
         ),
-        ...viewModel.monthReceipts.map(
-          (receipt) => _ReceiptTile(
-            receipt: receipt,
-            wallet: viewModel.walletById(receipt.walletId),
-            onTap: () => _editReceipt(context, receipt),
+        ...viewModel.monthMovements.map(
+          (movement) => _MovementTile(
+            movement: movement,
+            wallet: viewModel.walletById(movement.walletId),
+            onTap: () => _openMovement(context, movement),
           ),
         ),
       ],
@@ -104,6 +107,7 @@ class WalletsPage extends StatelessWidget {
         summary: summary,
         onTap: () => WalletFormPage.open(context, wallet: summary.wallet),
         onRegisterReceipt: () => _registerReceipt(context, summary.wallet),
+        onRegisterOutflow: () => _registerOutflow(context, summary.wallet),
         onAdjustBalance: () => _adjustBalance(context, summary),
       ),
     );
@@ -121,6 +125,19 @@ class WalletsPage extends StatelessWidget {
     );
   }
 
+  Future<void> _registerOutflow(BuildContext context, Wallet wallet) async {
+    final viewModel = context.read<WalletsViewModel>();
+    final edit = await OutflowSheet.show(context, wallet: wallet);
+    if (edit == null || edit.isDiscarded) return;
+
+    await viewModel.saveOutflow(
+      wallet: wallet,
+      description: edit.description,
+      amount: edit.amount,
+      spentAt: edit.spentAt,
+    );
+  }
+
   Future<void> _adjustBalance(
     BuildContext context,
     WalletSummary summary,
@@ -134,6 +151,43 @@ class WalletsPage extends StatelessWidget {
     if (balance == null) return;
 
     await viewModel.adjustBalance(summary, balance);
+  }
+
+  Future<void> _openMovement(
+    BuildContext context,
+    WalletMovement movement,
+  ) async {
+    final receipt = movement.receipt;
+    final outflow = movement.outflow;
+
+    if (receipt != null) return _editReceipt(context, receipt);
+    if (outflow != null) return _editOutflow(context, outflow);
+  }
+
+  Future<void> _editOutflow(BuildContext context, Outflow outflow) async {
+    final viewModel = context.read<WalletsViewModel>();
+    final wallet = viewModel.walletById(outflow.walletId);
+    if (wallet == null) return;
+
+    final edit = await OutflowSheet.show(
+      context,
+      wallet: wallet,
+      outflow: outflow,
+    );
+    if (edit == null) return;
+
+    if (edit.isDiscarded) {
+      await viewModel.deleteOutflow(outflow);
+      return;
+    }
+
+    await viewModel.saveOutflow(
+      wallet: wallet,
+      outflow: outflow,
+      description: edit.description,
+      amount: edit.amount,
+      spentAt: edit.spentAt,
+    );
   }
 
   Future<void> _editReceipt(BuildContext context, Receipt receipt) async {
@@ -205,14 +259,14 @@ class _TotalBalanceCard extends StatelessWidget {
   }
 }
 
-class _ReceiptTile extends StatelessWidget {
-  const _ReceiptTile({
-    required this.receipt,
+class _MovementTile extends StatelessWidget {
+  const _MovementTile({
+    required this.movement,
     required this.wallet,
     required this.onTap,
   });
 
-  final Receipt receipt;
+  final WalletMovement movement;
   final Wallet? wallet;
   final VoidCallback onTap;
 
@@ -220,46 +274,47 @@ class _ReceiptTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = wallet?.color ?? theme.colorScheme.primary;
+    final amountColor = movement.isPredicted
+        ? theme.colorScheme.onSurfaceVariant
+        : movement.isIncome
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurface;
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      onTap: onTap,
+      onTap: movement.isEditable ? onTap : null,
       leading: CircleAvatar(
         backgroundColor: color.withValues(alpha: 0.16),
-        child: Icon(
-          receipt.isAdjustment
-              ? Icons.tune
-              : receipt.isPredicted
-              ? Icons.schedule
-              : Icons.arrow_downward,
-          size: 18,
-          color: color,
-        ),
+        child: Icon(_icon, size: 18, color: color),
       ),
-      title: Text(wallet?.name ?? 'Carteira removida'),
+      title: Text(movement.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        '${DateFormat.yMMMMd('pt_BR').format(receipt.receivedAt)}'
-        '${receipt.isPredicted ? ' · a confirmar' : ''}'
-        '${receipt.isAdjustment
-            ? ' · ajuste de saldo'
-            : receipt.isManual
-            ? ' · manual'
-            : ''}',
+        '${DateFormat.MMMd('pt_BR').format(movement.date)}'
+        ' · ${wallet?.name ?? 'Carteira removida'}'
+        '${movement.isPredicted ? ' · a confirmar' : ''}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
       trailing: Text(
-        '${receipt.amount < 0
-            ? ''
-            : receipt.isAdjustment
+        '${movement.amount > 0
             ? '+'
+            : movement.amount < 0
+            ? '−'
             : ''}'
-        '${formatMoney(receipt.amount)}',
+        '${formatMoney(movement.amount.abs())}',
         style: theme.textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w700,
-          color: receipt.isPredicted
-              ? theme.colorScheme.onSurfaceVariant
-              : theme.colorScheme.primary,
+          color: amountColor,
         ),
       ),
     );
+  }
+
+  IconData get _icon {
+    if (movement.isAdjustment) return Icons.tune;
+    if (movement.isPredicted) return Icons.schedule;
+    if (movement.isIncome) return Icons.arrow_downward;
+    if (movement.outflow != null) return Icons.shopping_bag_outlined;
+    return Icons.arrow_upward;
   }
 }
