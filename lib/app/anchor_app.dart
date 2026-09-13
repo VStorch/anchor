@@ -8,6 +8,7 @@ import '../core/state/data_changes.dart';
 import '../core/state/month_selection.dart';
 import '../core/widgets/dismiss_focus.dart';
 import '../features/budget/services/budget_service.dart';
+import '../features/cards/repositories/card_repository.dart';
 import '../features/dashboard/viewmodels/dashboard_view_model.dart';
 import '../features/expenses/repositories/expense_repository.dart';
 import '../features/expenses/viewmodels/expenses_view_model.dart';
@@ -54,9 +55,18 @@ class AnchorApp extends StatelessWidget {
           update: (_, database, changes, __) =>
               WalletRepository(database, changes),
         ),
-        ProxyProvider2<ExpenseRepository, WalletRepository, BudgetService>(
-          update: (_, expenses, wallets, __) =>
-              BudgetService(expenses, wallets),
+        ProxyProvider2<AppDatabase, DataChanges, CardRepository>(
+          update: (_, database, changes, __) =>
+              CardRepository(database, changes),
+        ),
+        ProxyProvider3<
+          ExpenseRepository,
+          WalletRepository,
+          CardRepository,
+          BudgetService
+        >(
+          update: (_, expenses, wallets, cards, __) =>
+              BudgetService(expenses, wallets, cards),
         ),
         ChangeNotifierProvider(
           create: (context) => DashboardViewModel(

@@ -4,6 +4,8 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/database/database_backup.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/cards/models/credit_card.dart';
+import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
@@ -271,5 +273,29 @@ void main() {
 
     expect(wallet.name, 'Salário');
     expect(payments.every((payment) => payment.walletId == 1), isTrue);
+  });
+
+  test('o banco migrado aceita um cartão com compras', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final changes = DataChanges();
+    final cardId = await CardRepository(database, changes).saveCard(
+      CreditCard(
+        name: 'Nubank',
+        closingDay: 3,
+        dueDay: 10,
+        walletId: 1,
+        createdAt: DateTime(2026, 9),
+      ),
+    );
+    final expenses = ExpenseRepository(database, changes);
+    final market = (await expenses.fetchExpenses()).single;
+    await expenses.saveExpense(market.copyWith(cardId: cardId));
+
+    expect((await expenses.fetchExpenses()).single.cardId, cardId);
   });
 }

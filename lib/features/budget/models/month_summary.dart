@@ -1,8 +1,11 @@
 import '../../../core/utils/month.dart';
+import '../../cards/models/card_invoice.dart';
+import '../../cards/models/credit_card.dart';
 import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
+import '../../expenses/models/payable.dart';
 import '../../wallets/models/outflow.dart';
 import '../../wallets/models/receipt.dart';
 
@@ -12,6 +15,7 @@ class MonthSummary {
     required this.occurrences,
     required this.receipts,
     required this.outflows,
+    this.cards = const <CreditCard>[],
   });
 
   factory MonthSummary.build({
@@ -21,6 +25,7 @@ class MonthSummary {
     required List<Receipt> receipts,
     List<ExpenseMonth> monthAmounts = const <ExpenseMonth>[],
     List<Outflow> outflows = const <Outflow>[],
+    List<CreditCard> cards = const <CreditCard>[],
   }) {
     final paymentsByExpense = <int, List<ExpensePayment>>{};
     for (final payment in payments) {
@@ -65,6 +70,7 @@ class MonthSummary {
           .where((receipt) => receipt.month == month && receipt.counts)
           .toList(),
       outflows: outflows.where((outflow) => outflow.month == month).toList(),
+      cards: cards,
     );
   }
 
@@ -79,9 +85,45 @@ class MonthSummary {
   final List<ExpenseOccurrence> occurrences;
   final List<Receipt> receipts;
   final List<Outflow> outflows;
+  final List<CreditCard> cards;
 
   bool get isEmpty =>
       occurrences.isEmpty && receipts.isEmpty && outflows.isEmpty;
+
+  List<CardInvoice> get invoices => [
+    for (final card in cards)
+      CardInvoice(
+        card: card,
+        month: month,
+        items: occurrences
+            .where((occurrence) => occurrence.expense.cardId == card.id)
+            .toList(),
+      ),
+  ];
+
+  CardInvoice? invoiceOf(int cardId) {
+    for (final invoice in invoices) {
+      if (invoice.card.id == cardId) return invoice;
+    }
+    return null;
+  }
+
+  /// What the month owes, with each card's purchases folded into its invoice.
+  List<Payable> get payables {
+    final cardIds = cards.map((card) => card.id).toSet();
+    return <Payable>[
+      ...occurrences.where(
+        (occurrence) => !cardIds.contains(occurrence.expense.cardId),
+      ),
+      ...invoices.where((invoice) => invoice.items.isNotEmpty),
+    ]..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+  }
+
+  List<Payable> get pendingPayables =>
+      payables.where((payable) => !payable.isPaid).toList();
+
+  List<Payable> get paidPayables =>
+      payables.where((payable) => payable.isPaid).toList();
 
   List<ExpenseOccurrence> get pendingOccurrences =>
       occurrences.where((occurrence) => !occurrence.isPaid).toList();
@@ -89,8 +131,8 @@ class MonthSummary {
   List<ExpenseOccurrence> get paidOccurrences =>
       occurrences.where((occurrence) => occurrence.isPaid).toList();
 
-  List<ExpenseOccurrence> get overdueOccurrences =>
-      occurrences.where((occurrence) => occurrence.isOverdue).toList();
+  List<Payable> get overduePayables =>
+      payables.where((payable) => payable.isOverdue).toList();
 
   ExpenseOccurrence? occurrenceOf(int expenseId) {
     for (final occurrence in occurrences) {

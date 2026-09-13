@@ -356,6 +356,7 @@ class _ExpenseMenu extends StatelessWidget {
           ExpenseFormPage.route(
             referenceMonth: viewModel.month,
             wallets: viewModel.snapshot.wallets,
+            cards: viewModel.snapshot.cards,
             expense: expense,
           ),
         );

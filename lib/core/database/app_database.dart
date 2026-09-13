@@ -12,7 +12,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 5;
+  static const int version = 6;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -21,6 +21,7 @@ class AppDatabase {
   static const String expensePaymentsTable = 'expense_payments';
   static const String expenseMonthsTable = 'expense_months';
   static const String outflowsTable = 'outflows';
+  static const String cardsTable = 'cards';
 
   final DatabaseFactory _factory;
   final String? _filePath;
@@ -119,6 +120,16 @@ class AppDatabase {
     ''',
     'CREATE UNIQUE INDEX idx_receipt_payout_month ON $receiptsTable(payout_id, month_key)',
     '''
+    CREATE TABLE $cardsTable (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      closing_day INTEGER NOT NULL,
+      due_day INTEGER NOT NULL,
+      wallet_id INTEGER REFERENCES $walletsTable(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL
+    )
+    ''',
+    '''
     CREATE TABLE $expensesTable (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -130,7 +141,8 @@ class AppDatabase {
       total_installments INTEGER,
       settled_installments INTEGER NOT NULL DEFAULT 0,
       wallet_id INTEGER REFERENCES $walletsTable(id) ON DELETE SET NULL,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      card_id INTEGER REFERENCES $cardsTable(id) ON DELETE SET NULL
     )
     ''',
     '''
@@ -207,6 +219,19 @@ class AppDatabase {
       )
       WHERE wallet_id IS NULL
       ''',
+    ],
+    6: <String>[
+      '''
+      CREATE TABLE $cardsTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        closing_day INTEGER NOT NULL,
+        due_day INTEGER NOT NULL,
+        wallet_id INTEGER REFERENCES $walletsTable(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL
+      )
+      ''',
+      'ALTER TABLE $expensesTable ADD COLUMN card_id INTEGER REFERENCES $cardsTable(id) ON DELETE SET NULL',
     ],
   };
 }

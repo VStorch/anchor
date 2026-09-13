@@ -7,6 +7,7 @@ import '../../../core/widgets/day_of_month_picker.dart';
 import '../../../core/widgets/money_field.dart';
 import '../../../core/widgets/month_picker_sheet.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../cards/models/credit_card.dart';
 import '../../wallets/models/wallet.dart';
 import '../../wallets/models/wallet_kind.dart';
 import '../models/expense.dart';
@@ -19,33 +20,49 @@ class ExpenseFormPage extends StatelessWidget {
     super.key,
     required this.referenceMonth,
     required this.wallets,
+    this.cards = const <CreditCard>[],
     this.expense,
+    this.card,
   });
 
   static Future<void> open(
     BuildContext context, {
     required Month referenceMonth,
     required List<Wallet> wallets,
+    List<CreditCard> cards = const <CreditCard>[],
     Expense? expense,
+    CreditCard? card,
   }) => Navigator.of(context).push(
-    route(referenceMonth: referenceMonth, wallets: wallets, expense: expense),
+    route(
+      referenceMonth: referenceMonth,
+      wallets: wallets,
+      cards: cards,
+      expense: expense,
+      card: card,
+    ),
   );
 
   static MaterialPageRoute<void> route({
     required Month referenceMonth,
     required List<Wallet> wallets,
+    List<CreditCard> cards = const <CreditCard>[],
     Expense? expense,
+    CreditCard? card,
   }) => MaterialPageRoute<void>(
     builder: (_) => ExpenseFormPage(
       referenceMonth: referenceMonth,
       wallets: wallets,
+      cards: cards,
       expense: expense,
+      card: card,
     ),
   );
 
   final Month referenceMonth;
   final List<Wallet> wallets;
+  final List<CreditCard> cards;
   final Expense? expense;
+  final CreditCard? card;
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +72,10 @@ class ExpenseFormPage extends StatelessWidget {
         referenceMonth: referenceMonth,
         expense: expense,
         likelyWalletId: _likelyWalletId(),
+        cards: cards,
+        card: card,
       ),
-      child: _ExpenseFormView(wallets: wallets),
+      child: _ExpenseFormView(wallets: wallets, cards: cards),
     );
   }
 
@@ -69,9 +88,10 @@ class ExpenseFormPage extends StatelessWidget {
 }
 
 class _ExpenseFormView extends StatelessWidget {
-  const _ExpenseFormView({required this.wallets});
+  const _ExpenseFormView({required this.wallets, required this.cards});
 
   final List<Wallet> wallets;
+  final List<CreditCard> cards;
 
   @override
   Widget build(BuildContext context) {
@@ -98,9 +118,11 @@ class _ExpenseFormView extends StatelessWidget {
           const SizedBox(height: 16),
           MoneyField(
             initialValue: viewModel.amount,
-            label: viewModel.isInstallment
-                ? 'Valor da parcela'
-                : 'Valor mensal',
+            label: switch (viewModel.type) {
+              ExpenseType.installment => 'Valor da parcela',
+              ExpenseType.recurring => 'Valor mensal',
+              ExpenseType.single => 'Valor',
+            },
             onChanged: viewModel.setAmount,
           ),
           if (viewModel.isInstallment) ...[
@@ -119,26 +141,28 @@ class _ExpenseFormView extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 24),
+          _SourceDropdown(viewModel: viewModel, wallets: wallets, cards: cards),
+          const SizedBox(height: 24),
           SectionHeader(
             title: viewModel.isInstallment
                 ? 'Próxima parcela'
                 : 'Primeira cobrança',
           ),
           _MonthField(viewModel: viewModel),
-          const SizedBox(height: 20),
-          Text(
-            'Dia do vencimento',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          DayOfMonthPicker(
-            selectedDay: viewModel.dueDay,
-            onDaySelected: viewModel.setDueDay,
-          ),
-          const SizedBox(height: 24),
-          _WalletDropdown(viewModel: viewModel, wallets: wallets),
+          if (viewModel.card == null) ...[
+            const SizedBox(height: 20),
+            Text(
+              'Dia do vencimento',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            DayOfMonthPicker(
+              selectedDay: viewModel.dueDay,
+              onDaySelected: viewModel.setDueDay,
+            ),
+          ],
           const SizedBox(height: 28),
           _TotalPreview(viewModel: viewModel),
           const SizedBox(height: 20),
@@ -279,48 +303,68 @@ class _MonthField extends StatelessWidget {
   }
 }
 
-class _WalletDropdown extends StatelessWidget {
-  const _WalletDropdown({required this.viewModel, required this.wallets});
+class _SourceDropdown extends StatelessWidget {
+  const _SourceDropdown({
+    required this.viewModel,
+    required this.wallets,
+    required this.cards,
+  });
 
   final ExpenseFormViewModel viewModel;
   final List<Wallet> wallets;
+  final List<CreditCard> cards;
 
   @override
   Widget build(BuildContext context) {
-    if (wallets.isEmpty) {
-      return Text(
-        'Nenhuma carteira cadastrada ainda.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
+    if (wallets.isEmpty && cards.isEmpty) return const SizedBox.shrink();
 
-    return DropdownButtonFormField<int?>(
-      value: viewModel.walletId,
+    return DropdownButtonFormField<PaymentSource>(
+      value: viewModel.source,
       isExpanded: true,
-      decoration: const InputDecoration(labelText: 'Fonte do pagamento'),
+      decoration: const InputDecoration(labelText: 'Pago com'),
       items: [
-        const DropdownMenuItem<int?>(
-          value: null,
+        const DropdownMenuItem<PaymentSource>(
+          value: (walletId: null, cardId: null),
           child: Text('Definir na hora'),
         ),
         ...wallets.map(
-          (wallet) => DropdownMenuItem<int?>(
-            value: wallet.id,
-            child: Row(
-              children: [
-                Icon(wallet.icon, size: 18, color: wallet.color),
-                const SizedBox(width: 8),
-                Text(wallet.name),
-              ],
-            ),
+          (wallet) => _item(
+            (walletId: wallet.id, cardId: null),
+            wallet.icon,
+            wallet.color,
+            wallet.name,
+          ),
+        ),
+        ...cards.map(
+          (card) => _item(
+            (walletId: null, cardId: card.id),
+            CreditCard.icon,
+            Theme.of(context).colorScheme.primary,
+            card.name,
           ),
         ),
       ],
-      onChanged: viewModel.setWalletId,
+      onChanged: (source) {
+        if (source != null) viewModel.setSource(source);
+      },
     );
   }
+
+  DropdownMenuItem<PaymentSource> _item(
+    PaymentSource value,
+    IconData icon,
+    Color color,
+    String label,
+  ) => DropdownMenuItem<PaymentSource>(
+    value: value,
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+      ],
+    ),
+  );
 }
 
 class _TotalPreview extends StatelessWidget {

@@ -72,8 +72,8 @@ class RemindersViewModel extends ChangeNotifier {
     final next = await _budgetService.loadSnapshot(month.next);
 
     return DueReminder.plan([
-      ...current.summary.occurrences,
-      ...next.summary.occurrences,
+      ...current.summary.payables,
+      ...next.summary.payables,
     ], now: now);
   }
 

@@ -104,6 +104,18 @@ screen (`Month.suggestedDate`), not to today.
 `ExpenseOccurrence` is where the two meet: `amount` (month value), `paidAmount`, `remaining`, `isPaid`,
 `isPartlyPaid`. Views read those — never re-derive them.
 
+A **credit card** (`features/cards/`) is not a money source and has no balance: its purchases are
+ordinary expenses carrying `card_id`. `CardRepository.saveCard` copies the card's due day and paying
+wallet onto them, so occurrences, reminders, the agenda and wallet commitments keep reading those from
+the expense with no card awareness. `MonthSummary.invoices` groups a month's occurrences by card into
+`CardInvoice`, and `MonthSummary.payables` is what the month owes — loose occurrences plus non-empty
+invoices, both behind the `Payable` interface. Lists, the dashboard, the agenda and reminders render
+`payables`; totals still sum `occurrences`, so an invoice never changes `totalExpenses`. The month
+table stays per item. `CreditCard.invoiceMonthFor` turns a purchase date into the invoice month from
+the closing and due days; the expense form applies it when a card is picked, while "Adicionar compra"
+from an invoice keeps that invoice's month. Deleting a card leaves its purchases as loose expenses
+(`ON DELETE SET NULL`).
+
 A **wallet** (`features/wallets/`) is a money source — salary or a benefit (VR/VA/mercado). It owns
 `payouts` (the flexible calendar) which generate `receipts` (credits). A wallet's balance is *all*
 receipts minus *all* payments charged to it **and all its `outflows`**, so it carries across months;

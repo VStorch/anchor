@@ -8,6 +8,7 @@ import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/stat_tile.dart';
 import '../viewmodels/expenses_view_model.dart';
 import 'expense_form_page.dart';
+import '../../cards/views/payable_sheet.dart';
 import 'widgets/expense_ledger_sheet.dart';
 import 'widgets/expense_tile.dart';
 import 'widgets/month_table.dart';
@@ -27,6 +28,7 @@ class ExpensesPage extends StatelessWidget {
           context,
           referenceMonth: viewModel.month,
           wallets: viewModel.snapshot.wallets,
+          cards: viewModel.snapshot.cards,
         ),
         icon: const Icon(Icons.add),
         label: const Text('Nova despesa'),
@@ -48,7 +50,7 @@ class ExpensesPage extends StatelessWidget {
             Expanded(
               child: viewModel.isLoading
                   ? const LoadingView()
-                  : viewModel.occurrences.isEmpty
+                  : viewModel.payables.isEmpty
                   ? _emptyState(context, viewModel)
                   : viewModel.layout == ExpenseLayout.table
                   ? _table(context, viewModel)
@@ -63,14 +65,14 @@ class ExpensesPage extends StatelessWidget {
   Widget _list(BuildContext context, ExpensesViewModel viewModel) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      itemCount: viewModel.occurrences.length,
+      itemCount: viewModel.payables.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final occurrence = viewModel.occurrences[index];
+        final payable = viewModel.payables[index];
         return ExpenseTile(
-          occurrence: occurrence,
+          payable: payable,
           wallets: viewModel.snapshot.wallets,
-          onTap: () => ExpenseLedgerSheet.show(context, occurrence: occurrence),
+          onTap: () => showPayableSheet(context, payable),
         );
       },
     );
@@ -99,6 +101,7 @@ class ExpensesPage extends StatelessWidget {
                 context,
                 referenceMonth: viewModel.month,
                 wallets: viewModel.snapshot.wallets,
+                cards: viewModel.snapshot.cards,
               ),
               icon: const Icon(Icons.add),
               label: const Text('Cadastrar despesa'),

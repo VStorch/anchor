@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/month.dart';
+import '../../cards/models/credit_card.dart';
 import '../models/expense.dart';
 import '../models/expense_type.dart';
 import '../repositories/expense_repository.dart';
+
+typedef PaymentSource = ({int? walletId, int? cardId});
 
 class ExpenseFormViewModel extends ChangeNotifier {
   ExpenseFormViewModel({
@@ -11,19 +14,26 @@ class ExpenseFormViewModel extends ChangeNotifier {
     required Month referenceMonth,
     Expense? expense,
     int? likelyWalletId,
+    List<CreditCard> cards = const <CreditCard>[],
+    CreditCard? card,
   }) : _repository = repository,
+       _cards = cards,
        _expense = expense,
        _name = expense?.name ?? '',
-       _type = expense?.type ?? ExpenseType.recurring,
+       _type =
+           expense?.type ??
+           (card == null ? ExpenseType.recurring : ExpenseType.single),
        _amount = expense?.amount ?? 0,
        _dueDay = expense?.dueDay ?? 5,
        _startMonth = expense?.startMonth ?? referenceMonth,
        _totalInstallments = expense?.totalInstallments ?? 12,
        _settledInstallments = expense?.settledInstallments ?? 0,
-       _walletId = expense == null ? likelyWalletId : expense.walletId;
+       _walletId = expense == null ? likelyWalletId : expense.walletId,
+       _cardId = expense?.cardId ?? card?.id;
 
   final ExpenseRepository _repository;
   final Expense? _expense;
+  final List<CreditCard> _cards;
 
   String _name;
   ExpenseType _type;
@@ -33,6 +43,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   int _totalInstallments;
   int _settledInstallments;
   int? _walletId;
+  int? _cardId;
   bool _isSaving = false;
 
   bool get isEditing => _expense != null;
@@ -51,7 +62,15 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   int get settledInstallments => _settledInstallments;
 
-  int? get walletId => _walletId;
+  PaymentSource get source =>
+      (walletId: _cardId == null ? _walletId : null, cardId: _cardId);
+
+  CreditCard? get card {
+    for (final card in _cards) {
+      if (card.id == _cardId) return card;
+    }
+    return null;
+  }
 
   bool get isSaving => _isSaving;
 
@@ -117,8 +136,13 @@ class ExpenseFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setWalletId(int? value) {
-    _walletId = value;
+  void setSource(PaymentSource value) {
+    _walletId = value.walletId;
+    _cardId = value.cardId;
+    final card = this.card;
+    if (card != null && !isEditing) {
+      _startMonth = card.invoiceMonthFor(DateTime.now());
+    }
     notifyListeners();
   }
 
@@ -127,18 +151,20 @@ class ExpenseFormViewModel extends ChangeNotifier {
     _isSaving = true;
     notifyListeners();
 
+    final card = this.card;
     await _repository.saveExpense(
       Expense(
         id: _expense?.id,
         name: _name.trim(),
         type: _type,
         amount: _amount,
-        dueDay: _dueDay,
+        dueDay: card?.dueDay ?? _dueDay,
         startMonth: _startMonth,
         endMonth: _type == ExpenseType.recurring ? _expense?.endMonth : null,
         totalInstallments: isInstallment ? _totalInstallments : null,
         settledInstallments: isInstallment ? _settledInstallments : 0,
-        walletId: _walletId,
+        walletId: card == null ? _walletId : card.walletId,
+        cardId: card?.id,
         createdAt: _expense?.createdAt ?? DateTime.now(),
       ),
     );

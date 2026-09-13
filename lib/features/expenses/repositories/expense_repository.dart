@@ -73,6 +73,29 @@ class ExpenseRepository {
     _changes.publish();
   }
 
+  Future<void> savePayments(List<ExpensePayment> payments) async {
+    if (payments.isEmpty) return;
+    final db = await _database.database;
+    final batch = db.batch();
+    for (final payment in payments) {
+      batch.insert(AppDatabase.expensePaymentsTable, payment.toMap());
+    }
+    await batch.commit(noResult: true);
+    _changes.publish();
+  }
+
+  Future<void> deletePaymentsOfMany(List<int> expenseIds, Month month) async {
+    if (expenseIds.isEmpty) return;
+    final db = await _database.database;
+    await db.delete(
+      AppDatabase.expensePaymentsTable,
+      where:
+          'month_key = ? AND expense_id IN (${List.filled(expenseIds.length, '?').join(', ')})',
+      whereArgs: [month.key, ...expenseIds],
+    );
+    _changes.publish();
+  }
+
   Future<void> deletePayment(int id) async {
     final db = await _database.database;
     await db.delete(

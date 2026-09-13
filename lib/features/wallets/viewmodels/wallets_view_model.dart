@@ -3,6 +3,7 @@ import '../../../core/state/month_selection.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/viewmodels/reactive_view_model.dart';
 import '../../budget/models/budget_snapshot.dart';
+import '../../cards/models/card_invoice.dart';
 import '../../budget/models/month_summary.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../budget/services/budget_service.dart';
@@ -38,6 +39,10 @@ class WalletsViewModel extends ReactiveViewModel {
   Month get month => _monthSelection.current;
 
   List<WalletSummary> get summaries => _snapshot.walletSummaries;
+
+  List<Wallet> get wallets => _snapshot.wallets;
+
+  List<CardInvoice> get invoices => _snapshot.summary.invoices;
 
   List<WalletSummary> summariesOf(WalletKind kind) =>
       summaries.where((summary) => summary.wallet.kind == kind).toList();

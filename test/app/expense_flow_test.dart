@@ -4,6 +4,7 @@ import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/features/expenses/viewmodels/expense_form_view_model.dart';
 import 'package:anchor/features/expenses/views/widgets/expense_ledger_sheet.dart';
 import 'package:anchor/features/expenses/views/widgets/month_table.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
@@ -171,14 +172,14 @@ void main() {
     await tester.tap(find.text('Nova despesa'));
     await tester.pumpAndSettle();
 
-    final dropdown = tester.widget<DropdownButton<int?>>(
-      find.byType(DropdownButton<int?>),
+    final dropdown = tester.widget<DropdownButton<PaymentSource>>(
+      find.byType(DropdownButton<PaymentSource>),
     );
     final walletId = (await WalletRepository(
       database,
       DataChanges(),
     ).fetchWallets()).firstWhere((wallet) => wallet.name == 'Salário').id;
-    expect(dropdown.value, walletId);
+    expect(dropdown.value?.walletId, walletId);
   });
 
   testWidgets('edita o valor do mês pela tabela', (tester) async {

@@ -103,12 +103,12 @@ class _AgendaDay {
   static List<_AgendaDay> buildMonth(Month month, BudgetSnapshot snapshot) {
     final entries = <_AgendaEntry>[
       ..._incomes(month, snapshot),
-      for (final occurrence in snapshot.summary.occurrences)
+      for (final payable in snapshot.summary.payables)
         _AgendaEntry(
-          day: occurrence.dueDate.day,
-          title: occurrence.expense.name,
-          amount: occurrence.amount,
-          kind: occurrence.isPaid ? _EntryKind.paidBill : _EntryKind.bill,
+          day: payable.dueDate.day,
+          title: payable.name,
+          amount: payable.amount,
+          kind: payable.isPaid ? _EntryKind.paidBill : _EntryKind.bill,
         ),
       for (final outflow in snapshot.summary.outflows)
         _AgendaEntry(

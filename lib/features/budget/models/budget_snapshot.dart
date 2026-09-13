@@ -1,3 +1,4 @@
+import '../../cards/models/credit_card.dart';
 import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_payment.dart';
 import '../../wallets/models/receipt.dart';
@@ -13,6 +14,7 @@ class BudgetSnapshot {
     required this.wallets,
     required this.receipts,
     required this.payments,
+    this.cards = const <CreditCard>[],
   });
 
   factory BudgetSnapshot.empty(MonthSummary summary) => BudgetSnapshot(
@@ -30,6 +32,7 @@ class BudgetSnapshot {
   final List<Wallet> wallets;
   final List<Receipt> receipts;
   final List<ExpensePayment> payments;
+  final List<CreditCard> cards;
 
   bool get hasWallets => wallets.isNotEmpty;
 
@@ -45,4 +48,12 @@ class BudgetSnapshot {
   }
 
   Wallet? walletById(int? id) => summaryFor(id)?.wallet;
+
+  CreditCard? cardById(int? id) {
+    if (id == null) return null;
+    for (final card in cards) {
+      if (card.id == id) return card;
+    }
+    return null;
+  }
 }

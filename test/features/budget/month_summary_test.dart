@@ -1,6 +1,8 @@
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/models/month_summary.dart';
 import 'package:anchor/features/budget/models/wallet_summary.dart';
+import 'package:anchor/features/cards/models/card_invoice.dart';
+import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
@@ -377,6 +379,91 @@ void main() {
       );
 
       expect(summaryOf(late, august).occurrences, hasLength(1));
+    });
+  });
+
+  group('fatura de cartão', () {
+    final nubank = CreditCard(
+      id: 7,
+      name: 'Nubank',
+      closingDay: 3,
+      dueDay: 12,
+      walletId: 1,
+      createdAt: DateTime(2026, 8),
+    );
+
+    Expense onCard(int id, String name, double amount, {int? cardId = 7}) =>
+        Expense(
+          id: id,
+          name: name,
+          type: ExpenseType.installment,
+          amount: amount,
+          dueDay: 12,
+          startMonth: august,
+          totalInstallments: 10,
+          walletId: 1,
+          cardId: cardId,
+          createdAt: DateTime(2026, 8),
+        );
+
+    final purchases = [
+      onCard(20, 'Geladeira', 300),
+      onCard(21, 'Celular', 150),
+      buildExpense(id: 22, type: ExpenseType.recurring, amount: 90),
+    ];
+
+    MonthSummary summaryWith({
+      List<CreditCard> cards = const <CreditCard>[],
+      List<ExpensePayment> payments = const <ExpensePayment>[],
+    }) => MonthSummary.build(
+      month: august,
+      expenses: purchases,
+      payments: payments,
+      receipts: const <Receipt>[],
+      cards: cards,
+    );
+
+    test('as compras do cartão viram uma linha só', () {
+      final summary = summaryWith(cards: [nubank]);
+      final invoice = summary.payables.whereType<CardInvoice>().single;
+
+      expect(summary.payables, hasLength(2));
+      expect(invoice.name, 'Fatura Nubank');
+      expect(invoice.amount, 450);
+      expect(invoice.dueDate, DateTime(2026, 8, 12));
+    });
+
+    test('os totais do mês não mudam com a fatura', () {
+      expect(summaryWith(cards: [nubank]).totalExpenses, 540);
+      expect(summaryWith().totalExpenses, 540);
+    });
+
+    test('a fatura só fica paga quando todas as compras estão pagas', () {
+      ExpensePayment paid(int expenseId, double amount) => ExpensePayment(
+        expenseId: expenseId,
+        walletId: 1,
+        month: august,
+        amount: amount,
+        paidAt: DateTime(2026, 8, 12),
+      );
+
+      final partly = summaryWith(cards: [nubank], payments: [paid(20, 300)]);
+      final full = summaryWith(
+        cards: [nubank],
+        payments: [paid(20, 300), paid(21, 150)],
+      );
+
+      expect(partly.invoiceOf(7)!.isPartlyPaid, isTrue);
+      expect(partly.invoiceOf(7)!.remaining, 150);
+      expect(full.invoiceOf(7)!.isPaid, isTrue);
+      expect(full.totalPaid, 450);
+    });
+
+    test('sem o cartão, as compras voltam a ser despesas soltas', () {
+      final summary = summaryWith();
+
+      expect(summary.payables, hasLength(3));
+      expect(summary.invoices, isEmpty);
     });
   });
 }

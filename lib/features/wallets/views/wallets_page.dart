@@ -8,6 +8,10 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
+import '../../cards/models/card_invoice.dart';
+import '../../cards/models/credit_card.dart';
+import '../../cards/views/card_form_page.dart';
+import '../../cards/views/card_invoice_sheet.dart';
 import '../models/outflow.dart';
 import '../models/receipt.dart';
 import '../models/wallet.dart';
@@ -84,6 +88,18 @@ class WalletsPage extends StatelessWidget {
           const SectionHeader(title: 'Benefícios'),
           ...benefits.map((summary) => _card(context, summary)),
         ],
+        const SizedBox(height: 20),
+        SectionHeader(
+          title: 'Cartões',
+          trailing: IconButton.filledTonal(
+            onPressed: () => Navigator.of(
+              context,
+            ).push(CardFormPage.route(wallets: viewModel.wallets)),
+            icon: const Icon(Icons.add),
+            tooltip: 'Adicionar cartão',
+          ),
+        ),
+        ...viewModel.invoices.map((invoice) => _InvoiceTile(invoice: invoice)),
         const SizedBox(height: 20),
         SectionHeader(
           title: 'Movimentações do mês',
@@ -324,5 +340,41 @@ class _MovementTile extends StatelessWidget {
     if (movement.isIncome) return Icons.arrow_downward;
     if (movement.outflow != null) return Icons.shopping_bag_outlined;
     return Icons.arrow_upward;
+  }
+}
+
+class _InvoiceTile extends StatelessWidget {
+  const _InvoiceTile({required this.invoice});
+
+  final CardInvoice invoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        onTap: () => CardInvoiceSheet.show(context, cardId: invoice.card.id!),
+        leading: CircleAvatar(
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: Icon(
+            CreditCard.icon,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+        title: Text(invoice.card.name),
+        subtitle: Text(
+          'Vence ${DateFormat.MMMd('pt_BR').format(invoice.dueDate)}'
+          '${invoice.isPaid ? ' · paga' : ''}',
+        ),
+        trailing: Text(
+          formatMoney(invoice.amount),
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
   }
 }

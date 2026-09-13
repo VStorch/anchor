@@ -7,7 +7,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../expenses/views/widgets/expense_tile.dart';
-import '../../expenses/views/widgets/expense_ledger_sheet.dart';
+import '../../cards/views/payable_sheet.dart';
 import '../../wallets/views/wallet_form_page.dart';
 import '../viewmodels/dashboard_view_model.dart';
 import 'month_agenda_page.dart';
@@ -58,7 +58,7 @@ class DashboardPage extends StatelessWidget {
 
   Widget _content(BuildContext context, DashboardViewModel viewModel) {
     final summary = viewModel.summary;
-    final upcoming = summary.pendingOccurrences.take(_upcomingLimit).toList();
+    final upcoming = summary.pendingPayables.take(_upcomingLimit).toList();
 
     return RefreshIndicator(
       onRefresh: viewModel.refresh,
@@ -92,8 +92,8 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(height: 20),
           SectionHeader(
             title: 'A pagar',
-            subtitle: summary.overdueOccurrences.isNotEmpty
-                ? '${summary.overdueOccurrences.length} em atraso'
+            subtitle: summary.overduePayables.isNotEmpty
+                ? '${summary.overduePayables.length} em atraso'
                 : null,
             trailing: TextButton(
               onPressed: () => context.read<AppShellController>().goTo(
@@ -106,13 +106,12 @@ class DashboardPage extends StatelessWidget {
             const _AllSettledCard()
           else
             ...upcoming.map(
-              (occurrence) => Padding(
+              (payable) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: ExpenseTile(
-                  occurrence: occurrence,
+                  payable: payable,
                   wallets: viewModel.snapshot.wallets,
-                  onTap: () =>
-                      ExpenseLedgerSheet.show(context, occurrence: occurrence),
+                  onTap: () => showPayableSheet(context, payable),
                 ),
               ),
             ),

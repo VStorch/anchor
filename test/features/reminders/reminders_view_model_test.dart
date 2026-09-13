@@ -2,6 +2,7 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/services/budget_service.dart';
+import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -35,7 +36,11 @@ void main() {
   tearDown(() => database.close());
 
   RemindersViewModel buildViewModel() => RemindersViewModel(
-    budgetService: BudgetService(expenses, WalletRepository(database, changes)),
+    budgetService: BudgetService(
+      expenses,
+      WalletRepository(database, changes),
+      CardRepository(database, changes),
+    ),
     notifications: notifications,
     changes: changes,
     clock: () => clock,

@@ -5,10 +5,12 @@ import '../../../core/viewmodels/reactive_view_model.dart';
 import '../../budget/models/budget_snapshot.dart';
 import '../../budget/models/month_summary.dart';
 import '../../budget/services/budget_service.dart';
+import '../../cards/models/card_invoice.dart';
 import '../models/expense.dart';
 import '../models/expense_month.dart';
 import '../models/expense_occurrence.dart';
 import '../models/expense_payment.dart';
+import '../models/payable.dart';
 import '../repositories/expense_repository.dart';
 
 enum ExpenseFilter {
@@ -58,11 +60,19 @@ class ExpensesViewModel extends ReactiveViewModel {
 
   List<Expense> get registeredExpenses => _snapshot.expenses;
 
+  List<Payable> get payables => switch (_filter) {
+    ExpenseFilter.all => summary.payables,
+    ExpenseFilter.pending => summary.pendingPayables,
+    ExpenseFilter.paid => summary.paidPayables,
+  };
+
   List<ExpenseOccurrence> get occurrences => switch (_filter) {
     ExpenseFilter.all => summary.occurrences,
     ExpenseFilter.pending => summary.pendingOccurrences,
     ExpenseFilter.paid => summary.paidOccurrences,
   };
+
+  CardInvoice? invoiceOf(int cardId) => summary.invoiceOf(cardId);
 
   @override
   Future<void> loadData() async {
@@ -140,6 +150,30 @@ class ExpensesViewModel extends ReactiveViewModel {
     if (_snapshot.walletById(planned) != null) return planned;
     return _snapshot.wallets.isEmpty ? null : _snapshot.wallets.first.id;
   }
+
+  int? defaultWalletIdForInvoice(CardInvoice invoice) {
+    final planned = invoice.card.walletId;
+    if (_snapshot.walletById(planned) != null) return planned;
+    return _snapshot.wallets.isEmpty ? null : _snapshot.wallets.first.id;
+  }
+
+  Future<void> payInvoice(CardInvoice invoice, {required int? walletId}) =>
+      _expenseRepository.savePayments([
+        for (final item in invoice.unpaidItems)
+          ExpensePayment(
+            expenseId: item.expense.id!,
+            walletId: walletId,
+            month: item.month,
+            amount: item.remaining,
+            paidAt: DateTime.now(),
+          ),
+      ]);
+
+  Future<void> clearInvoicePayments(CardInvoice invoice) =>
+      _expenseRepository.deletePaymentsOfMany(
+        invoice.items.map((item) => item.expense.id!).toList(),
+        invoice.month,
+      );
 
   Future<void> removePayment(ExpensePayment payment) =>
       _expenseRepository.deletePayment(payment.id!);

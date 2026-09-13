@@ -3,27 +3,28 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/utils/money.dart';
 import '../../../wallets/models/wallet.dart';
+import '../../../cards/models/card_invoice.dart';
 import '../../models/expense_occurrence.dart';
+import '../../models/payable.dart';
 
 class ExpenseTile extends StatelessWidget {
   const ExpenseTile({
     super.key,
-    required this.occurrence,
+    required this.payable,
     required this.wallets,
     required this.onTap,
   });
 
-  final ExpenseOccurrence occurrence;
+  final Payable payable;
   final List<Wallet> wallets;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final expense = occurrence.expense;
-    final accent = occurrence.isPaid
+    final accent = payable.isPaid
         ? theme.colorScheme.primary
-        : occurrence.isOverdue
+        : payable.isOverdue
         ? theme.colorScheme.error
         : theme.colorScheme.onSurfaceVariant;
 
@@ -36,19 +37,19 @@ class ExpenseTile extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) => Row(
               children: [
-                _DueBadge(occurrence: occurrence, accent: accent),
+                _DueBadge(payable: payable, accent: accent),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        expense.name,
+                        payable.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
-                          decoration: occurrence.isPaid
+                          decoration: payable.isPaid
                               ? TextDecoration.lineThrough
                               : null,
                           decorationColor: theme.colorScheme.onSurfaceVariant,
@@ -67,7 +68,7 @@ class ExpenseTile extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (occurrence.isOverdue) ...[
+                          if (payable.isOverdue) ...[
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -83,9 +84,9 @@ class ExpenseTile extends StatelessWidget {
                           ],
                         ],
                       ),
-                      if (occurrence.isPartlyPaid) ...[
+                      if (payable.isPartlyPaid) ...[
                         const SizedBox(height: 8),
-                        _PartialBar(occurrence: occurrence),
+                        _PartialBar(payable: payable),
                       ],
                     ],
                   ),
@@ -100,7 +101,7 @@ class ExpenseTile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        formatMoney(occurrence.amount),
+                        formatMoney(payable.amount),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
@@ -108,7 +109,7 @@ class ExpenseTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      _PaidToggle(occurrence: occurrence, onPressed: onTap),
+                      _PaidToggle(payable: payable, onPressed: onTap),
                     ],
                   ),
                 ),
@@ -120,37 +121,36 @@ class ExpenseTile extends StatelessWidget {
     );
   }
 
-  String _subtitle() {
-    final installment = occurrence.installmentLabel;
-    final parts = <String>[
-      installment != null
-          ? 'Parcela $installment'
+  String _subtitle() => switch (payable) {
+    ExpenseOccurrence occurrence => [
+      occurrence.installmentLabel != null
+          ? 'Parcela ${occurrence.installmentLabel}'
           : occurrence.expense.type.label,
-      ..._walletNames(),
-    ];
-    return parts.join(' · ');
-  }
+      ..._walletNames(
+        occurrence.paidWalletIds.isNotEmpty
+            ? occurrence.paidWalletIds
+            : [?occurrence.plannedWalletId],
+      ),
+    ].join(' · '),
+    CardInvoice invoice => [
+      invoice.items.length == 1
+          ? '1 compra'
+          : '${invoice.items.length} compras',
+      ..._walletNames([?invoice.card.walletId]),
+    ].join(' · '),
+    _ => '',
+  };
 
-  List<String> _walletNames() {
-    final ids = occurrence.paidWalletIds.isNotEmpty
-        ? occurrence.paidWalletIds
-        : <int>[
-            if (occurrence.plannedWalletId != null) occurrence.plannedWalletId!,
-          ];
-
-    return ids
-        .map(
-          (id) => wallets.where((wallet) => wallet.id == id).firstOrNull?.name,
-        )
-        .whereType<String>()
-        .toList();
-  }
+  List<String> _walletNames(List<int> ids) => ids
+      .map((id) => wallets.where((wallet) => wallet.id == id).firstOrNull?.name)
+      .whereType<String>()
+      .toList();
 }
 
 class _PartialBar extends StatelessWidget {
-  const _PartialBar({required this.occurrence});
+  const _PartialBar({required this.payable});
 
-  final ExpenseOccurrence occurrence;
+  final Payable payable;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +162,7 @@ class _PartialBar extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
-            value: occurrence.paidRatio,
+            value: payable.paidRatio,
             minHeight: 4,
             color: theme.colorScheme.primary,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
@@ -170,7 +170,7 @@ class _PartialBar extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '${formatMoney(occurrence.paidAmount)} pagos · faltam ${formatMoney(occurrence.remaining)}',
+          '${formatMoney(payable.paidAmount)} pagos · faltam ${formatMoney(payable.remaining)}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
@@ -183,9 +183,9 @@ class _PartialBar extends StatelessWidget {
 }
 
 class _DueBadge extends StatelessWidget {
-  const _DueBadge({required this.occurrence, required this.accent});
+  const _DueBadge({required this.payable, required this.accent});
 
-  final ExpenseOccurrence occurrence;
+  final Payable payable;
   final Color accent;
 
   @override
@@ -206,7 +206,7 @@ class _DueBadge extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '${occurrence.dueDate.day}',
+            '${payable.dueDate.day}',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: accent,
@@ -214,9 +214,7 @@ class _DueBadge extends StatelessWidget {
             ),
           ),
           Text(
-            DateFormat.MMM(
-              'pt_BR',
-            ).format(occurrence.dueDate).replaceAll('.', ''),
+            DateFormat.MMM('pt_BR').format(payable.dueDate).replaceAll('.', ''),
             style: theme.textTheme.labelSmall?.copyWith(color: accent),
           ),
         ],
@@ -226,15 +224,15 @@ class _DueBadge extends StatelessWidget {
 }
 
 class _PaidToggle extends StatelessWidget {
-  const _PaidToggle({required this.occurrence, required this.onPressed});
+  const _PaidToggle({required this.payable, required this.onPressed});
 
-  final ExpenseOccurrence occurrence;
+  final Payable payable;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = occurrence.isPaid
+    final color = payable.isPaid
         ? theme.colorScheme.primary
         : theme.colorScheme.onSurfaceVariant;
 
@@ -268,15 +266,15 @@ class _PaidToggle extends StatelessWidget {
     );
   }
 
-  IconData get _icon => occurrence.isPaid
+  IconData get _icon => payable.isPaid
       ? Icons.check_circle
-      : occurrence.isPartlyPaid
+      : payable.isPartlyPaid
       ? Icons.incomplete_circle
       : Icons.circle_outlined;
 
-  String get _label => occurrence.isPaid
+  String get _label => payable.isPaid
       ? 'Paga'
-      : occurrence.isPartlyPaid
+      : payable.isPartlyPaid
       ? 'Parcial'
       : 'Pagar';
 }

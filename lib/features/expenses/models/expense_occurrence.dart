@@ -5,8 +5,9 @@ import '../../../core/utils/month.dart';
 import 'expense.dart';
 import 'expense_payment.dart';
 import 'expense_type.dart';
+import 'payable.dart';
 
-class ExpenseOccurrence {
+class ExpenseOccurrence implements Payable {
   const ExpenseOccurrence({
     required this.expense,
     required this.month,
@@ -21,19 +22,28 @@ class ExpenseOccurrence {
   final double? monthAmount;
   final List<ExpensePayment> payments;
 
+  @override
+  String get name => expense.name;
+
+  @override
   double get amount => monthAmount ?? expense.amount;
 
   bool get hasCustomAmount => monthAmount != null;
 
+  @override
   double get paidAmount =>
       payments.fold(0, (total, payment) => total + payment.amount);
 
+  @override
   double get remaining => max(0, amount - paidAmount);
 
+  @override
   bool get isPaid => coversAmount(paidAmount, amount);
 
+  @override
   bool get isPartlyPaid => paidAmount > 0 && !isPaid;
 
+  @override
   double get paidRatio => amount <= 0 ? 1 : (paidAmount / amount).clamp(0, 1);
 
   int? get plannedWalletId => expense.walletId;
@@ -44,8 +54,10 @@ class ExpenseOccurrence {
       .toSet()
       .toList();
 
+  @override
   DateTime get dueDate => month.dayOf(expense.dueDay);
 
+  @override
   bool get isOverdue => !isPaid && dueDate.isBefore(_today);
 
   String? get installmentLabel =>
