@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../models/receipt.dart';
 import '../../models/wallet.dart';
@@ -18,24 +19,32 @@ class ReceiptEdit {
 }
 
 class ReceiptSheet extends StatefulWidget {
-  const ReceiptSheet({super.key, required this.wallet, this.receipt});
+  const ReceiptSheet({
+    super.key,
+    required this.wallet,
+    this.receipt,
+    this.month,
+  });
 
   static Future<ReceiptEdit?> show(
     BuildContext context, {
     required Wallet wallet,
     Receipt? receipt,
+    Month? month,
   }) {
     return showModalBottomSheet<ReceiptEdit>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) => ReceiptSheet(wallet: wallet, receipt: receipt),
+      builder: (_) =>
+          ReceiptSheet(wallet: wallet, receipt: receipt, month: month),
     );
   }
 
   final Wallet wallet;
   final Receipt? receipt;
+  final Month? month;
 
   @override
   State<ReceiptSheet> createState() => _ReceiptSheetState();
@@ -43,7 +52,9 @@ class ReceiptSheet extends StatefulWidget {
 
 class _ReceiptSheetState extends State<ReceiptSheet> {
   late double _amount = widget.receipt?.amount ?? 0;
-  late DateTime _receivedAt = widget.receipt?.receivedAt ?? DateTime.now();
+  late DateTime _receivedAt =
+      widget.receipt?.receivedAt ??
+      (widget.month ?? Month.current()).suggestedDate;
 
   Receipt? get _receipt => widget.receipt;
 

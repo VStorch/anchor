@@ -115,7 +115,11 @@ class WalletsPage extends StatelessWidget {
 
   Future<void> _registerReceipt(BuildContext context, Wallet wallet) async {
     final viewModel = context.read<WalletsViewModel>();
-    final edit = await ReceiptSheet.show(context, wallet: wallet);
+    final edit = await ReceiptSheet.show(
+      context,
+      wallet: wallet,
+      month: viewModel.month,
+    );
     if (edit == null || edit.isDiscarded) return;
 
     await viewModel.registerReceipt(
@@ -127,7 +131,11 @@ class WalletsPage extends StatelessWidget {
 
   Future<void> _registerOutflow(BuildContext context, Wallet wallet) async {
     final viewModel = context.read<WalletsViewModel>();
-    final edit = await OutflowSheet.show(context, wallet: wallet);
+    final edit = await OutflowSheet.show(
+      context,
+      wallet: wallet,
+      month: viewModel.month,
+    );
     if (edit == null || edit.isDiscarded) return;
 
     await viewModel.saveOutflow(

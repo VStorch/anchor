@@ -39,10 +39,20 @@ class MonthSummary {
     for (final expense in expenses) {
       final occurrence = expense.occurrenceIn(month);
       if (occurrence == null) continue;
+
+      final monthAmount = amountByExpense[expense.id];
+      final expensePayments =
+          paymentsByExpense[expense.id] ?? const <ExpensePayment>[];
+      final isUntouchedProjection =
+          monthAmount == null && expensePayments.isEmpty;
+      if (isUntouchedProjection && expense.projectsBackIntoPast(month)) {
+        continue;
+      }
+
       occurrences.add(
         occurrence.withLedger(
-          monthAmount: amountByExpense[expense.id],
-          payments: paymentsByExpense[expense.id] ?? const <ExpensePayment>[],
+          monthAmount: monthAmount,
+          payments: expensePayments,
         ),
       );
     }

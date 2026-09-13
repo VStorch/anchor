@@ -93,6 +93,14 @@ mutated:
 - **`expense_months`** holds the amount this particular month really cost (light bill, groceries). A
   missing row means "use the rule's amount"; deleting the row is the "back to the rule" action.
 
+`MonthSummary.build` drops a projection that falls before the month the expense was registered
+(`Expense.projectsBackIntoPast`) unless that month already has a payment or a month amount. Without
+it, a recurring rule saved today with a start month in January billed — and flagged overdue — every
+month before the user had the app. `single` is exempt: its month is an explicit choice. The wallet
+side mirrors this, since `registerDuePayouts` starts at `wallet.createdAt`; to fill in a past month
+the user navigates to it, and the receipt and outflow sheets default to a date inside the month on
+screen (`Month.suggestedDate`), not to today.
+
 `ExpenseOccurrence` is where the two meet: `amount` (month value), `paidAmount`, `remaining`, `isPaid`,
 `isPartlyPaid`. Views read those — never re-derive them.
 

@@ -1,6 +1,7 @@
 import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:anchor/core/widgets/money_field.dart';
 import 'package:anchor/features/dashboard/views/widgets/balance_card.dart';
@@ -205,6 +206,36 @@ void main() {
 
     expect(find.text('Mercado'), findsOneWidget);
     expect(find.textContaining('2.952,10'), findsWidgets);
+  });
+
+  testWidgets('o gasto lançado num mês passado fica naquele mês', (
+    tester,
+  ) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gasto'));
+    await tester.pumpAndSettle();
+    expect(find.byType(OutflowSheet), findsOneWidget);
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '4790',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar gasto'));
+    await tester.pumpAndSettle();
+
+    final outflow = (await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchOutflows()).single;
+    expect(outflow.month, Month.current().previous);
   });
 
   testWidgets('corrige um gasto avulso já lançado', (tester) async {

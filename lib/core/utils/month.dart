@@ -30,6 +30,9 @@ class Month implements Comparable<Month> {
 
   bool get isCurrent => this == Month.current();
 
+  DateTime get suggestedDate =>
+      isCurrent ? DateTime.now() : dayOf(DateTime.now().day);
+
   Month addMonths(int amount) {
     final date = DateTime(year, month + amount);
     return Month(date.year, date.month);

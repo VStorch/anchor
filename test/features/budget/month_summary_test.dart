@@ -318,4 +318,65 @@ void main() {
       expect(benefit.committedInMonth, 300);
     });
   });
+
+  group('antes de a despesa existir no app', () {
+    final rent = Expense(
+      id: 9,
+      name: 'Aluguel',
+      type: ExpenseType.recurring,
+      amount: 1200,
+      dueDay: 10,
+      startMonth: const Month(2026, 1),
+      createdAt: DateTime(2026, 9, 13),
+    );
+
+    MonthSummary summaryOf(
+      Expense expense,
+      Month month, {
+      List<ExpensePayment> payments = const <ExpensePayment>[],
+    }) => MonthSummary.build(
+      month: month,
+      expenses: [expense],
+      payments: payments,
+      receipts: const <Receipt>[],
+    );
+
+    test('não cobra os meses anteriores ao cadastro', () {
+      expect(summaryOf(rent, august).occurrences, isEmpty);
+      expect(summaryOf(rent, august).totalPending, 0);
+      expect(summaryOf(rent, const Month(2026, 9)).occurrences, hasLength(1));
+    });
+
+    test('mostra o mês anterior quando há pagamento lançado nele', () {
+      final summary = summaryOf(
+        rent,
+        august,
+        payments: [
+          ExpensePayment(
+            expenseId: 9,
+            walletId: 1,
+            month: august,
+            amount: 1200,
+            paidAt: DateTime(2026, 8, 10),
+          ),
+        ],
+      );
+
+      expect(summary.occurrences.single.isPaid, isTrue);
+    });
+
+    test('a avulsa lançada depois continua no mês escolhido', () {
+      final late = Expense(
+        id: 10,
+        name: 'Conserto',
+        type: ExpenseType.single,
+        amount: 300,
+        dueDay: 20,
+        startMonth: august,
+        createdAt: DateTime(2026, 9, 13),
+      );
+
+      expect(summaryOf(late, august).occurrences, hasLength(1));
+    });
+  });
 }

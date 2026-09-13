@@ -8,6 +8,14 @@ void main() {
       expect(const Month(2026, 3).key, '2026-03');
     });
 
+    test('sugere uma data dentro do mês que está na tela', () {
+      final today = DateTime.now();
+      final past = Month.current().addMonths(-7);
+
+      expect(Month.fromDate(past.suggestedDate), past);
+      expect(Month.current().suggestedDate.day, today.day);
+    });
+
     test('avança e volta atravessando o ano', () {
       expect(const Month(2026, 12).next, const Month(2027, 1));
       expect(const Month(2026, 1).previous, const Month(2025, 12));

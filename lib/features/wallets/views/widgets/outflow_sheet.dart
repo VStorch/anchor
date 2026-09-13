@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../models/outflow.dart';
 import '../../models/wallet.dart';
@@ -20,24 +21,32 @@ class OutflowEdit {
 }
 
 class OutflowSheet extends StatefulWidget {
-  const OutflowSheet({super.key, required this.wallet, this.outflow});
+  const OutflowSheet({
+    super.key,
+    required this.wallet,
+    this.outflow,
+    this.month,
+  });
 
   static Future<OutflowEdit?> show(
     BuildContext context, {
     required Wallet wallet,
     Outflow? outflow,
+    Month? month,
   }) {
     return showModalBottomSheet<OutflowEdit>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) => OutflowSheet(wallet: wallet, outflow: outflow),
+      builder: (_) =>
+          OutflowSheet(wallet: wallet, outflow: outflow, month: month),
     );
   }
 
   final Wallet wallet;
   final Outflow? outflow;
+  final Month? month;
 
   @override
   State<OutflowSheet> createState() => _OutflowSheetState();
@@ -46,7 +55,9 @@ class OutflowSheet extends StatefulWidget {
 class _OutflowSheetState extends State<OutflowSheet> {
   late double _amount = widget.outflow?.amount ?? 0;
   late String _description = widget.outflow?.description ?? '';
-  late DateTime _spentAt = widget.outflow?.spentAt ?? DateTime.now();
+  late DateTime _spentAt =
+      widget.outflow?.spentAt ??
+      (widget.month ?? Month.current()).suggestedDate;
 
   @override
   Widget build(BuildContext context) {

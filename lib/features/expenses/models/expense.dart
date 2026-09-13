@@ -56,6 +56,11 @@ class Expense {
     ExpenseType.installment => startMonth.addMonths(remainingInstallments - 1),
   };
 
+  /// A rule registered today with a start month in the past would otherwise
+  /// bill every month before the user started using the app.
+  bool projectsBackIntoPast(Month month) =>
+      type != ExpenseType.single && month < Month.fromDate(createdAt);
+
   ExpenseOccurrence? occurrenceIn(Month month) {
     if (month < startMonth) return null;
 
