@@ -11,6 +11,8 @@ import '../features/budget/services/budget_service.dart';
 import '../features/dashboard/viewmodels/dashboard_view_model.dart';
 import '../features/expenses/repositories/expense_repository.dart';
 import '../features/expenses/viewmodels/expenses_view_model.dart';
+import '../features/reminders/services/reminder_notifications.dart';
+import '../features/reminders/viewmodels/reminders_view_model.dart';
 import '../features/settings/services/backup_files.dart';
 import '../features/settings/viewmodels/backup_view_model.dart';
 import '../features/settings/viewmodels/settings_view_model.dart';
@@ -25,12 +27,15 @@ class AnchorApp extends StatelessWidget {
     required this.settings,
     AppDatabase? database,
     BackupFiles backupFiles = const DeviceBackupFiles(),
+    ReminderNotifications? reminderNotifications,
   }) : _database = database,
-       _backupFiles = backupFiles;
+       _backupFiles = backupFiles,
+       _reminderNotifications = reminderNotifications;
 
   final SettingsViewModel settings;
   final AppDatabase? _database;
   final BackupFiles _backupFiles;
+  final ReminderNotifications? _reminderNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +85,15 @@ class AnchorApp extends StatelessWidget {
           create: (context) => BackupViewModel(
             backup: DatabaseBackup(context.read<AppDatabase>()),
             files: _backupFiles,
+            changes: context.read<DataChanges>(),
+          )..initialize(),
+        ),
+        ChangeNotifierProvider(
+          lazy: false,
+          create: (context) => RemindersViewModel(
+            budgetService: context.read<BudgetService>(),
+            notifications:
+                _reminderNotifications ?? LocalReminderNotifications(),
             changes: context.read<DataChanges>(),
           )..initialize(),
         ),

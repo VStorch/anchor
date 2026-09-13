@@ -154,6 +154,15 @@ extra to keep in sync when the schema changes. `restore` inspects the file first
 the new one fails. The file I/O there is synchronous on purpose — see the widget-test note below.
 The system file dialogs sit behind `BackupFiles`, which `AnchorApp` takes so tests can fake them.
 
+**Reminders** (`features/reminders/`) are rebuilt from scratch on every `DataChanges`:
+`RemindersViewModel` loads the current and next month, `DueReminder.plan` turns each unpaid occurrence
+into a 9h notification (one per day, id `yyyymmdd`), and `ReminderNotifications.replaceAll` cancels
+everything and schedules the new list — so paying a bill is what cancels its reminder, with no
+bookkeeping of notification ids. Android is asked for permission the first time there is something
+to remind, never on its own again; a refusal turns the switch in Ajustes off. Scheduling is inexact
+(`inexactAllowWhileIdle`), which needs no exact-alarm permission. The plugin requires core library
+desugaring in `android/app/build.gradle.kts` and the two receivers in `AndroidManifest.xml`.
+
 ## Testing
 
 `test/support/test_database.dart` gives repositories a real in-memory SQLite via
@@ -161,7 +170,8 @@ The system file dialogs sit behind `BackupFiles`, which `AnchorApp` takes so tes
 below does not cross isolates) and it opens `libsqlite3.so.0` explicitly, because this machine has no
 `libsqlite3.so` symlink.
 
-`test/app/` boots the whole app with `AnchorApp(database: …)` against that database. When adding
+`test/app/` boots the whole app with `AnchorApp(database: …)` against that database, and must pass
+`reminderNotifications: FakeReminderNotifications()` — the real plugin has no platform side in tests. When adding
 widget tests: scope `find.byType(TextField)` to the sheet/page you mean (a sheet does not hide the form
 behind it), scope tab taps to `NavigationBar` (feature icons collide with destination icons), and use the
 concrete generic (`DropdownButtonFormField<ExpenseType>`).

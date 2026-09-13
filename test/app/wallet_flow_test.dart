@@ -21,6 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/fake_reminder_notifications.dart';
 import '../support/test_database.dart';
 
 void main() {
@@ -66,7 +67,13 @@ void main() {
     final settings = SettingsViewModel();
     await settings.initialize();
 
-    await tester.pumpWidget(AnchorApp(settings: settings, database: database));
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(

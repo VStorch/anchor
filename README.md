@@ -28,6 +28,8 @@ falta pagar no mês.
   e o que sobrou no mês — os três medidos pelo que aconteceu, não pelo previsto.
 - **Tabela do mês**: as despesas em grade, com valor e pago editáveis na própria célula.
 - **Agenda do mês**: entradas e vencimentos organizados por dia.
+- **Aviso de vencimento**: às 9h do dia em que uma conta vence, se ela ainda não foi paga. Contas do
+  mesmo dia viram um aviso só, e pagar a conta cancela o aviso dela.
 - **Cópia dos dados**: em Ajustes, salve o banco num arquivo (Downloads, Drive...) e restaure-o em
   outro celular ou depois de reinstalar. Uma cópia feita numa versão anterior do app é atualizada ao
   ser restaurada.

@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/database/database_backup.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../reminders/models/due_reminder.dart';
+import '../../reminders/viewmodels/reminders_view_model.dart';
 import '../viewmodels/backup_view_model.dart';
 import '../viewmodels/settings_view_model.dart';
 
@@ -14,6 +16,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsViewModel>();
     final backup = context.watch<BackupViewModel>();
+    final reminders = context.watch<RemindersViewModel>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
@@ -35,6 +38,18 @@ class SettingsPage extends StatelessWidget {
                     ),
                   )
                   .toList(),
+            ),
+          ),
+          const SectionHeader(title: 'Lembretes'),
+          Card(
+            child: SwitchListTile(
+              value: reminders.isEnabled,
+              onChanged: (value) => _setReminders(context, reminders, value),
+              secondary: const Icon(Icons.notifications_outlined),
+              title: const Text('Avisar no dia do vencimento'),
+              subtitle: Text(
+                'Às ${DueReminder.hourOfDay}h, se ainda não foi paga',
+              ),
             ),
           ),
           const SectionHeader(title: 'Cópia dos dados'),
@@ -60,6 +75,23 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _setReminders(
+    BuildContext context,
+    RemindersViewModel reminders,
+    bool value,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await reminders.setEnabled(value)) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Libere as notificações do Anchor nos ajustes do Android',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _save(BuildContext context, BackupViewModel backup) async {

@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/fake_reminder_notifications.dart';
 import '../support/test_database.dart';
 
 class _FakeBackupFiles implements BackupFiles {
@@ -81,17 +82,29 @@ void main() {
     await settle(tester);
   }
 
+  void useTallPhone(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+  }
+
   Finder walletNamed(String name) =>
       find.descendant(of: find.byType(WalletCard), matching: find.text(name));
 
   testWidgets('salva uma cópia e volta a ela depois de mudar os dados', (
     tester,
   ) async {
+    useTallPhone(tester);
     await tester.runAsync(() => createWallet('Vale'));
     final settings = SettingsViewModel();
     await settings.initialize();
     await tester.pumpWidget(
-      AnchorApp(settings: settings, database: database, backupFiles: files),
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+        backupFiles: files,
+      ),
     );
     await settle(tester);
 
@@ -138,12 +151,18 @@ void main() {
   });
 
   testWidgets('um arquivo qualquer não apaga nada', (tester) async {
+    useTallPhone(tester);
     await tester.runAsync(() => createWallet('Vale'));
     files.toOpen = Uint8List.fromList('nada a ver'.codeUnits);
     final settings = SettingsViewModel();
     await settings.initialize();
     await tester.pumpWidget(
-      AnchorApp(settings: settings, database: database, backupFiles: files),
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+        backupFiles: files,
+      ),
     );
     await settle(tester);
 
