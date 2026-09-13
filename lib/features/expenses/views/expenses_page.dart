@@ -6,10 +6,8 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/stat_tile.dart';
-import '../models/expense_occurrence.dart';
 import '../viewmodels/expenses_view_model.dart';
 import 'expense_form_page.dart';
-import 'widgets/expense_actions_sheet.dart';
 import 'widgets/expense_ledger_sheet.dart';
 import 'widgets/expense_tile.dart';
 import 'widgets/month_table.dart';
@@ -72,9 +70,7 @@ class ExpensesPage extends StatelessWidget {
         return ExpenseTile(
           occurrence: occurrence,
           wallets: viewModel.snapshot.wallets,
-          onTap: () => _openActions(context, viewModel, occurrence),
-          onTogglePaid: () =>
-              ExpenseLedgerSheet.show(context, occurrence: occurrence),
+          onTap: () => ExpenseLedgerSheet.show(context, occurrence: occurrence),
         );
       },
     );
@@ -108,39 +104,6 @@ class ExpensesPage extends StatelessWidget {
               label: const Text('Cadastrar despesa'),
             ),
     );
-  }
-
-  Future<void> _openActions(
-    BuildContext context,
-    ExpensesViewModel viewModel,
-    ExpenseOccurrence occurrence,
-  ) async {
-    final action = await ExpenseActionsSheet.show(
-      context,
-      occurrence: occurrence,
-    );
-    if (action == null || !context.mounted) return;
-
-    switch (action) {
-      case ExpenseAction.pay:
-        await ExpenseLedgerSheet.show(context, occurrence: occurrence);
-      case ExpenseAction.edit:
-        await ExpenseFormPage.open(
-          context,
-          referenceMonth: viewModel.month,
-          wallets: viewModel.snapshot.wallets,
-          expense: occurrence.expense,
-        );
-      case ExpenseAction.undoPayment:
-        await viewModel.clearPayments(occurrence);
-      case ExpenseAction.endRecurring:
-        await viewModel.endRecurringExpense(
-          occurrence.expense,
-          viewModel.month,
-        );
-      case ExpenseAction.delete:
-        await viewModel.deleteExpense(occurrence.expense);
-    }
   }
 }
 
@@ -219,20 +182,24 @@ class _FilterBar extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              onPressed: () => viewModel.applyLayout(
-                viewModel.layout == ExpenseLayout.list
-                    ? ExpenseLayout.table
-                    : ExpenseLayout.list,
-              ),
-              icon: Icon(
-                viewModel.layout == ExpenseLayout.list
-                    ? Icons.table_rows_outlined
-                    : Icons.view_list_outlined,
-              ),
-              tooltip: viewModel.layout == ExpenseLayout.list
-                  ? 'Ver como tabela'
-                  : 'Ver como lista',
+            child: SegmentedButton<ExpenseLayout>(
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              segments: const [
+                ButtonSegment(
+                  value: ExpenseLayout.list,
+                  icon: Icon(Icons.view_agenda_outlined),
+                  tooltip: 'Lista',
+                ),
+                ButtonSegment(
+                  value: ExpenseLayout.table,
+                  icon: Icon(Icons.table_chart_outlined),
+                  tooltip: 'Tabela',
+                ),
+              ],
+              selected: {viewModel.layout},
+              onSelectionChanged: (selection) =>
+                  viewModel.applyLayout(selection.single),
             ),
           ),
         ],

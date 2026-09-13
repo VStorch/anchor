@@ -11,13 +11,11 @@ class ExpenseTile extends StatelessWidget {
     required this.occurrence,
     required this.wallets,
     required this.onTap,
-    required this.onTogglePaid,
   });
 
   final ExpenseOccurrence occurrence;
   final List<Wallet> wallets;
   final VoidCallback onTap;
-  final VoidCallback onTogglePaid;
 
   @override
   Widget build(BuildContext context) {
@@ -110,10 +108,7 @@ class ExpenseTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      _PaidToggle(
-                        occurrence: occurrence,
-                        onPressed: onTogglePaid,
-                      ),
+                      _PaidToggle(occurrence: occurrence, onPressed: onTap),
                     ],
                   ),
                 ),

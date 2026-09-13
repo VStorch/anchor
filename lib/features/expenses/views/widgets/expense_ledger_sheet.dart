@@ -7,7 +7,9 @@ import '../../../../core/widgets/money_field.dart';
 import '../../../wallets/models/wallet.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/expense_payment.dart';
+import '../../models/expense_type.dart';
 import '../../viewmodels/expenses_view_model.dart';
+import '../expense_form_page.dart';
 
 class ExpenseLedgerSheet extends StatefulWidget {
   const ExpenseLedgerSheet({super.key, required this.expenseId});
@@ -62,11 +64,18 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              occurrence.expense.name,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    occurrence.expense.name,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                _ExpenseMenu(occurrence: occurrence),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -300,6 +309,81 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
       if (wallet.id == id) return wallet;
     }
     return null;
+  }
+}
+
+enum _ExpenseMenuAction { edit, endHere, delete }
+
+class _ExpenseMenu extends StatelessWidget {
+  const _ExpenseMenu({required this.occurrence});
+
+  final ExpenseOccurrence occurrence;
+
+  @override
+  Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+
+    return PopupMenuButton<_ExpenseMenuAction>(
+      tooltip: 'Mais opções',
+      onSelected: (action) => _run(context, action),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: _ExpenseMenuAction.edit,
+          child: Text('Editar despesa'),
+        ),
+        if (occurrence.expense.type == ExpenseType.recurring)
+          const PopupMenuItem(
+            value: _ExpenseMenuAction.endHere,
+            child: Text('Encerrar neste mês'),
+          ),
+        PopupMenuItem(
+          value: _ExpenseMenuAction.delete,
+          child: Text('Excluir despesa', style: TextStyle(color: errorColor)),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _run(BuildContext context, _ExpenseMenuAction action) async {
+    final viewModel = context.read<ExpensesViewModel>();
+    final navigator = Navigator.of(context);
+    final expense = occurrence.expense;
+
+    switch (action) {
+      case _ExpenseMenuAction.edit:
+        navigator.pop();
+        await navigator.push(
+          ExpenseFormPage.route(
+            referenceMonth: viewModel.month,
+            wallets: viewModel.snapshot.wallets,
+            expense: expense,
+          ),
+        );
+      case _ExpenseMenuAction.endHere:
+        navigator.pop();
+        await viewModel.endRecurringExpense(expense, viewModel.month);
+      case _ExpenseMenuAction.delete:
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Excluir ${expense.name}?'),
+            content: const Text('Os pagamentos dela saem de todos os meses.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Excluir'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+        navigator.pop();
+        await viewModel.deleteExpense(expense);
+    }
   }
 }
 

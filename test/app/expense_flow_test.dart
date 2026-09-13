@@ -97,6 +97,71 @@ void main() {
     expect(find.text('Paga'), findsOneWidget);
   });
 
+  Future<void> openExpensesTab(WidgetTester tester) async {
+    await _seedMarketExpense(database);
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(AnchorApp(settings: settings, database: database));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('tocar na despesa abre os pagamentos, e excluir fica no menu', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await openExpensesTab(tester);
+
+    await tester.tap(find.text('Mercado'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExpenseLedgerSheet), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Mais opções'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Excluir despesa'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExpenseLedgerSheet), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Mais opções'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Excluir despesa'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Excluir'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpenseLedgerSheet), findsNothing);
+    expect(find.text('Mercado'), findsNothing);
+  });
+
+  testWidgets('a despesa nova já vem com o salário como fonte', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await openExpensesTab(tester);
+
+    await tester.tap(find.text('Nova despesa'));
+    await tester.pumpAndSettle();
+
+    final dropdown = tester.widget<DropdownButton<int?>>(
+      find.byType(DropdownButton<int?>),
+    );
+    final walletId = (await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchWallets()).firstWhere((wallet) => wallet.name == 'Salário').id;
+    expect(dropdown.value, walletId);
+  });
+
   testWidgets('edita o valor do mês pela tabela', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
@@ -117,7 +182,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Ver como tabela'));
+    await tester.tap(find.byTooltip('Tabela'));
     await tester.pumpAndSettle();
 
     expect(find.byType(MonthTable), findsOneWidget);
@@ -177,7 +242,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Ver como tabela'));
+    await tester.tap(find.byTooltip('Tabela'));
     await tester.pumpAndSettle();
 
     await tester.tap(

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/utils/month.dart';
 import '../../../core/widgets/section_header.dart';
 import '../models/payout.dart';
 import '../models/wallet.dart';
@@ -300,7 +301,7 @@ class _PayoutTile extends StatelessWidget {
           leading: CircleAvatar(
             backgroundColor: theme.colorScheme.primaryContainer,
             child: Text(
-              '${payout.day}',
+              '${payout.dateIn(Month.current()).day}',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.w700,

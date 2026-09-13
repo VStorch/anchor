@@ -10,6 +10,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
     required ExpenseRepository repository,
     required Month referenceMonth,
     Expense? expense,
+    int? likelyWalletId,
   }) : _repository = repository,
        _expense = expense,
        _name = expense?.name ?? '',
@@ -19,7 +20,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
        _startMonth = expense?.startMonth ?? referenceMonth,
        _totalInstallments = expense?.totalInstallments ?? 12,
        _settledInstallments = expense?.settledInstallments ?? 0,
-       _walletId = expense?.walletId;
+       _walletId = expense == null ? likelyWalletId : expense.walletId;
 
   final ExpenseRepository _repository;
   final Expense? _expense;

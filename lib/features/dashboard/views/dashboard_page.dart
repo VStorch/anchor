@@ -111,10 +111,7 @@ class DashboardPage extends StatelessWidget {
                 child: ExpenseTile(
                   occurrence: occurrence,
                   wallets: viewModel.snapshot.wallets,
-                  onTap: () => context.read<AppShellController>().goTo(
-                    AppShellController.expensesTab,
-                  ),
-                  onTogglePaid: () =>
+                  onTap: () =>
                       ExpenseLedgerSheet.show(context, occurrence: occurrence),
                 ),
               ),

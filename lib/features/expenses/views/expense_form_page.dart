@@ -8,6 +8,7 @@ import '../../../core/widgets/money_field.dart';
 import '../../../core/widgets/month_picker_sheet.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../wallets/models/wallet.dart';
+import '../../wallets/models/wallet_kind.dart';
 import '../models/expense.dart';
 import '../models/expense_type.dart';
 import '../repositories/expense_repository.dart';
@@ -26,17 +27,21 @@ class ExpenseFormPage extends StatelessWidget {
     required Month referenceMonth,
     required List<Wallet> wallets,
     Expense? expense,
-  }) {
-    return Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ExpenseFormPage(
-          referenceMonth: referenceMonth,
-          wallets: wallets,
-          expense: expense,
-        ),
-      ),
-    );
-  }
+  }) => Navigator.of(context).push(
+    route(referenceMonth: referenceMonth, wallets: wallets, expense: expense),
+  );
+
+  static MaterialPageRoute<void> route({
+    required Month referenceMonth,
+    required List<Wallet> wallets,
+    Expense? expense,
+  }) => MaterialPageRoute<void>(
+    builder: (_) => ExpenseFormPage(
+      referenceMonth: referenceMonth,
+      wallets: wallets,
+      expense: expense,
+    ),
+  );
 
   final Month referenceMonth;
   final List<Wallet> wallets;
@@ -49,9 +54,17 @@ class ExpenseFormPage extends StatelessWidget {
         repository: context.read<ExpenseRepository>(),
         referenceMonth: referenceMonth,
         expense: expense,
+        likelyWalletId: _likelyWalletId(),
       ),
       child: _ExpenseFormView(wallets: wallets),
     );
+  }
+
+  int? _likelyWalletId() {
+    for (final wallet in wallets) {
+      if (wallet.kind == WalletKind.salary) return wallet.id;
+    }
+    return wallets.isEmpty ? null : wallets.first.id;
   }
 }
 
