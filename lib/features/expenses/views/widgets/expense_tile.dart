@@ -71,11 +71,15 @@ class ExpenseTile extends StatelessWidget {
                           ),
                           if (occurrence.isOverdue) ...[
                             const SizedBox(width: 6),
-                            Text(
-                              'Atrasada',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.error,
-                                fontWeight: FontWeight.w600,
+                            Flexible(
+                              child: Text(
+                                'Atrasada',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],
