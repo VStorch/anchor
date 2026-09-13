@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite/sqflite.dart'
@@ -24,8 +26,35 @@ class AppDatabase {
   final String? _filePath;
 
   Database? _database;
+  Completer<void>? _closedFor;
 
-  Future<Database> get database async => _database ??= await _open();
+  DatabaseFactory get factory => _factory;
+
+  Future<String> get path async =>
+      _filePath ?? p.join(await _factory.getDatabasesPath(), 'anchor.db');
+
+  Future<Database> get database async {
+    await _waitUntilOpenable();
+    return _database ??= await _open();
+  }
+
+  Future<T> whileClosed<T>(Future<T> Function(String path) action) async {
+    await _waitUntilOpenable();
+    final closedFor = _closedFor = Completer<void>();
+    try {
+      await close();
+      return await action(await path);
+    } finally {
+      _closedFor = null;
+      closedFor.complete();
+    }
+  }
+
+  Future<void> _waitUntilOpenable() async {
+    while (_closedFor != null) {
+      await _closedFor!.future;
+    }
+  }
 
   Future<void> close() async {
     await _database?.close();
@@ -33,11 +62,8 @@ class AppDatabase {
   }
 
   Future<Database> _open() async {
-    final path =
-        _filePath ?? p.join(await _factory.getDatabasesPath(), 'anchor.db');
-
     return _factory.openDatabase(
-      path,
+      await path,
       options: OpenDatabaseOptions(
         version: version,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),

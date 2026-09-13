@@ -28,6 +28,9 @@ falta pagar no mês.
   e o que sobrou no mês — os três medidos pelo que aconteceu, não pelo previsto.
 - **Tabela do mês**: as despesas em grade, com valor e pago editáveis na própria célula.
 - **Agenda do mês**: entradas e vencimentos organizados por dia.
+- **Cópia dos dados**: em Ajustes, salve o banco num arquivo (Downloads, Drive...) e restaure-o em
+  outro celular ou depois de reinstalar. Uma cópia feita numa versão anterior do app é atualizada ao
+  ser restaurada.
 - **Tema**: claro, escuro ou padrão do sistema, em tons de verde.
 
 ## Rodando o projeto

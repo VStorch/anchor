@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../core/database/app_database.dart';
+import '../core/database/database_backup.dart';
 import '../core/state/data_changes.dart';
 import '../core/state/month_selection.dart';
 import '../core/widgets/dismiss_focus.dart';
@@ -10,6 +11,8 @@ import '../features/budget/services/budget_service.dart';
 import '../features/dashboard/viewmodels/dashboard_view_model.dart';
 import '../features/expenses/repositories/expense_repository.dart';
 import '../features/expenses/viewmodels/expenses_view_model.dart';
+import '../features/settings/services/backup_files.dart';
+import '../features/settings/viewmodels/backup_view_model.dart';
 import '../features/settings/viewmodels/settings_view_model.dart';
 import '../features/wallets/repositories/wallet_repository.dart';
 import '../features/wallets/viewmodels/wallets_view_model.dart';
@@ -17,11 +20,17 @@ import 'app_shell.dart';
 import 'theme/app_theme.dart';
 
 class AnchorApp extends StatelessWidget {
-  const AnchorApp({super.key, required this.settings, AppDatabase? database})
-    : _database = database;
+  const AnchorApp({
+    super.key,
+    required this.settings,
+    AppDatabase? database,
+    BackupFiles backupFiles = const DeviceBackupFiles(),
+  }) : _database = database,
+       _backupFiles = backupFiles;
 
   final SettingsViewModel settings;
   final AppDatabase? _database;
+  final BackupFiles _backupFiles;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +73,13 @@ class AnchorApp extends StatelessWidget {
             budgetService: context.read<BudgetService>(),
             walletRepository: context.read<WalletRepository>(),
             monthSelection: context.read<MonthSelection>(),
+            changes: context.read<DataChanges>(),
+          )..initialize(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => BackupViewModel(
+            backup: DatabaseBackup(context.read<AppDatabase>()),
+            files: _backupFiles,
             changes: context.read<DataChanges>(),
           )..initialize(),
         ),

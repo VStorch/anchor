@@ -15,6 +15,11 @@ AppDatabase createInMemoryDatabase() {
   );
 }
 
+AppDatabase createFileDatabase(String path) {
+  _initializeOnce();
+  return AppDatabase(factory: databaseFactoryFfiNoIsolate, filePath: path);
+}
+
 void _initializeOnce() {
   if (_initialized) return;
   _initialized = true;

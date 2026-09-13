@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:anchor/core/database/app_database.dart';
+import 'package:anchor/core/database/database_backup.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
@@ -250,5 +251,25 @@ void main() {
     );
 
     expect(await repository.fetchPayments(), hasLength(3));
+  });
+
+  test('uma cópia salva na versão 1 é restaurada já migrada', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: '${directory.path}/current.db',
+    );
+    addTearDown(database.close);
+
+    await DatabaseBackup(database).restore(File(path).readAsBytesSync());
+
+    final changes = DataChanges();
+    final wallet = (await WalletRepository(
+      database,
+      changes,
+    ).fetchWallets()).single;
+    final payments = await ExpenseRepository(database, changes).fetchPayments();
+
+    expect(wallet.name, 'Salário');
+    expect(payments.every((payment) => payment.walletId == 1), isTrue);
   });
 }

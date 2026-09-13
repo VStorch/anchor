@@ -138,6 +138,14 @@ The database is versioned: bump `AppDatabase.version`, add the statements to `_m
 `_schema` (fresh install) and the migrated result identical. `test/core/database/app_database_test.dart`
 builds a v1 file and opens it to prove the upgrade keeps the data.
 
+A **backup** is the SQLite file itself (`DatabaseBackup`, `core/database/`), not an export format: a
+copy saved by an older version goes through the same `_migrations` when restored, so there is nothing
+extra to keep in sync when the schema changes. `restore` inspects the file first (SQLite header, the
+`wallets`/`expenses` tables, `user_version` not newer than the app), swaps it in while
+`AppDatabase.whileClosed` holds every other reader back, and puts the previous file back if opening
+the new one fails. The file I/O there is synchronous on purpose — see the widget-test note below.
+The system file dialogs sit behind `BackupFiles`, which `AnchorApp` takes so tests can fake them.
+
 ## Testing
 
 `test/support/test_database.dart` gives repositories a real in-memory SQLite via
@@ -149,6 +157,11 @@ below does not cross isolates) and it opens `libsqlite3.so.0` explicitly, becaus
 widget tests: scope `find.byType(TextField)` to the sheet/page you mean (a sheet does not hide the form
 behind it), scope tab taps to `NavigationBar` (feature icons collide with destination icons), and use the
 concrete generic (`DropdownButtonFormField<ExpenseType>`).
+
+A widget test that needs a real file database (`createFileDatabase`, as in `test/app/backup_test.dart`)
+must let real async I/O run: sqflite checks the file with `File.exists()`, which never completes on
+the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` rounds before
+`pumpAndSettle`.
 
 ## Conventions
 
