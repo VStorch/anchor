@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/money.dart';
 import '../../../wallets/models/wallet.dart';
 import '../../../cards/models/card_invoice.dart';
+import '../../../cards/models/invoice_status.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/payable.dart';
 
@@ -136,6 +137,8 @@ class ExpenseTile extends StatelessWidget {
       if (occurrence.hasOutsidePayments) 'Outro dinheiro',
     ].join(' · '),
     CardInvoice invoice => [
+      if (invoice.status case InvoiceStatus.open || InvoiceStatus.closed)
+        invoice.status.label,
       invoice.items.length == 1
           ? '1 compra'
           : '${invoice.items.length} compras',

@@ -1,6 +1,8 @@
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/cards/models/credit_card.dart';
+import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -79,5 +81,124 @@ void main() {
 
     form.setEndMonth(august);
     expect(form.monthsLeftOffRule, {const Month(2026, 9)});
+  });
+
+  group('compra no cartão', () {
+    const september = Month(2026, 9);
+    const october = Month(2026, 10);
+    final today = DateTime(2026, 9, 14, 9, 30);
+
+    late CreditCard card;
+
+    setUp(() async {
+      final id = await CardRepository(database, DataChanges()).saveCard(
+        CreditCard(
+          name: 'Nubank',
+          closingDay: 3,
+          dueDay: 10,
+          createdAt: DateTime(2026, 9),
+        ),
+      );
+      card = (await CardRepository(
+        database,
+        DataChanges(),
+      ).fetchCards()).singleWhere((card) => card.id == id);
+    });
+
+    ExpenseFormViewModel purchaseFrom(Month invoiceMonth) =>
+        ExpenseFormViewModel(
+            repository: repository,
+            referenceMonth: invoiceMonth,
+            cards: [card],
+            card: card,
+            invoiceMonth: invoiceMonth,
+            now: today,
+          )
+          ..setName('Tênis')
+          ..setAmount(200);
+
+    test('a compra nova já vem com a data de hoje', () {
+      final form = purchaseFrom(october);
+
+      expect(form.purchasedAt, DateTime(2026, 9, 14));
+      expect(form.invoiceMonth, october);
+      expect(form.leavesOpenedInvoice, isFalse);
+    });
+
+    test(
+      'a compra de 13/09 aberta na fatura de setembro vai para outubro',
+      () async {
+        final form = purchaseFrom(september)
+          ..setPurchasedAt(DateTime(2026, 9, 13));
+
+        expect(form.invoiceMonth, october);
+        expect(form.startMonth, october);
+        expect(form.leavesOpenedInvoice, isTrue);
+
+        await form.save();
+
+        final saved = (await repository.fetchExpenses()).single;
+        expect(saved.startMonth, october);
+        expect(saved.purchasedAt, DateTime(2026, 9, 13));
+        expect(saved.cardId, card.id);
+      },
+    );
+
+    test('a parcelada começa na fatura da compra mais as parcelas pagas', () {
+      final form = purchaseFrom(september)
+        ..setType(ExpenseType.installment)
+        ..setTotalInstallments(10)
+        ..setSettledInstallments(2)
+        ..setPurchasedAt(DateTime(2026, 9, 2));
+
+      expect(form.invoiceMonth, september);
+      expect(form.startMonth, const Month(2026, 11));
+      expect(form.leavesOpenedInvoice, isFalse);
+    });
+
+    test('a compra antiga sem data mantém o mês até escolherem uma', () {
+      final legacy = Expense(
+        id: 9,
+        name: 'Fone',
+        type: ExpenseType.single,
+        amount: 90,
+        dueDay: 10,
+        startMonth: const Month(2026, 7),
+        cardId: card.id,
+        createdAt: DateTime(2026, 7),
+      );
+      final form = ExpenseFormViewModel(
+        repository: repository,
+        referenceMonth: september,
+        expense: legacy,
+        cards: [card],
+        now: today,
+      );
+
+      expect(form.purchasedAt, isNull);
+      expect(form.invoiceMonth, isNull);
+
+      form.setStartMonth(const Month(2026, 8));
+      expect(form.startMonth, const Month(2026, 8));
+
+      form.setPurchasedAt(DateTime(2026, 7, 20));
+      expect(form.startMonth, const Month(2026, 8));
+      expect(form.invoiceMonth, const Month(2026, 8));
+    });
+
+    test('sem cartão a data da compra não é gravada', () async {
+      final form =
+          ExpenseFormViewModel(
+              repository: repository,
+              referenceMonth: september,
+              now: today,
+            )
+            ..setName('Luz')
+            ..setAmount(150);
+
+      await form.save();
+
+      expect((await repository.fetchExpenses()).single.purchasedAt, isNull);
+    });
   });
 }

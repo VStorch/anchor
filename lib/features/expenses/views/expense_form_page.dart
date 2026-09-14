@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/money.dart';
@@ -6,6 +7,7 @@ import '../../../core/utils/month.dart';
 import '../../../core/widgets/day_of_month_picker.dart';
 import '../../../core/widgets/money_field.dart';
 import '../../../core/widgets/month_picker_sheet.dart';
+import '../../../core/widgets/movement_date_picker.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../cards/models/credit_card.dart';
 import '../../wallets/models/wallet.dart';
@@ -25,6 +27,7 @@ class ExpenseFormPage extends StatelessWidget {
     this.expense,
     this.card,
     this.payments = const <ExpensePayment>[],
+    this.invoiceMonth,
   });
 
   static Future<void> open(
@@ -53,6 +56,7 @@ class ExpenseFormPage extends StatelessWidget {
     Expense? expense,
     CreditCard? card,
     List<ExpensePayment> payments = const <ExpensePayment>[],
+    Month? invoiceMonth,
   }) => MaterialPageRoute<void>(
     builder: (_) => ExpenseFormPage(
       referenceMonth: referenceMonth,
@@ -61,6 +65,7 @@ class ExpenseFormPage extends StatelessWidget {
       expense: expense,
       card: card,
       payments: payments,
+      invoiceMonth: invoiceMonth,
     ),
   );
 
@@ -70,6 +75,7 @@ class ExpenseFormPage extends StatelessWidget {
   final Expense? expense;
   final CreditCard? card;
   final List<ExpensePayment> payments;
+  final Month? invoiceMonth;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +88,7 @@ class ExpenseFormPage extends StatelessWidget {
         cards: cards,
         card: card,
         payments: payments,
+        invoiceMonth: invoiceMonth,
       ),
       child: _ExpenseFormView(wallets: wallets, cards: cards),
     );
@@ -151,12 +158,23 @@ class _ExpenseFormView extends StatelessWidget {
           const SizedBox(height: 24),
           _SourceDropdown(viewModel: viewModel, wallets: wallets, cards: cards),
           const SizedBox(height: 24),
-          SectionHeader(
-            title: viewModel.isInstallment
-                ? 'Próxima parcela'
-                : 'Primeira cobrança',
-          ),
-          _MonthField(viewModel: viewModel),
+          if (viewModel.card != null) ...[
+            const SectionHeader(title: 'Compra'),
+            _PurchaseDateField(viewModel: viewModel),
+            if (viewModel.purchasedAt == null) ...[
+              const SizedBox(height: 12),
+              _MonthField(viewModel: viewModel),
+            ],
+            const SizedBox(height: 12),
+            _InvoiceLine(viewModel: viewModel),
+          ] else ...[
+            SectionHeader(
+              title: viewModel.isInstallment
+                  ? 'Próxima parcela'
+                  : 'Primeira cobrança',
+            ),
+            _MonthField(viewModel: viewModel),
+          ],
           if (viewModel.type == ExpenseType.recurring) ...[
             const SizedBox(height: 12),
             _EndMonthField(viewModel: viewModel),
@@ -183,7 +201,11 @@ class _ExpenseFormView extends StatelessWidget {
                 ? () => _save(context, viewModel)
                 : null,
             child: Text(
-              viewModel.isEditing ? 'Salvar alterações' : 'Cadastrar despesa',
+              viewModel.leavesOpenedInvoice
+                  ? 'Adicionar à fatura de ${_monthName(viewModel.invoiceMonth!)}'
+                  : viewModel.isEditing
+                  ? 'Salvar alterações'
+                  : 'Cadastrar despesa',
             ),
           ),
         ],
@@ -222,6 +244,110 @@ Future<void> _save(BuildContext context, ExpenseFormViewModel viewModel) async {
 
   await viewModel.save();
   if (context.mounted) Navigator.of(context).pop();
+}
+
+String _monthName(Month month) =>
+    DateFormat.MMMM('pt_BR').format(month.firstDay);
+
+class _PurchaseDateField extends StatelessWidget {
+  const _PurchaseDateField({required this.viewModel});
+
+  final ExpenseFormViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final purchasedAt = viewModel.purchasedAt;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      tileColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      leading: const Icon(Icons.shopping_bag_outlined),
+      title: const Text('Data da compra'),
+      subtitle: Text(
+        purchasedAt == null
+            ? 'Não informada'
+            : DateFormat.yMMMMd('pt_BR').format(purchasedAt),
+      ),
+      trailing: const Icon(Icons.edit_calendar_outlined),
+      onTap: () async {
+        final day = await pickMovementDate(
+          context,
+          purchasedAt ?? viewModel.startMonth.suggestedDate,
+        );
+        if (day != null) viewModel.setPurchasedAt(day);
+      },
+    );
+  }
+}
+
+class _InvoiceLine extends StatelessWidget {
+  const _InvoiceLine({required this.viewModel});
+
+  final ExpenseFormViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final purchasedAt = viewModel.purchasedAt;
+    final invoice = _monthName(viewModel.invoiceMonth ?? viewModel.startMonth);
+    final leaves = viewModel.leavesOpenedInvoice && purchasedAt != null;
+    final foreground = leaves
+        ? theme.colorScheme.onTertiaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: leaves
+            ? theme.colorScheme.tertiaryContainer
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            leaves ? Icons.info_outline : CreditCard.icon,
+            size: 20,
+            color: foreground,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fatura de $invoice',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: foreground,
+                  ),
+                ),
+                if (leaves)
+                  Text(
+                    'Compra de ${DateFormat('dd/MM', 'pt_BR').format(purchasedAt)} '
+                    'vai para a fatura de $invoice',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                if (viewModel.isInstallment &&
+                    viewModel.settledInstallments > 0)
+                  Text(
+                    'Próxima parcela em ${viewModel.startMonth.label}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TypeDropdown extends StatelessWidget {

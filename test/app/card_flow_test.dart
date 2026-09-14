@@ -126,7 +126,7 @@ void main() {
 
       expect(find.text('Fatura Nubank'), findsOneWidget);
       expect(find.text('Geladeira'), findsNothing);
-      expect(find.text('2 compras · Salário'), findsOneWidget);
+      expect(find.textContaining('2 compras · Salário'), findsOneWidget);
 
       await tester.tap(find.text('Fatura Nubank'));
       await tester.pumpAndSettle();
@@ -138,7 +138,7 @@ void main() {
       await tester.tap(find.text('Pagar fatura com Salário'));
       await tester.pumpAndSettle();
 
-      expect(inSheet('Paga'), findsOneWidget);
+      expect(inSheet('Paga · '), findsOneWidget);
       expect(inSheet('450,00'), findsWidgets);
 
       await tester.tapAt(const Offset(10, 10));
@@ -218,6 +218,103 @@ void main() {
     expect(saved.dueDay, 28);
     expect(saved.startMonth, card.invoiceMonthFor(DateTime.now()));
   });
+
+  testWidgets(
+    'a compra de 13/09 adicionada na fatura de setembro vai para outubro',
+    (tester) async {
+      await seed(withCard: false);
+      await CardRepository(database, DataChanges()).saveCard(
+        CreditCard(
+          name: 'Inter',
+          closingDay: 3,
+          dueDay: 10,
+          createdAt: DateTime(2026, 9),
+        ),
+      );
+      await pumpApp(tester);
+      await tapTab(tester, Icons.account_balance_wallet_outlined);
+
+      const september = Month(2026, 9);
+      final distance = Month.current().monthsSince(september);
+      for (var step = 0; step < distance.abs(); step++) {
+        await tester.tap(
+          find.byTooltip(distance > 0 ? 'Mês anterior' : 'Próximo mês'),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      final invoiceTile = find.widgetWithText(ListTile, 'Inter');
+      await tester.scrollUntilVisible(
+        invoiceTile,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(invoiceTile);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar compra'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nome da despesa'),
+        'Tênis',
+      );
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(MoneyField),
+          matching: find.byType(TextField),
+        ),
+        '200',
+      );
+
+      final purchaseDay = find.text('Data da compra');
+      await tester.ensureVisible(purchaseDay);
+      await tester.pumpAndSettle();
+      await tester.tap(purchaseDay);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.byIcon(Icons.edit_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.byType(TextField),
+        ),
+        '13/09/2026',
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Compra de 13/09 vai para a fatura de outubro'),
+        findsOneWidget,
+      );
+
+      final add = find.text('Adicionar à fatura de outubro');
+      await tester.scrollUntilVisible(
+        add,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CardInvoiceSheet), findsOneWidget);
+      expect(inSheet('Tênis'), findsNothing);
+      expect(inSheet('Atrasada'), findsNothing);
+
+      final saved = (await ExpenseRepository(
+        database,
+        DataChanges(),
+      ).fetchExpenses()).single;
+      expect(saved.startMonth, const Month(2026, 10));
+      expect(saved.purchasedAt, DateTime(2026, 9, 13));
+      expect(saved.dueDay, 10);
+    },
+  );
 
   testWidgets('cadastra um cartão pela aba Carteiras', (tester) async {
     await seed(withCard: false);

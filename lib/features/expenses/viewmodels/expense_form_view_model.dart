@@ -18,7 +18,11 @@ class ExpenseFormViewModel extends ChangeNotifier {
     List<CreditCard> cards = const <CreditCard>[],
     CreditCard? card,
     List<ExpensePayment> payments = const <ExpensePayment>[],
+    Month? invoiceMonth,
+    DateTime? now,
   }) : _repository = repository,
+       _now = now ?? DateTime.now(),
+       _openedInvoiceMonth = invoiceMonth,
        _cards = cards,
        _expense = expense,
        _payments = payments,
@@ -35,12 +39,16 @@ class ExpenseFormViewModel extends ChangeNotifier {
        _totalInstallments = expense?.totalInstallments ?? 12,
        _settledInstallments = expense?.settledInstallments ?? 0,
        _walletId = expense == null ? likelyWalletId : expense.walletId,
-       _cardId = expense?.cardId ?? card?.id;
+       _cardId = expense?.cardId ?? card?.id {
+    _purchasedAt = expense == null ? _dayOf(_now) : expense.purchasedAt;
+  }
 
   final ExpenseRepository _repository;
   final Expense? _expense;
   final List<CreditCard> _cards;
   final List<ExpensePayment> _payments;
+  final DateTime _now;
+  final Month? _openedInvoiceMonth;
 
   String _name;
   ExpenseType _type;
@@ -52,6 +60,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   int _settledInstallments;
   int? _walletId;
   int? _cardId;
+  DateTime? _purchasedAt;
   bool _isSaving = false;
 
   bool get isEditing => _expense != null;
@@ -64,14 +73,36 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   int get dueDay => _dueDay;
 
-  Month get startMonth => _startMonth;
+  /// A card purchase with a date starts on the invoice that date falls in,
+  /// moved on by the parcels already paid.
+  Month get startMonth {
+    final invoiceMonth = this.invoiceMonth;
+    if (invoiceMonth == null) return _startMonth;
+    return invoiceMonth.addMonths(isInstallment ? _settledInstallments : 0);
+  }
+
+  DateTime? get purchasedAt => _purchasedAt;
+
+  Month? get invoiceMonth {
+    final card = this.card;
+    final purchasedAt = _purchasedAt;
+    if (card == null || purchasedAt == null) return null;
+    return card.invoiceMonthFor(purchasedAt);
+  }
+
+  /// "Adicionar compra" opened from one invoice, but the purchase day belongs
+  /// to another.
+  bool get leavesOpenedInvoice =>
+      _openedInvoiceMonth != null &&
+      invoiceMonth != null &&
+      invoiceMonth != _openedInvoiceMonth;
 
   Month? get endMonth => _endMonth;
 
   bool get endsBeforeStart =>
       _type == ExpenseType.recurring &&
       _endMonth != null &&
-      _endMonth! < _startMonth;
+      _endMonth! < startMonth;
 
   int get totalInstallments => _totalInstallments;
 
@@ -97,8 +128,8 @@ class ExpenseFormViewModel extends ChangeNotifier {
       isInstallment ? _amount * remainingInstallments : _amount;
 
   Month get lastMonth => isInstallment
-      ? _startMonth.addMonths(remainingInstallments - 1)
-      : _startMonth;
+      ? startMonth.addMonths(remainingInstallments - 1)
+      : startMonth;
 
   bool get isValid =>
       _name.trim().isNotEmpty &&
@@ -154,6 +185,11 @@ class ExpenseFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPurchasedAt(DateTime value) {
+    _purchasedAt = _dayOf(value);
+    notifyListeners();
+  }
+
   void setEndMonth(Month? value) {
     _endMonth = value;
     notifyListeners();
@@ -177,7 +213,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
     _cardId = value.cardId;
     final card = this.card;
     if (card != null && !isEditing) {
-      _startMonth = card.invoiceMonthFor(DateTime.now());
+      _startMonth = card.invoiceMonthFor(_purchasedAt ?? _now);
     }
     notifyListeners();
   }
@@ -201,13 +237,17 @@ class ExpenseFormViewModel extends ChangeNotifier {
       type: _type,
       amount: _amount,
       dueDay: card?.dueDay ?? _dueDay,
-      startMonth: _startMonth,
+      startMonth: startMonth,
       endMonth: _type == ExpenseType.recurring ? _endMonth : null,
       totalInstallments: isInstallment ? _totalInstallments : null,
       settledInstallments: isInstallment ? _settledInstallments : 0,
       walletId: card == null ? _walletId : card.walletId,
       cardId: card?.id,
-      createdAt: _expense?.createdAt ?? DateTime.now(),
+      purchasedAt: card == null ? null : _purchasedAt,
+      createdAt: _expense?.createdAt ?? _now,
     );
   }
+
+  static DateTime _dayOf(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 }

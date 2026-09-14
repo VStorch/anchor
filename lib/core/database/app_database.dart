@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 9;
+  static const int version = 10;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -150,7 +150,8 @@ class AppDatabase {
       settled_installments INTEGER NOT NULL DEFAULT 0,
       wallet_id INTEGER REFERENCES $walletsTable(id) ON DELETE SET NULL,
       created_at TEXT NOT NULL,
-      card_id INTEGER REFERENCES $cardsTable(id) ON DELETE SET NULL
+      card_id INTEGER REFERENCES $cardsTable(id) ON DELETE SET NULL,
+      purchased_at TEXT
     )
     ''',
     '''
@@ -290,5 +291,6 @@ class AppDatabase {
       'ALTER TABLE $expensePaymentsTable ADD COLUMN settled_outside INTEGER NOT NULL DEFAULT 0',
       'UPDATE $expensePaymentsTable SET settled_outside = 1 WHERE wallet_id IS NULL',
     ],
+    10: <String>['ALTER TABLE $expensesTable ADD COLUMN purchased_at TEXT'],
   };
 }

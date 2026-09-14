@@ -411,8 +411,10 @@ class _InvoiceTile extends StatelessWidget {
         ),
         title: Text(invoice.card.name),
         subtitle: Text(
-          'Vence ${DateFormat.MMMd('pt_BR').format(invoice.dueDate)}'
-          '${invoice.isPaid ? ' · paga' : ''}',
+          invoice.statusLabel,
+          style: invoice.isOverdue
+              ? TextStyle(color: theme.colorScheme.error)
+              : null,
         ),
         trailing: Text(
           formatMoney(invoice.amount),

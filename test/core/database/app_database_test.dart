@@ -436,6 +436,50 @@ void main() {
     },
   );
 
+  test(
+    'a migração mantém a compra de cartão antiga sem data e aceita a data',
+    () async {
+      final v9 = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: path,
+        schemaVersion: 9,
+      );
+      final cardId = await CardRepository(v9, DataChanges()).saveCard(
+        CreditCard(
+          name: 'Nubank',
+          closingDay: 3,
+          dueDay: 10,
+          walletId: 1,
+          createdAt: DateTime(2026, 9),
+        ),
+      );
+      await (await v9.database).update('expenses', <String, Object?>{
+        'card_id': cardId,
+      });
+      await v9.close();
+
+      final database = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: path,
+      );
+      addTearDown(database.close);
+
+      final expenses = ExpenseRepository(database, DataChanges());
+      final legacy = (await expenses.fetchExpenses()).single;
+      expect(legacy.cardId, cardId);
+      expect(legacy.purchasedAt, isNull);
+      expect(legacy.startMonth, const Month(2026, 8));
+
+      await expenses.saveExpense(
+        legacy.copyWith(purchasedAt: DateTime(2026, 9, 13)),
+      );
+      expect(
+        (await expenses.fetchExpenses()).single.purchasedAt,
+        DateTime(2026, 9, 13),
+      );
+    },
+  );
+
   test('o banco migrado tem o mesmo esquema de uma instalação nova', () async {
     final migrated = AppDatabase(
       factory: databaseFactoryFfiNoIsolate,

@@ -144,9 +144,16 @@ the expense with no card awareness. `MonthSummary.invoices` groups a month's occ
 `CardInvoice`, and `MonthSummary.payables` is what the month owes — loose occurrences plus non-empty
 invoices, both behind the `Payable` interface. Lists, the dashboard, the agenda and reminders render
 `payables`; totals still sum `occurrences`, so an invoice never changes `totalExpenses`. The month
-table stays per item. `CreditCard.invoiceMonthFor` turns a purchase date into the invoice month from
-the closing and due days; the expense form applies it when a card is picked, while "Adicionar compra"
-from an invoice keeps that invoice's month. Deleting a card leaves its purchases as loose expenses
+table stays per item. A purchase stores the day it was made (`expenses.purchased_at`, schema v10) and
+the invoice month always comes from it through `CreditCard.invoiceMonthFor` — the form asks for
+"Data da compra" (today by default) instead of a month, sets `startMonth` to that invoice plus the
+parcels already paid, and warns when it differs from the invoice it was opened from ("Adicionar
+compra", `ExpenseFormViewModel.leavesOpenedInvoice`), so a purchase made after the closing day never
+lands on a statement that is already due. A purchase saved before v10 has no date and keeps its month
+editable until one is picked. `CardInvoice` takes `today` from `MonthSummary` and reports
+`InvoiceStatus` — paid, else overdue, else closed once `today` is past `CreditCard.closingDateOf`,
+else open — shown as "Aberta · fecha 03/10", "Fechada · vence 10/10", "Atrasada" or "Paga"; its
+`purchases` are ordered by purchase day. Deleting a card leaves its purchases as loose expenses
 (`ON DELETE SET NULL`).
 
 A **wallet** (`features/wallets/`) is a money source — salary or a benefit (VR/VA/mercado). It owns

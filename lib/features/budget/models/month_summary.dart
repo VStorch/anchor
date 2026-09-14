@@ -116,6 +116,7 @@ class MonthSummary {
         items: occurrences
             .where((occurrence) => occurrence.expense.cardId == card.id)
             .toList(),
+        today: today,
       ),
   ];
 

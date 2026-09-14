@@ -43,6 +43,14 @@ class CreditCard {
     return dueDay > closingDay ? closingMonth : closingMonth.next;
   }
 
+  /// The day the statement for [invoiceMonth] stops taking purchases.
+  DateTime closingDateOf(Month invoiceMonth) {
+    final closingMonth = dueDay > closingDay
+        ? invoiceMonth
+        : invoiceMonth.previous;
+    return closingMonth.dayOf(closingDay);
+  }
+
   Map<String, Object?> toMap() => <String, Object?>{
     if (id != null) 'id': id,
     'name': name,

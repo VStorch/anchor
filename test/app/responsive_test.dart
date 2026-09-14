@@ -2,15 +2,19 @@ import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/cards/models/credit_card.dart';
+import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/features/expenses/views/expense_form_page.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/wallets/views/wallets_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -115,7 +119,32 @@ void main() {
       ),
     );
 
-    final saved = await expenses.fetchExpenses();
+    final cardId = await CardRepository(database, changes).saveCard(
+      CreditCard(
+        name: 'Cartão de crédito do banco',
+        closingDay: 3,
+        dueDay: 10,
+        walletId: salaryId,
+        createdAt: createdAt,
+      ),
+    );
+    await expenses.saveExpense(
+      Expense(
+        name: 'Fone de ouvido sem fio',
+        type: ExpenseType.single,
+        amount: 1299.9,
+        dueDay: 10,
+        startMonth: Month.current(),
+        walletId: salaryId,
+        cardId: cardId,
+        purchasedAt: Month.current().previous.dayOf(20),
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    final saved = (await expenses.fetchExpenses())
+        .where((expense) => expense.cardId == null)
+        .toList();
     await expenses.savePayment(
       ExpensePayment(
         expenseId: saved.first.id!,
@@ -162,6 +191,54 @@ void main() {
         );
         await tester.pumpAndSettle();
       }
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.account_balance_wallet_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final invoice = find.widgetWithText(
+        ListTile,
+        'Cartão de crédito do banco',
+      );
+      await tester.scrollUntilVisible(
+        invoice,
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(WalletsPage),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.ensureVisible(invoice);
+      await tester.pumpAndSettle();
+      await tester.tapAt(tester.getTopRight(invoice) + const Offset(-8, 8));
+      await tester.pumpAndSettle();
+      final addPurchase = find.text('Adicionar compra');
+      await tester.ensureVisible(addPurchase);
+      await tester.pumpAndSettle();
+      await tester.tap(addPurchase);
+      await tester.pumpAndSettle();
+      expect(find.byType(ExpenseFormPage), findsOneWidget);
+      await tester.ensureVisible(find.textContaining('Fatura de'));
+      await tester.pumpAndSettle();
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).first,
+      );
+      navigator.pop();
+      await tester.pumpAndSettle();
+      navigator.pop();
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.pie_chart_outline),
+        ),
+      );
+      await tester.pumpAndSettle();
 
       final details = find.text('Como chegamos nisso');
       await tester.ensureVisible(details);

@@ -15,6 +15,7 @@ class Expense {
     this.settledInstallments = 0,
     this.walletId,
     this.cardId,
+    this.purchasedAt,
     required this.createdAt,
   });
 
@@ -32,6 +33,7 @@ class Expense {
     settledInstallments: map['settled_installments'] as int? ?? 0,
     walletId: map['wallet_id'] as int?,
     cardId: map['card_id'] as int?,
+    purchasedAt: DateTime.tryParse(map['purchased_at'] as String? ?? ''),
     createdAt: DateTime.parse(map['created_at'] as String),
   );
 
@@ -46,6 +48,9 @@ class Expense {
   final int settledInstallments;
   final int? walletId;
   final int? cardId;
+
+  /// The day a card purchase was made; the invoice it lands on comes from it.
+  final DateTime? purchasedAt;
   final DateTime createdAt;
 
   int get remainingInstallments =>
@@ -113,6 +118,7 @@ class Expense {
     'settled_installments': settledInstallments,
     'wallet_id': walletId,
     'card_id': cardId,
+    'purchased_at': purchasedAt?.toIso8601String(),
     'created_at': createdAt.toIso8601String(),
   };
 
@@ -129,6 +135,7 @@ class Expense {
     int? settledInstallments,
     int? walletId,
     int? cardId,
+    DateTime? purchasedAt,
     DateTime? createdAt,
   }) => Expense(
     id: id ?? this.id,
@@ -142,6 +149,7 @@ class Expense {
     settledInstallments: settledInstallments ?? this.settledInstallments,
     walletId: walletId ?? this.walletId,
     cardId: cardId ?? this.cardId,
+    purchasedAt: purchasedAt ?? this.purchasedAt,
     createdAt: createdAt ?? this.createdAt,
   );
 }

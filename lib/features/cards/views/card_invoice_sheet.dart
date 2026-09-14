@@ -76,6 +76,15 @@ class CardInvoiceSheet extends StatelessWidget {
               ],
             ),
             Text(
+              invoice.statusLabel,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: invoice.isOverdue
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            Text(
               'Vence em ${DateFormat.MMMMd('pt_BR').format(invoice.dueDate)}'
               ' · fecha dia ${card.closingDay}',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -83,7 +92,7 @@ class CardInvoiceSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            ...invoice.items.map((item) => _ItemLine(item: item)),
+            ...invoice.purchases.map((item) => _ItemLine(item: item)),
             TextButton.icon(
               onPressed: () => Navigator.of(context).push(
                 ExpenseFormPage.route(
@@ -91,6 +100,7 @@ class CardInvoiceSheet extends StatelessWidget {
                   wallets: viewModel.snapshot.wallets,
                   cards: viewModel.snapshot.cards,
                   card: card,
+                  invoiceMonth: invoice.month,
                 ),
               ),
               icon: const Icon(Icons.add, size: 18),
@@ -131,9 +141,13 @@ class _ItemLine extends StatelessWidget {
       ),
       title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        item.installmentLabel != null
-            ? 'Parcela ${item.installmentLabel}'
-            : item.expense.type.label,
+        [
+          if (item.expense.purchasedAt case final purchasedAt?)
+            DateFormat('dd/MM', 'pt_BR').format(purchasedAt),
+          item.installmentLabel != null
+              ? 'Parcela ${item.installmentLabel}'
+              : item.expense.type.label,
+        ].join(' · '),
       ),
       trailing: Text(
         formatMoney(item.amount),

@@ -53,4 +53,34 @@ void main() {
       );
     });
   });
+
+  group('dia em que a fatura fecha', () {
+    test('com o vencimento depois do fechamento, fecha no mesmo mês', () {
+      expect(
+        card(closingDay: 3, dueDay: 10).closingDateOf(const Month(2026, 10)),
+        DateTime(2026, 10, 3),
+      );
+    });
+
+    test('com o vencimento antes do fechamento, fecha no mês anterior', () {
+      expect(
+        card(closingDay: 25, dueDay: 5).closingDateOf(const Month(2026, 10)),
+        DateTime(2026, 9, 25),
+      );
+    });
+
+    test('o fechamento no dia 31 cabe no mês curto', () {
+      expect(
+        card(closingDay: 31, dueDay: 8).closingDateOf(const Month(2026, 3)),
+        DateTime(2026, 2, 28),
+      );
+    });
+
+    test('a compra do dia do fechamento cai na fatura que fecha nele', () {
+      final nubank = card(closingDay: 3, dueDay: 10);
+      final purchase = DateTime(2026, 10, 3);
+
+      expect(nubank.closingDateOf(nubank.invoiceMonthFor(purchase)), purchase);
+    });
+  });
 }
