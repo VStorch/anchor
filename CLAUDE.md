@@ -243,7 +243,12 @@ concrete generic (`DropdownButtonFormField<ExpenseType>`).
 
 `MoneyField` takes reais first (`MoneyInputFormatter`): digits grow the integer part and a comma or dot
 opens up to two digits of cents, so a test types the amount as it reads — `enterText(field, '47,90')`,
-not the old cents-only `'4790'`. `allowNegative` adds the "Trocar sinal" button.
+not the old cents-only `'4790'`. `allowNegative` adds the "Trocar sinal" button and is the only way a
+sign survives the formatter. The formatter tells three edits apart: typing or erasing at the end goes key
+by key; an edit in the middle drops the dots (never decimals in our own text) and joins the digits, so
+erasing the comma of "R$ 10,50" gives "R$ 1.050"; a paste into an empty field or over the whole selection
+is read as foreign text — a comma is the decimal, and with none a dot followed by one or two digits at the
+end is (`12.5` → "R$ 12,50"). The table cells never accept a negative amount.
 
 A widget test that needs a real file database (`createFileDatabase`, as in `test/app/backup_test.dart`)
 must let real async I/O run: sqflite checks the file with `File.exists()`, which never completes on

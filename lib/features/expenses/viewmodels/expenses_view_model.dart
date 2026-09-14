@@ -136,8 +136,8 @@ class ExpensesViewModel extends ReactiveViewModel {
     ExpenseOccurrence occurrence,
     double amount,
   ) async {
-    if (sameAmount(amount, occurrence.paidAmount)) return;
-    if (amount <= 0) return clearPayments(occurrence);
+    if (amount < 0 || sameAmount(amount, occurrence.paidAmount)) return;
+    if (amount == 0) return clearPayments(occurrence);
 
     final existing = occurrence.payments;
     if (existing.length > 1) return;
@@ -236,7 +236,8 @@ class ExpensesViewModel extends ReactiveViewModel {
     ExpenseOccurrence occurrence,
     double amount,
   ) async {
-    if (amount <= 0) return resetMonthAmount(occurrence);
+    if (amount < 0) return;
+    if (amount == 0) return resetMonthAmount(occurrence);
     if (sameAmount(amount, occurrence.amount)) return;
     await _expenseRepository.saveMonthAmount(
       ExpenseMonth(

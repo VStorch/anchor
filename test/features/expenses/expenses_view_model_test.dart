@@ -174,6 +174,21 @@ void main() {
     },
   );
 
+  test('valor negativo na tabela não apaga os pagamentos nem o mês', () async {
+    final light = await saveBill('Luz', 180);
+    await pay(light, 80);
+    await expenses.saveMonthAmount(
+      ExpenseMonth(expenseId: light, month: month, amount: 150),
+    );
+    await viewModel.initialize();
+
+    await viewModel.setPaidAmount(viewModel.occurrenceOf(light)!, -5);
+    await viewModel.setMonthAmount(viewModel.occurrenceOf(light)!, -5);
+
+    expect((await expenses.fetchPayments()).single.amount, 80);
+    expect((await expenses.fetchMonthAmounts()).single.amount, 150);
+  });
+
   group('saldo informado depois do vencimento', () {
     const september = Month(2026, 9);
     final checkedAt = DateTime(2026, 9, 13, 18);

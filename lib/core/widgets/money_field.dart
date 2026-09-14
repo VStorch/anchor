@@ -56,7 +56,9 @@ class _MoneyFieldState extends State<MoneyField> {
       controller: _controller,
       autofocus: widget.autofocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: const [MoneyInputFormatter()],
+      inputFormatters: [
+        MoneyInputFormatter(allowNegative: widget.allowNegative),
+      ],
       style: Theme.of(
         context,
       ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),

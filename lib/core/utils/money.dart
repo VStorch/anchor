@@ -41,10 +41,14 @@ bool sameAmount(double a, double b) => (a - b).abs() < 0.005;
 double roundCents(double value) => (value * 100).round() / 100;
 
 /// Reais first: digits grow the integer part until a comma (or a dot) is
-/// typed, then up to two digits of cents follow. Nothing is filled in while
-/// typing, and the cursor stays at the end.
+/// typed, then up to two digits of cents follow. Typing or erasing at the end
+/// works key by key; an edit in the middle joins the digits again (a dot is
+/// never a decimal in our own text); a paste or a replaced selection is read
+/// as someone else wrote it. The cursor keeps its distance from the end.
 class MoneyInputFormatter extends TextInputFormatter {
-  const MoneyInputFormatter();
+  const MoneyInputFormatter({this.allowNegative = false});
+
+  final bool allowNegative;
 
   @override
   TextEditingValue formatEditUpdate(
@@ -56,20 +60,41 @@ class MoneyInputFormatter extends TextInputFormatter {
     if (after.isEmpty) return const TextEditingValue();
 
     final _RawMoney raw;
-    if (after.startsWith(before)) {
-      raw = _RawMoney.parse(before)..type(after.substring(before.length));
-    } else if (before.startsWith(after)) {
-      raw = _RawMoney.parse(before)..backspace();
+    if (before.isEmpty || _coversAll(oldValue)) {
+      raw = _RawMoney.external(after, allowNegative: allowNegative);
+    } else if (after.startsWith(before) && _cursorAtEnd(newValue)) {
+      raw = _RawMoney.parse(before, allowNegative: allowNegative)
+        ..type(after.substring(before.length));
+    } else if (before.startsWith(after) &&
+        before.length - after.length == 1 &&
+        _cursorAtEnd(oldValue)) {
+      raw = _RawMoney.parse(before, allowNegative: allowNegative)..backspace();
     } else {
-      raw = _RawMoney.typed(after);
+      raw = _RawMoney.edited(after, allowNegative: allowNegative);
     }
 
     final text = raw.display;
+    final cursor = newValue.selection.isValid
+        ? newValue.selection.baseOffset
+        : after.length;
+    final offset = (text.length - (after.length - cursor)).clamp(
+      0,
+      text.length,
+    );
     return TextEditingValue(
       text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      selection: TextSelection.collapsed(offset: offset),
     );
   }
+
+  static bool _coversAll(TextEditingValue value) =>
+      value.selection.isValid &&
+      !value.selection.isCollapsed &&
+      value.selection.start == 0 &&
+      value.selection.end == value.text.length;
+
+  static bool _cursorAtEnd(TextEditingValue value) =>
+      !value.selection.isValid || value.selection.end == value.text.length;
 }
 
 class _RawMoney {
@@ -80,20 +105,54 @@ class _RawMoney {
     this.cents = '',
   });
 
-  factory _RawMoney.parse(String formatted) {
+  factory _RawMoney.parse(String formatted, {required bool allowNegative}) {
     final parts = formatted.replaceAll(RegExp(r'[^0-9,]'), '').split(',');
     return _RawMoney(
-      negative: formatted.startsWith('-'),
+      negative: allowNegative && formatted.startsWith('-'),
       reais: parts.first,
       hasComma: parts.length > 1,
       cents: parts.length > 1 ? parts[1] : '',
     );
   }
 
-  factory _RawMoney.typed(String text) {
-    final raw = _RawMoney(negative: text.trimLeft().startsWith('-'));
-    return raw..type(text.contains(',') ? text.replaceAll('.', '') : text);
+  /// Pasted text: a comma is the decimal; with no comma, a dot followed by up
+  /// to two digits at the end is the decimal and any other dot groups
+  /// thousands.
+  factory _RawMoney.external(String text, {required bool allowNegative}) {
+    final negative = allowNegative && text.trimLeft().startsWith('-');
+    final kept = text.replaceAll(RegExp(r'[^0-9,.]'), '');
+    final String reais;
+    final String? decimals;
+    final comma = kept.indexOf(',');
+    final dotDecimal = RegExp(r'\.(\d{0,2})$').firstMatch(kept);
+    if (comma >= 0) {
+      reais = kept.substring(0, comma);
+      decimals = kept.substring(comma + 1);
+    } else if (dotDecimal != null) {
+      reais = kept.substring(0, dotDecimal.start);
+      decimals = dotDecimal.group(1);
+    } else {
+      reais = kept;
+      decimals = null;
+    }
+
+    final raw = _RawMoney(negative: negative)..type(_digits(reais));
+    if (decimals == null) return raw;
+    raw
+      ..hasComma = true
+      ..type(_digits(decimals));
+    if (raw.cents.isNotEmpty) raw.cents = raw.cents.padRight(2, '0');
+    return raw;
   }
+
+  factory _RawMoney.edited(String text, {required bool allowNegative}) {
+    final raw = _RawMoney(
+      negative: allowNegative && text.trimLeft().startsWith('-'),
+    );
+    return raw..type(text.replaceAll('.', ''));
+  }
+
+  static String _digits(String text) => text.replaceAll(RegExp(r'[^0-9]'), '');
 
   static const int _maxReaisDigits = 12;
 

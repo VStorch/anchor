@@ -80,9 +80,19 @@ void main() {
       expect(typeKeys('-5'), r'R$ 5');
     });
 
-    test('mantém o sinal já presente', () {
-      expect(typeKeys('5', from: '-'), r'-R$ 5');
-      expect(backspace(r'-R$ 5'), '-');
+    test('mantém o sinal já presente só no campo com sinal', () {
+      const signed = MoneyInputFormatter(allowNegative: true);
+      final typed = signed.formatEditUpdate(
+        const TextEditingValue(text: '-'),
+        const TextEditingValue(text: '-5'),
+      );
+      expect(typed.text, r'-R$ 5');
+      final erased = signed.formatEditUpdate(
+        const TextEditingValue(text: r'-R$ 5'),
+        const TextEditingValue(text: r'-R$ '),
+      );
+      expect(erased.text, '-');
+      expect(typeKeys('5', from: '-'), r'R$ 5');
     });
 
     test('texto substituído de uma vez é lido do zero', () {
@@ -92,6 +102,73 @@ void main() {
       );
       expect(result.text, r'R$ 47,90');
       expect(result.selection.baseOffset, result.text.length);
+    });
+  });
+
+  group('MoneyInputFormatter ao colar e editar no meio', () {
+    const formatter = MoneyInputFormatter();
+    const signed = MoneyInputFormatter(allowNegative: true);
+
+    TextEditingValue edit(
+      TextEditingValue before,
+      String after, {
+      int? cursor,
+      MoneyInputFormatter using = formatter,
+    }) => using.formatEditUpdate(
+      before,
+      TextEditingValue(
+        text: after,
+        selection: TextSelection.collapsed(offset: cursor ?? after.length),
+      ),
+    );
+
+    TextEditingValue at(String text, int cursor) => TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: cursor),
+    );
+
+    TextEditingValue selectingAll(String text) => TextEditingValue(
+      text: text,
+      selection: TextSelection(baseOffset: 0, extentOffset: text.length),
+    );
+
+    test('colar "1.234,56" num campo vazio', () {
+      expect(edit(TextEditingValue.empty, '1.234,56').text, r'R$ 1.234,56');
+    });
+
+    test('colar "1.234,56" sobre o valor selecionado', () {
+      expect(edit(selectingAll(r'R$ 9'), '1.234,56').text, r'R$ 1.234,56');
+    });
+
+    test('colar "R\$ 10"', () {
+      expect(edit(TextEditingValue.empty, r'R$ 10').text, r'R$ 10');
+    });
+
+    test('colar "-5" mantém o sinal só no campo com sinal', () {
+      expect(edit(TextEditingValue.empty, '-5', using: signed).text, r'-R$ 5');
+      expect(edit(TextEditingValue.empty, '-5').text, r'R$ 5');
+      expect(edit(selectingAll(r'R$ 10'), '-5').text, r'R$ 5');
+    });
+
+    test('colar "12.5" lê o ponto como vírgula decimal', () {
+      expect(edit(TextEditingValue.empty, '12.5').text, r'R$ 12,50');
+      expect(edit(TextEditingValue.empty, '1.234').text, r'R$ 1.234');
+    });
+
+    test('inserir um dígito no meio junta os dígitos e mantém o cursor', () {
+      final result = edit(at(r'R$ 1.234', 4), r'R$ 15.234', cursor: 5);
+      expect(result.text, r'R$ 15.234');
+      expect(result.selection.baseOffset, 5);
+    });
+
+    test('apagar um dígito no meio', () {
+      final result = edit(at(r'R$ 1.234', 6), r'R$ 1.34', cursor: 5);
+      expect(result.text, r'R$ 134');
+      expect(result.selection.baseOffset, 4);
+    });
+
+    test('apagar a vírgula no meio junta reais e centavos', () {
+      expect(edit(at(r'R$ 10,50', 6), r'R$ 1050', cursor: 5).text, r'R$ 1.050');
     });
   });
 
