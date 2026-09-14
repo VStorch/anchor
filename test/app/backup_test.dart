@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../support/fake_reminder_notifications.dart';
 import '../support/test_database.dart';
@@ -176,4 +177,48 @@ void main() {
     await tapTab(tester, Icons.account_balance_wallet_outlined);
     expect(walletNamed('Vale'), findsOneWidget);
   });
+
+  testWidgets('a cópia que falha ao abrir avisa e mantém os dados', (
+    tester,
+  ) async {
+    useTallPhone(tester);
+    await tester.runAsync(() => createWallet('Vale'));
+    files.toOpen = await tester.runAsync(
+      () => brokenBackup('${directory.path}/quebrada.db'),
+    );
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+        backupFiles: files,
+      ),
+    );
+    await settle(tester);
+
+    await tapTab(tester, Icons.tune_outlined);
+    await tester.tap(find.text('Restaurar cópia'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(TextButton, 'Restaurar'));
+    await settle(tester);
+
+    expect(find.text('Não foi possível restaurar essa cópia'), findsOneWidget);
+    expect(find.text('Cópia restaurada'), findsNothing);
+
+    await tapTab(tester, Icons.account_balance_wallet_outlined);
+    expect(walletNamed('Vale'), findsOneWidget);
+  });
+}
+
+/// Passes the inspection (header, both tables, an old version) but cannot be
+/// migrated, so it only fails once the app tries to open it.
+Future<Uint8List> brokenBackup(String path) async {
+  final db = await databaseFactoryFfiNoIsolate.openDatabase(path);
+  await db.execute('CREATE TABLE ${AppDatabase.walletsTable} (id INTEGER)');
+  await db.execute('CREATE TABLE ${AppDatabase.expensesTable} (id INTEGER)');
+  await db.execute('PRAGMA user_version = 1');
+  await db.close();
+  return File(path).readAsBytesSync();
 }

@@ -136,7 +136,17 @@ class SettingsPage extends StatelessWidget {
     );
     if (confirmed != true) return;
 
-    await backup.restore(contents);
+    try {
+      await backup.restore(contents);
+    } on BackupException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.problem.message)));
+      return;
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Não foi possível restaurar essa cópia')),
+      );
+      return;
+    }
     messenger.showSnackBar(const SnackBar(content: Text('Cópia restaurada')));
   }
 
