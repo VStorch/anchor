@@ -258,7 +258,7 @@ class _CellField extends StatefulWidget {
 
 class _CellFieldState extends State<_CellField> {
   late final TextEditingController _controller = TextEditingController(
-    text: widget.initialValue > 0 ? formatMoney(widget.initialValue) : '',
+    text: widget.initialValue > 0 ? formatMoneyInput(widget.initialValue) : '',
   );
   final FocusNode _focusNode = FocusNode();
   bool _isSubmitted = false;
@@ -285,8 +285,8 @@ class _CellFieldState extends State<_CellField> {
       focusNode: _focusNode,
       autofocus: true,
       textAlign: TextAlign.end,
-      keyboardType: TextInputType.number,
-      inputFormatters: [MoneyInputFormatter()],
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: const [MoneyInputFormatter()],
       style: Theme.of(context).textTheme.bodyMedium,
       decoration: const InputDecoration(
         isDense: true,

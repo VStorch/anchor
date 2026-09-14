@@ -181,7 +181,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '20000',
+      '200',
     );
     expect(find.text('Dia do vencimento'), findsOneWidget);
 

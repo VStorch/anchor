@@ -108,7 +108,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '520000',
+      '5200',
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ajustar saldo'));
@@ -145,7 +145,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '312045',
+      '3120,45',
     );
     await tester.pumpAndSettle();
 
@@ -171,7 +171,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '520000',
+      '5200',
     );
     await tester.pumpAndSettle();
 
@@ -200,7 +200,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '4790',
+      '47,90',
     );
     await tester.enterText(
       find.widgetWithText(TextField, 'No que foi'),
@@ -232,7 +232,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '4790',
+      '47,90',
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Registrar gasto'));
@@ -256,7 +256,7 @@ void main() {
         of: find.byType(MoneyField),
         matching: find.byType(TextField),
       ),
-      '4790',
+      '47,90',
     );
     await tester.enterText(
       find.widgetWithText(TextField, 'No que foi'),

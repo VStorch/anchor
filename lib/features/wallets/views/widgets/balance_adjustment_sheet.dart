@@ -75,6 +75,7 @@ class _BalanceAdjustmentSheetState extends State<BalanceAdjustmentSheet> {
               initialValue: _balance,
               label: 'Saldo real',
               autofocus: true,
+              allowNegative: true,
               onChanged: (value) => setState(() => _balance = value),
             ),
             const SizedBox(height: 16),

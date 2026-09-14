@@ -188,6 +188,10 @@ widget tests: scope `find.byType(TextField)` to the sheet/page you mean (a sheet
 behind it), scope tab taps to `NavigationBar` (feature icons collide with destination icons), and use the
 concrete generic (`DropdownButtonFormField<ExpenseType>`).
 
+`MoneyField` takes reais first (`MoneyInputFormatter`): digits grow the integer part and a comma or dot
+opens up to two digits of cents, so a test types the amount as it reads — `enterText(field, '47,90')`,
+not the old cents-only `'4790'`. `allowNegative` adds the "Trocar sinal" button.
+
 A widget test that needs a real file database (`createFileDatabase`, as in `test/app/backup_test.dart`)
 must let real async I/O run: sqflite checks the file with `File.exists()`, which never completes on
 the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` rounds before

@@ -95,11 +95,11 @@ void main() {
     expect(_inSheet('Falta'), findsOneWidget);
     expect(_inSheet('600,00'), findsWidgets);
 
-    await _addLedgerPayment(tester, wallet: 'Vale mercado', digits: '40000');
+    await _addLedgerPayment(tester, wallet: 'Vale mercado', amount: '400');
     expect(_inSheet('Falta'), findsOneWidget);
     expect(_inSheet('200,00'), findsWidgets);
 
-    await _addLedgerPayment(tester, wallet: 'Salário', digits: '20000');
+    await _addLedgerPayment(tester, wallet: 'Salário', amount: '200');
 
     expect(_inSheet('Quitada'), findsOneWidget);
     expect(_inSheet('Falta'), findsNothing);
@@ -237,7 +237,7 @@ void main() {
         of: find.byType(MonthTable),
         matching: find.byType(TextField),
       ),
-      '14320',
+      '143,20',
     );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
@@ -348,7 +348,7 @@ void main() {
         of: find.byType(MonthTable),
         matching: find.byType(TextField),
       ),
-      '10000',
+      '100',
     );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
@@ -456,7 +456,7 @@ Finder _inSheet(String text) => find.descendant(
 Future<void> _addLedgerPayment(
   WidgetTester tester, {
   required String wallet,
-  required String digits,
+  required String amount,
 }) async {
   await tester.tap(find.text('Adicionar pagamento'));
   await tester.pumpAndSettle();
@@ -471,7 +471,7 @@ Future<void> _addLedgerPayment(
       of: find.byType(MoneyField),
       matching: find.byType(TextField),
     ),
-    digits,
+    amount,
   );
   await tester.pumpAndSettle();
 
@@ -496,7 +496,7 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
     ),
     'Mensal',
   );
-  await _typeMoney(tester, '300000');
+  await _typeMoney(tester, '3000');
   await tester.tap(_dayCell(1));
   await tester.pumpAndSettle();
 
@@ -533,7 +533,7 @@ Future<void> _createInstallmentExpense(WidgetTester tester) async {
   await tester.tap(find.text('Parcelada').last);
   await tester.pumpAndSettle();
 
-  await _typeMoney(tester, '25000');
+  await _typeMoney(tester, '250');
 
   final settledStepper = find.ancestor(
     of: find.text('Parcelas já pagas'),
@@ -577,13 +577,13 @@ Future<void> _payFirstExpense(WidgetTester tester) async {
   expect(find.text('Pagar'), findsNothing);
 }
 
-Future<void> _typeMoney(WidgetTester tester, String digits) async {
+Future<void> _typeMoney(WidgetTester tester, String amount) async {
   await tester.enterText(
     find.descendant(
       of: find.byType(MoneyField),
       matching: find.byType(TextField),
     ),
-    digits,
+    amount,
   );
   await tester.pumpAndSettle();
 }
