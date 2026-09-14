@@ -50,20 +50,39 @@ class Month implements Comparable<Month> {
   DateTime dayOf(int dayOfMonth) =>
       DateTime(year, month, min(dayOfMonth, lengthInDays));
 
-  DateTime businessDay(int position) {
+  /// Counts Monday to Friday, skipping national holidays. With
+  /// [countSaturday] Saturdays count too (the CLT deadline), but a date that
+  /// lands on one moves back to the bank business day before it.
+  DateTime businessDay(int position, {bool countSaturday = false}) {
+    final target = max(position, 1);
+    final lastWeekday = countSaturday ? DateTime.saturday : DateTime.friday;
     var found = 0;
-    var lastBusinessDay = 1;
+    var lastCounted = 1;
 
     for (var day = 1; day <= lengthInDays; day++) {
-      final date = DateTime(year, month, day);
-      if (date.weekday > DateTime.friday || BrazilianHolidays.isHoliday(date)) {
-        continue;
-      }
-      lastBusinessDay = day;
-      if (++found == position) return DateTime(year, month, day);
+      if (!_counts(DateTime(year, month, day), lastWeekday)) continue;
+      lastCounted = day;
+      if (++found == target) break;
     }
 
-    return DateTime(year, month, lastBusinessDay);
+    final date = DateTime(year, month, lastCounted);
+    if (date.weekday != DateTime.saturday) return date;
+    return _bankDayAround(lastCounted);
+  }
+
+  bool _counts(DateTime date, int lastWeekday) =>
+      date.weekday <= lastWeekday && !BrazilianHolidays.isHoliday(date);
+
+  DateTime _bankDayAround(int saturday) {
+    for (var day = saturday - 1; day >= 1; day--) {
+      final date = DateTime(year, month, day);
+      if (_counts(date, DateTime.friday)) return date;
+    }
+    for (var day = saturday + 1; day <= lengthInDays; day++) {
+      final date = DateTime(year, month, day);
+      if (_counts(date, DateTime.friday)) return date;
+    }
+    return DateTime(year, month, saturday);
   }
 
   @override

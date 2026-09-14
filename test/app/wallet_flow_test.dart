@@ -404,6 +404,30 @@ void main() {
     expect(find.textContaining('5º dia útil'), findsWidgets);
   });
 
+  testWidgets('o recebimento por dia útil pode contar o sábado', (
+    tester,
+  ) async {
+    await seedSalary(schedule: PayoutSchedule.businessDay);
+    await pumpApp(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mensal'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Contar sábado (prazo da CLT)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar recebimento'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('(conta sábado)'), findsWidgets);
+  });
+
   group('calendário da entrada e do gasto num mês distante', () {
     final wallet = Wallet(
       id: 1,

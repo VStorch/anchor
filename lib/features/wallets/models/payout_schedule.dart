@@ -1,6 +1,7 @@
 enum PayoutSchedule {
   dayOfMonth('day_of_month', 'Dia fixo'),
-  businessDay('business_day', 'Dia útil');
+  businessDay('business_day', 'Dia útil'),
+  businessDaySaturday('business_day_saturday', 'Dia útil, conta sábado');
 
   const PayoutSchedule(this.id, this.label);
 
@@ -11,4 +12,6 @@ enum PayoutSchedule {
 
   final String id;
   final String label;
+
+  bool get isBusinessDay => this != dayOfMonth;
 }

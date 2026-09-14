@@ -39,11 +39,16 @@ class Payout {
   DateTime dateIn(Month month) => switch (schedule) {
     PayoutSchedule.dayOfMonth => month.dayOf(day),
     PayoutSchedule.businessDay => month.businessDay(day),
+    PayoutSchedule.businessDaySaturday => month.businessDay(
+      day,
+      countSaturday: true,
+    ),
   };
 
   String get scheduleLabel => switch (schedule) {
     PayoutSchedule.dayOfMonth => 'dia $day',
     PayoutSchedule.businessDay => '$dayº dia útil',
+    PayoutSchedule.businessDaySaturday => '$dayº dia útil (conta sábado)',
   };
 
   Map<String, Object?> toMap() => <String, Object?>{

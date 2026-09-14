@@ -1,14 +1,14 @@
 abstract final class BrazilianHolidays {
-  static const List<(int, int)> _fixed = [
-    (1, 1),
-    (4, 21),
-    (5, 1),
-    (9, 7),
-    (10, 12),
-    (11, 2),
-    (11, 15),
-    (11, 20),
-    (12, 25),
+  static const List<(int, int, int)> _fixed = [
+    (1, 1, 1),
+    (4, 21, 1),
+    (5, 1, 1),
+    (9, 7, 1),
+    (10, 12, 1),
+    (11, 2, 1),
+    (11, 15, 1),
+    (11, 20, 2024),
+    (12, 25, 1),
   ];
 
   static const List<int> _daysFromEaster = [-48, -47, -2, 60];
@@ -33,7 +33,13 @@ abstract final class BrazilianHolidays {
   }
 
   static bool isHoliday(DateTime day) {
-    if (_fixed.contains((day.month, day.day))) return true;
+    final isFixed = _fixed.any(
+      (holiday) =>
+          holiday.$1 == day.month &&
+          holiday.$2 == day.day &&
+          day.year >= holiday.$3,
+    );
+    if (isFixed) return true;
 
     final easterDay = easter(day.year);
     return _daysFromEaster.any((offset) {

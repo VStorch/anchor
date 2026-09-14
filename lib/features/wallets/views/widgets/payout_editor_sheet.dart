@@ -64,8 +64,7 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
 
   bool get _isEditing => widget.payout != null;
 
-  int get _dayCount =>
-      _schedule == PayoutSchedule.businessDay ? Payout.maxBusinessDay : 31;
+  int get _dayCount => _schedule.isBusinessDay ? Payout.maxBusinessDay : 31;
 
   @override
   void dispose() {
@@ -111,21 +110,32 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
               onChanged: (value) => setState(() => _amount = value),
             ),
             const SizedBox(height: 20),
-            SegmentedButton<PayoutSchedule>(
-              segments: PayoutSchedule.values
-                  .map(
-                    (schedule) => ButtonSegment(
-                      value: schedule,
-                      label: Text(schedule.label),
-                    ),
-                  )
-                  .toList(),
-              selected: {_schedule},
-              onSelectionChanged: _changeSchedule,
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Dia fixo')),
+                ButtonSegment(value: true, label: Text('Dia útil')),
+              ],
+              selected: {_schedule.isBusinessDay},
+              onSelectionChanged: (selection) => _changeSchedule(
+                selection.first
+                    ? PayoutSchedule.businessDay
+                    : PayoutSchedule.dayOfMonth,
+              ),
             ),
+            if (_schedule.isBusinessDay)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Contar sábado (prazo da CLT)'),
+                value: _schedule == PayoutSchedule.businessDaySaturday,
+                onChanged: (countSaturday) => _changeSchedule(
+                  countSaturday
+                      ? PayoutSchedule.businessDaySaturday
+                      : PayoutSchedule.businessDay,
+                ),
+              ),
             const SizedBox(height: 20),
             Text(
-              _schedule == PayoutSchedule.businessDay
+              _schedule.isBusinessDay
                   ? 'Cai no $_dayº dia útil'
                   : 'Cai no dia $_day',
               style: theme.textTheme.titleSmall?.copyWith(
@@ -152,9 +162,9 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
     );
   }
 
-  void _changeSchedule(Set<PayoutSchedule> selection) {
+  void _changeSchedule(PayoutSchedule schedule) {
     setState(() {
-      _schedule = selection.first;
+      _schedule = schedule;
       if (_day > _dayCount) _day = _dayCount;
     });
   }

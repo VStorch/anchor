@@ -173,7 +173,10 @@ what `WalletSummary.countsInBalance` leaves out shows faded as "antes do saldo i
 
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
-national holidays (`BrazilianHolidays`); state and city holidays still need a manual correction.
+national holidays (`BrazilianHolidays`, where November 20 only counts from 2024); state and city holidays
+still need a manual correction. `PayoutSchedule.businessDaySaturday` ("Contar sábado (prazo da CLT)", a
+switch under "Dia útil") counts Saturdays too, and a date that lands on one moves back to the bank business
+day before it. A position below 1 reads as 1; `schedule_kind` is TEXT, so a new schedule needs no migration.
 
 A **balance check** (`balance_checks`, `BalanceCheck`) is how the user says "this wallet really
 holds X": it stores the *absolute* amount and the instant (`checked_at`), and whatever is dated up to
