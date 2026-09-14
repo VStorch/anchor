@@ -65,5 +65,6 @@ class Receipt {
     amount: amount ?? this.amount,
     receivedAt: receivedAt ?? this.receivedAt,
     status: status ?? this.status,
+    kind: kind,
   );
 }
