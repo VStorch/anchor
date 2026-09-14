@@ -1,3 +1,4 @@
+import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../cards/models/card_invoice.dart';
 import '../../cards/models/credit_card.dart';
@@ -145,25 +146,24 @@ class MonthSummary {
       .where((receipt) => receipt.isPredicted && !receipt.isAdjustment)
       .toList();
 
-  double get totalExpenses =>
-      occurrences.fold(0, (total, occurrence) => total + occurrence.amount);
+  double get totalExpenses => occurrences.totalAmount;
 
-  double get totalPaid =>
-      occurrences.fold(0, (total, occurrence) => total + occurrence.paidAmount);
+  double get totalPaid => occurrences.totalPaid;
 
-  double get totalPending => totalExpenses - totalPaid;
+  double get totalPending => occurrences.totalRemaining;
 
   double get totalOutflows =>
-      outflows.fold(0, (total, outflow) => total + outflow.amount);
+      roundCents(outflows.fold(0, (total, outflow) => total + outflow.amount));
 
-  double get totalSpent => totalPaid + totalOutflows;
+  double get totalSpent => roundCents(totalPaid + totalOutflows);
 
-  double get totalReceived => receipts
-      .where((receipt) => !receipt.isAdjustment)
-      .fold(0, (total, receipt) => total + receipt.amount);
+  double get totalReceived => roundCents(
+    receipts
+        .where((receipt) => !receipt.isAdjustment)
+        .fold(0, (total, receipt) => total + receipt.amount),
+  );
 
-  double get balance => totalReceived - totalSpent;
+  double get balance => roundCents(totalReceived - totalSpent);
 
-  double get paidRatio =>
-      totalExpenses <= 0 ? 0 : (totalPaid / totalExpenses).clamp(0, 1);
+  double get paidRatio => occurrences.paidRatio(whenEmpty: 0);
 }

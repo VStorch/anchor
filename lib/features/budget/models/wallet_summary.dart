@@ -1,3 +1,4 @@
+import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
@@ -51,29 +52,29 @@ class WalletSummary {
 
       final plannedRemainder = occurrences
           .where((occurrence) => occurrence.plannedWalletId == wallet.id)
-          .fold<double>(0, (total, occurrence) => total + occurrence.remaining);
+          .totalRemaining;
 
       return WalletSummary(
         wallet: wallet,
-        receivedInMonth: monthIncome.fold(
-          0,
-          (total, receipt) => total + receipt.amount,
+        receivedInMonth: roundCents(
+          monthIncome.fold(0, (total, receipt) => total + receipt.amount),
         ),
-        spentInMonth: spentInMonth,
-        committedInMonth: spentInMonth + plannedRemainder,
-        balance:
-            walletReceipts.fold<double>(
-              0,
-              (total, receipt) => total + receipt.amount,
-            ) -
-            walletPayments.fold<double>(
-              0,
-              (total, payment) => total + payment.amount,
-            ) -
-            walletOutflows.fold<double>(
-              0,
-              (total, outflow) => total + outflow.amount,
-            ),
+        spentInMonth: roundCents(spentInMonth),
+        committedInMonth: roundCents(spentInMonth + plannedRemainder),
+        balance: roundCents(
+          walletReceipts.fold<double>(
+                0,
+                (total, receipt) => total + receipt.amount,
+              ) -
+              walletPayments.fold<double>(
+                0,
+                (total, payment) => total + payment.amount,
+              ) -
+              walletOutflows.fold<double>(
+                0,
+                (total, outflow) => total + outflow.amount,
+              ),
+        ),
         unconfirmedInMonth: monthIncome
             .where((receipt) => receipt.isPredicted)
             .length,
@@ -88,7 +89,7 @@ class WalletSummary {
   final double balance;
   final int unconfirmedInMonth;
 
-  double get pendingInMonth => committedInMonth - spentInMonth;
+  double get pendingInMonth => roundCents(committedInMonth - spentInMonth);
 
   double get usageRatio =>
       receivedInMonth <= 0 ? 0 : (spentInMonth / receivedInMonth).clamp(0, 1);

@@ -246,6 +246,67 @@ void main() {
     expect(find.textContaining('600,00'), findsNothing);
   });
 
+  testWidgets('tocar na célula da tabela e sair sem editar não fixa o mês', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await _seedMarketExpense(database);
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Tabela'));
+    await tester.pumpAndSettle();
+
+    Finder amountCell() => find
+        .descendant(
+          of: find.byType(MonthTable),
+          matching: find.textContaining('600,00'),
+        )
+        .first;
+    final cellField = find.descendant(
+      of: find.byType(MonthTable),
+      matching: find.byType(TextField),
+    );
+
+    await tester.tap(amountCell());
+    await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+
+    await tester.tap(amountCell());
+    await tester.pumpAndSettle();
+    await tester.enterText(cellField, '');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    final monthAmounts = await ExpenseRepository(
+      database,
+      DataChanges(),
+    ).fetchMonthAmounts();
+    expect(monthAmounts, isEmpty);
+    expect(amountCell(), findsOneWidget);
+    expect(find.text('Quitada'), findsNothing);
+  });
+
   testWidgets('o pagamento de despesa sem carteira sai de alguma carteira', (
     tester,
   ) async {

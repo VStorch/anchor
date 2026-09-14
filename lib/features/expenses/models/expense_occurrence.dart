@@ -35,7 +35,7 @@ class ExpenseOccurrence implements Payable {
       payments.fold(0, (total, payment) => total + payment.amount);
 
   @override
-  double get remaining => max(0, amount - paidAmount);
+  double get remaining => isPaid ? 0 : roundCents(max(0, amount - paidAmount));
 
   @override
   bool get isPaid => coversAmount(paidAmount, amount);
@@ -83,5 +83,23 @@ class ExpenseOccurrence implements Payable {
   static DateTime get _today {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
+  }
+}
+
+extension OccurrenceTotals on Iterable<ExpenseOccurrence> {
+  double get totalAmount =>
+      roundCents(fold(0, (total, occurrence) => total + occurrence.amount));
+
+  double get totalPaid =>
+      roundCents(fold(0, (total, occurrence) => total + occurrence.paidAmount));
+
+  /// Summed per occurrence, so an overpaid bill never hides one still open.
+  double get totalRemaining =>
+      roundCents(fold(0, (total, occurrence) => total + occurrence.remaining));
+
+  double paidRatio({required double whenEmpty}) {
+    final amount = totalAmount;
+    if (amount <= 0) return whenEmpty;
+    return ((amount - totalRemaining) / amount).clamp(0, 1);
   }
 }

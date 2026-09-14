@@ -465,5 +465,146 @@ void main() {
       expect(summary.payables, hasLength(3));
       expect(summary.invoices, isEmpty);
     });
+
+    test('a compra paga a mais não quita a outra compra da fatura', () {
+      final summary = summaryWith(
+        cards: [nubank],
+        payments: [
+          ExpensePayment(
+            expenseId: 20,
+            walletId: 1,
+            month: august,
+            amount: 400,
+            paidAt: DateTime(2026, 8, 12),
+          ),
+        ],
+      );
+      final invoice = summary.invoiceOf(7)!;
+
+      expect(invoice.isPaid, isFalse);
+      expect(invoice.remaining, 150);
+      expect(summary.totalPending, 240);
+      expect(invoice.settlement.single.$1.expense.id, 21);
+      expect(invoice.settlement.single.$2, invoice.remaining);
+    });
+  });
+
+  group('conta paga a mais', () {
+    final bills = [
+      buildExpense(id: 1, type: ExpenseType.recurring, amount: 100),
+      buildExpense(id: 2, type: ExpenseType.recurring, amount: 100),
+    ];
+
+    MonthSummary buildOverpaid() => MonthSummary.build(
+      month: august,
+      expenses: bills,
+      payments: [
+        ExpensePayment(
+          expenseId: 1,
+          walletId: 1,
+          month: august,
+          amount: 200,
+          paidAt: DateTime(2026, 8, 10),
+        ),
+      ],
+      receipts: const <Receipt>[],
+    );
+
+    test('não compensa a conta que ficou em aberto', () {
+      final summary = buildOverpaid();
+
+      expect(summary.totalPaid, 200);
+      expect(summary.totalPending, 100);
+      expect(summary.paidRatio, 0.5);
+    });
+  });
+
+  group('centavos de arredondamento', () {
+    final bill = [buildExpense(id: 1, type: ExpenseType.single, amount: 0.8)];
+    final splitPayments = [
+      for (final amount in [0.7, 0.1])
+        ExpensePayment(
+          expenseId: 1,
+          walletId: 1,
+          month: august,
+          amount: amount,
+          paidAt: DateTime(2026, 8, 10),
+        ),
+    ];
+    final credit = [
+      Receipt(
+        walletId: 1,
+        month: august,
+        amount: 0.8,
+        receivedAt: DateTime(2026, 8, 5),
+      ),
+    ];
+
+    MonthSummary buildCents() => MonthSummary.build(
+      month: august,
+      expenses: bill,
+      payments: splitPayments,
+      receipts: credit,
+    );
+
+    test('a conta quitada em partes não fica com resto a pagar', () {
+      final summary = buildCents();
+
+      expect(summary.occurrenceOf(1)!.remaining, 0);
+      expect(summary.totalPending, 0);
+    });
+
+    test('o saldo zerado não fica negativo', () {
+      final summary = buildCents();
+      final wallet = WalletSummary.buildAll(
+        month: august,
+        wallets: [salary],
+        receipts: credit,
+        payments: splitPayments,
+        occurrences: summary.occurrences,
+      ).single;
+
+      expect(summary.balance.isNegative, isFalse);
+      expect(wallet.balance.isNegative, isFalse);
+      expect(wallet.balance, 0);
+      expect(wallet.pendingInMonth, 0);
+    });
+
+    test('entradas em partes gastas por inteiro não deixam saldo negativo', () {
+      final partReceipts = [
+        for (final amount in [0.7, 0.1])
+          Receipt(
+            walletId: 1,
+            month: august,
+            amount: amount,
+            receivedAt: DateTime(2026, 8, 5),
+          ),
+      ];
+      final wholePayment = [
+        ExpensePayment(
+          expenseId: 1,
+          walletId: 1,
+          month: august,
+          amount: 0.8,
+          paidAt: DateTime(2026, 8, 10),
+        ),
+      ];
+      final summary = MonthSummary.build(
+        month: august,
+        expenses: bill,
+        payments: wholePayment,
+        receipts: partReceipts,
+      );
+      final wallet = WalletSummary.buildAll(
+        month: august,
+        wallets: [salary],
+        receipts: partReceipts,
+        payments: wholePayment,
+        occurrences: summary.occurrences,
+      ).single;
+
+      expect(summary.balance.isNegative, isFalse);
+      expect(wallet.balance.isNegative, isFalse);
+    });
   });
 }

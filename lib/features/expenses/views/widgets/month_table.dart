@@ -148,14 +148,7 @@ class _MonthTableState extends State<MonthTable> {
 
   TableRow _totalsRow(BuildContext context) {
     final theme = Theme.of(context);
-    final total = widget.occurrences.fold<double>(
-      0,
-      (sum, o) => sum + o.amount,
-    );
-    final paid = widget.occurrences.fold<double>(
-      0,
-      (sum, o) => sum + o.paidAmount,
-    );
+    final occurrences = widget.occurrences;
     final style = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.w800,
     );
@@ -168,11 +161,23 @@ class _MonthTableState extends State<MonthTable> {
       ),
       children: [
         _pad(Text('Total', style: style)),
-        _pad(Text(formatMoney(total), style: style, textAlign: TextAlign.end)),
-        _pad(Text(formatMoney(paid), style: style, textAlign: TextAlign.end)),
         _pad(
           Text(
-            formatMoney(total - paid),
+            formatMoney(occurrences.totalAmount),
+            style: style,
+            textAlign: TextAlign.end,
+          ),
+        ),
+        _pad(
+          Text(
+            formatMoney(occurrences.totalPaid),
+            style: style,
+            textAlign: TextAlign.end,
+          ),
+        ),
+        _pad(
+          Text(
+            formatMoney(occurrences.totalRemaining),
             style: style,
             textAlign: TextAlign.end,
           ),

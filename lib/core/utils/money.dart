@@ -16,6 +16,12 @@ double parseMoney(String text) {
 
 bool coversAmount(double paid, double total) => paid >= total - 0.005;
 
+bool sameAmount(double a, double b) => (a - b).abs() < 0.005;
+
+/// Sums of doubles leave residue like -0.0000000001, which formats as
+/// "-R$ 0,00"; derived totals go through here before anyone compares them.
+double roundCents(double value) => (value * 100).round() / 100;
+
 class MoneyInputFormatter extends TextInputFormatter {
   static const int _maxDigits = 12;
 

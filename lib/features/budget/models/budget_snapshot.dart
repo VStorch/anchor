@@ -1,3 +1,4 @@
+import '../../../core/utils/money.dart';
 import '../../cards/models/credit_card.dart';
 import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_payment.dart';
@@ -36,8 +37,9 @@ class BudgetSnapshot {
 
   bool get hasWallets => wallets.isNotEmpty;
 
-  double get walletsBalance =>
-      walletSummaries.fold(0, (total, summary) => total + summary.balance);
+  double get walletsBalance => roundCents(
+    walletSummaries.fold(0, (total, summary) => total + summary.balance),
+  );
 
   WalletSummary? summaryFor(int? walletId) {
     if (walletId == null) return null;

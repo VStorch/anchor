@@ -1,6 +1,3 @@
-import 'dart:math';
-
-import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/payable.dart';
@@ -24,20 +21,21 @@ class CardInvoice implements Payable {
   DateTime get dueDate => card.dueDateIn(month);
 
   @override
-  double get amount => items.fold(0, (total, item) => total + item.amount);
+  double get amount => items.totalAmount;
 
   @override
-  double get paidAmount =>
-      items.fold(0, (total, item) => total + item.paidAmount);
+  double get paidAmount => items.totalPaid;
+
+  /// What each purchase still owes: money paid over one purchase does not
+  /// settle another, the same rule the month totals follow.
+  @override
+  double get remaining => items.totalRemaining;
 
   @override
-  double get remaining => max(0, amount - paidAmount);
+  double get paidRatio => items.paidRatio(whenEmpty: 1);
 
   @override
-  double get paidRatio => amount <= 0 ? 1 : (paidAmount / amount).clamp(0, 1);
-
-  @override
-  bool get isPaid => items.isNotEmpty && coversAmount(paidAmount, amount);
+  bool get isPaid => items.isNotEmpty && unpaidItems.isEmpty;
 
   @override
   bool get isPartlyPaid => paidAmount > 0 && !isPaid;
@@ -47,4 +45,10 @@ class CardInvoice implements Payable {
 
   List<ExpenseOccurrence> get unpaidItems =>
       items.where((item) => !item.isPaid).toList();
+
+  /// The payments that pay the invoice off, adding up to exactly [remaining].
+  List<(ExpenseOccurrence, double)> get settlement => [
+    for (final item in unpaidItems)
+      if (item.remaining > 0) (item, item.remaining),
+  ];
 }

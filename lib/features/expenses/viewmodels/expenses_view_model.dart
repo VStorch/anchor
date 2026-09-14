@@ -1,5 +1,6 @@
 import '../../../core/state/data_changes.dart';
 import '../../../core/state/month_selection.dart';
+import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/viewmodels/reactive_view_model.dart';
 import '../../budget/models/budget_snapshot.dart';
@@ -130,6 +131,7 @@ class ExpensesViewModel extends ReactiveViewModel {
     ExpenseOccurrence occurrence,
     double amount,
   ) async {
+    if (sameAmount(amount, occurrence.paidAmount)) return;
     if (amount <= 0) return clearPayments(occurrence);
 
     final existing = occurrence.payments;
@@ -159,12 +161,12 @@ class ExpensesViewModel extends ReactiveViewModel {
 
   Future<void> payInvoice(CardInvoice invoice, {required int? walletId}) =>
       _expenseRepository.savePayments([
-        for (final item in invoice.unpaidItems)
+        for (final (item, amount) in invoice.settlement)
           ExpensePayment(
             expenseId: item.expense.id!,
             walletId: walletId,
             month: item.month,
-            amount: item.remaining,
+            amount: amount,
             paidAt: DateTime.now(),
           ),
       ]);
@@ -181,20 +183,30 @@ class ExpensesViewModel extends ReactiveViewModel {
   Future<void> clearPayments(ExpenseOccurrence occurrence) => _expenseRepository
       .deletePaymentsOf(occurrence.expense.id!, occurrence.month);
 
-  Future<void> setMonthAmount(ExpenseOccurrence occurrence, double amount) =>
-      _expenseRepository.saveMonthAmount(
-        ExpenseMonth(
-          expenseId: occurrence.expense.id!,
-          month: occurrence.month,
-          amount: amount,
-        ),
-      );
+  /// A blank amount means "back to the rule", and leaving the field untouched
+  /// writes nothing — otherwise the month would freeze the rule's value.
+  Future<void> setMonthAmount(
+    ExpenseOccurrence occurrence,
+    double amount,
+  ) async {
+    if (amount <= 0) return resetMonthAmount(occurrence);
+    if (sameAmount(amount, occurrence.amount)) return;
+    await _expenseRepository.saveMonthAmount(
+      ExpenseMonth(
+        expenseId: occurrence.expense.id!,
+        month: occurrence.month,
+        amount: amount,
+      ),
+    );
+  }
 
-  Future<void> resetMonthAmount(ExpenseOccurrence occurrence) =>
-      _expenseRepository.clearMonthAmount(
-        occurrence.expense.id!,
-        occurrence.month,
-      );
+  Future<void> resetMonthAmount(ExpenseOccurrence occurrence) async {
+    if (!occurrence.hasCustomAmount) return;
+    await _expenseRepository.clearMonthAmount(
+      occurrence.expense.id!,
+      occurrence.month,
+    );
+  }
 
   Future<void> deleteExpense(Expense expense) =>
       _expenseRepository.deleteExpense(expense.id!);
