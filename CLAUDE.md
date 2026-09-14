@@ -85,11 +85,22 @@ mutated:
 - **`expense_payments`** holds *many* rows per expense per month — one per wallet the money came from.
   That is how "R$ 400 do vale + R$ 200 do salário" is stored. Quitada means
   `sum(payments) >= occurrence.amount`, compared with the half-cent tolerance in `coversAmount`
-  (`core/utils/money.dart`). **A payment must carry a wallet whenever one exists** — go through
-  `ExpensesViewModel.defaultWalletIdFor`, which falls back to the first wallet when the expense was
-  saved as "Definir na hora". A `wallet_id` of null counts in `totalPaid` but in no wallet's balance,
-  so the app says "pago" while the money leaves nowhere; schema v5 backfills the rows that predate
-  the rule.
+  (`core/utils/money.dart`). **A payment carries a wallet or `settled_outside = 1`, never neither**
+  (`ExpensePayment` asserts `settledOutside == (walletId == null)`; build one from a `PaymentOrigin`
+  with `ExpensePayment.fromOrigin`). `settled_outside` is "Outro dinheiro" — money the app does not
+  follow, including "it was already paid": it settles the occurrence (`isPaid`, `totalPaid`) but
+  stays out of every balance, `spentInMonth` and `MonthSummary.totalSpent`, which sums
+  `paidFromWallets`. The default origin comes from `ExpensesViewModel.defaultOriginFor`, which falls
+  back to the first wallet when the expense was saved as "Definir na hora". Schema v9 marked the
+  null-wallet rows as outside, and `WalletRepository.deleteWallet` turns the wallet's payments into
+  outside ones in the same transaction, so the bills it paid stay paid.
+
+  `paid_at` is chosen, not stamped: "Marcar como paga" uses `Payable.suggestedPaidAt` (now in the
+  current month, the due day in another), and `PaySheet` ("Outro valor ou data") picks wallet or
+  "Outro dinheiro", amount and day through `stampFor`. When the wallet's latest balance check was
+  informed after the bill fell due and nothing was paid on it (`checkCoveringDue`), the one tap asks
+  whether the money had already left; "Sim" dates it just inside the check (`paidBeforeCheck`), so
+  the informed balance does not move.
 - **`expense_months`** holds the amount this particular month really cost (light bill, groceries). A
   missing row means "use the rule's amount"; deleting the row is the "back to the rule" action.
 

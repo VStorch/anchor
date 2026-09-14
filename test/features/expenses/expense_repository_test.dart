@@ -55,10 +55,10 @@ void main() {
       await repository.savePayment(
         ExpensePayment(
           expenseId: expense.id!,
-          walletId: null,
           month: const Month(2026, 8),
           amount: 150,
           paidAt: DateTime(2026, 8, 12),
+          settledOutside: true,
         ),
       );
       await repository.savePayment(
@@ -67,6 +67,7 @@ void main() {
           month: const Month(2026, 8),
           amount: 100,
           paidAt: DateTime(2026, 8, 13),
+          settledOutside: true,
         ),
       );
 
@@ -85,6 +86,7 @@ void main() {
         month: const Month(2026, 8),
         amount: 150,
         paidAt: DateTime(2026, 8, 12),
+        settledOutside: true,
       ),
     );
 
@@ -96,6 +98,7 @@ void main() {
         month: const Month(2026, 8),
         amount: 200,
         paidAt: saved.paidAt,
+        settledOutside: true,
       ),
     );
 
@@ -141,6 +144,7 @@ void main() {
           month: month,
           amount: 250,
           paidAt: DateTime(2026, 8, 12),
+          settledOutside: true,
         ),
       );
     }
@@ -160,6 +164,7 @@ void main() {
         month: const Month(2026, 8),
         amount: 250,
         paidAt: DateTime(2026, 8, 12),
+        settledOutside: true,
       ),
     );
     await repository.saveMonthAmount(
@@ -185,6 +190,7 @@ void main() {
         month: const Month(2026, 8),
         amount: 250,
         paidAt: DateTime(2026, 8, 12),
+        settledOutside: true,
       ),
     );
 

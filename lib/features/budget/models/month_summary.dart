@@ -167,7 +167,10 @@ class MonthSummary {
   double get totalOutflows =>
       roundCents(outflows.fold(0, (total, outflow) => total + outflow.amount));
 
-  double get totalSpent => roundCents(totalPaid + totalOutflows);
+  /// Money that left the wallets: a bill settled with money from outside the
+  /// app counts as paid, never as spent.
+  double get totalSpent =>
+      roundCents(occurrences.totalPaidFromWallets + totalOutflows);
 
   double get totalReceived => roundCents(
     receipts

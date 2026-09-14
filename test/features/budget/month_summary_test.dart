@@ -862,4 +862,46 @@ void main() {
       expect(occurrence.remaining, 70);
     });
   });
+
+  group('pago com outro dinheiro', () {
+    final outside = ExpensePayment(
+      expenseId: 1,
+      month: august,
+      amount: 500,
+      paidAt: DateTime(2026, 8, 10),
+      settledOutside: true,
+    );
+
+    MonthSummary buildOutside() => MonthSummary.build(
+      month: august,
+      expenses: expenses,
+      payments: [outside],
+      receipts: receipts,
+    );
+
+    test('quita a conta sem entrar no que saiu', () {
+      final summary = buildOutside();
+
+      expect(summary.occurrenceOf(1)!.isPaid, isTrue);
+      expect(summary.occurrenceOf(1)!.paidFromWallets, 0);
+      expect(summary.totalPaid, 500);
+      expect(summary.totalPending, 500);
+      expect(summary.totalSpent, 0);
+      expect(summary.balance, 3600);
+    });
+
+    test('não mexe no saldo nem no gasto da carteira', () {
+      final wallet = WalletSummary.buildAll(
+        month: august,
+        wallets: [salary],
+        receipts: receipts,
+        payments: [outside],
+        occurrences: buildOutside().occurrences,
+        checks: const [],
+      ).single;
+
+      expect(wallet.balance, 6000);
+      expect(wallet.spentInMonth, 0);
+    });
+  });
 }

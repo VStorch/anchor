@@ -29,10 +29,10 @@ void main() {
 
   ExpensePayment paidIn(Month month) => ExpensePayment(
     expenseId: 1,
-    walletId: null,
     month: month,
     amount: 120,
     paidAt: month.dayOf(10),
+    settledOutside: true,
   );
 
   setUp(() {

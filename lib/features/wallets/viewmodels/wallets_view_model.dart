@@ -128,6 +128,8 @@ class WalletsViewModel extends ReactiveViewModel {
 
   void goToCurrentMonth() => _monthSelection.goToToday();
 
+  int paymentCountOf(Wallet wallet) => _snapshot.paymentCountOf(wallet.id!);
+
   Future<void> deleteWallet(Wallet wallet) =>
       _walletRepository.deleteWallet(wallet.id!);
 

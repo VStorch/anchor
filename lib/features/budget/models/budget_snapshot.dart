@@ -47,6 +47,14 @@ class BudgetSnapshot {
     paymentsOf(expenseId).fold(0, (total, payment) => total + payment.amount),
   );
 
+  /// How many bills (expense and month) were paid, at least in part, with
+  /// the wallet.
+  int paymentCountOf(int walletId) => payments
+      .where((payment) => payment.walletId == walletId)
+      .map((payment) => (payment.expenseId, payment.month))
+      .toSet()
+      .length;
+
   double get walletsBalance => roundCents(
     walletSummaries.fold(0, (total, summary) => total + summary.balance),
   );

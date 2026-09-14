@@ -41,7 +41,7 @@ class WalletSummary {
         (receipt) => receipt.isConfirmed,
       );
       final walletPayments = payments.where(
-        (payment) => payment.walletId == wallet.id,
+        (payment) => !payment.settledOutside && payment.walletId == wallet.id,
       );
       final walletOutflows = outflows.where(
         (outflow) => outflow.walletId == wallet.id,

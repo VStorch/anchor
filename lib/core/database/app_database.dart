@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 8;
+  static const int version = 9;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -160,7 +160,8 @@ class AppDatabase {
       wallet_id INTEGER REFERENCES $walletsTable(id) ON DELETE SET NULL,
       month_key TEXT NOT NULL,
       amount REAL NOT NULL,
-      paid_at TEXT NOT NULL
+      paid_at TEXT NOT NULL,
+      settled_outside INTEGER NOT NULL DEFAULT 0
     )
     ''',
     'CREATE INDEX idx_payment_expense_month ON $expensePaymentsTable(expense_id, month_key)',
@@ -284,6 +285,10 @@ class AppDatabase {
       FROM $receiptsTable a WHERE a.kind = 'adjustment' ORDER BY a.received_at, a.id
       ''',
       "DELETE FROM $receiptsTable WHERE kind = 'adjustment'",
+    ],
+    9: <String>[
+      'ALTER TABLE $expensePaymentsTable ADD COLUMN settled_outside INTEGER NOT NULL DEFAULT 0',
+      'UPDATE $expensePaymentsTable SET settled_outside = 1 WHERE wallet_id IS NULL',
     ],
   };
 }

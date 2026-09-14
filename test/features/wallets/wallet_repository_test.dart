@@ -1,6 +1,10 @@
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/models/expense_payment.dart';
+import 'package:anchor/features/expenses/models/expense_type.dart';
+import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
@@ -402,6 +406,39 @@ void main() {
 
       expect(await repository.fetchBalanceChecks(), isEmpty);
     });
+  });
+
+  test('apagar a carteira mantém pagas as contas pagas com ela', () async {
+    final walletId = await createSalary();
+    final expenses = ExpenseRepository(database, DataChanges());
+    await expenses.saveExpense(
+      Expense(
+        name: 'Aluguel',
+        type: ExpenseType.recurring,
+        amount: 1100,
+        dueDay: 10,
+        startMonth: Month.current(),
+        walletId: walletId,
+        createdAt: DateTime.now(),
+      ),
+    );
+    final expenseId = (await expenses.fetchExpenses()).single.id!;
+    await expenses.savePayment(
+      ExpensePayment(
+        expenseId: expenseId,
+        walletId: walletId,
+        month: Month.current(),
+        amount: 1100,
+        paidAt: DateTime.now(),
+      ),
+    );
+
+    await repository.deleteWallet(walletId);
+
+    final payment = (await expenses.fetchPayments()).single;
+    expect(payment.walletId, isNull);
+    expect(payment.settledOutside, isTrue);
+    expect(payment.amount, 1100);
   });
 
   test('remover o recebimento preserva as entradas já confirmadas', () async {

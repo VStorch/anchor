@@ -1,12 +1,15 @@
 import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/viewmodels/expense_form_view_model.dart';
 import 'package:anchor/features/expenses/views/widgets/expense_ledger_sheet.dart';
 import 'package:anchor/features/expenses/views/widgets/month_table.dart';
+import 'package:anchor/features/expenses/views/widgets/pay_sheet.dart';
+import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
@@ -378,6 +381,148 @@ void main() {
     );
   });
 
+  group('pagar com data e com outro dinheiro', () {
+    final previousMonth = Month.current().previous;
+
+    Future<void> openWithCheck(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+
+      await _seedRentAndGymWithCheck(database, since: previousMonth);
+      final settings = SettingsViewModel();
+      await settings.initialize();
+      await tester.pumpWidget(
+        AnchorApp(
+          reminderNotifications: FakeReminderNotifications(),
+          settings: settings,
+          database: database,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _tapTab(tester, Icons.receipt_long_outlined);
+    }
+
+    Future<void> expectWalletBalance(WidgetTester tester, double amount) async {
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await _tapTab(tester, Icons.account_balance_wallet_outlined);
+      expect(
+        find.descendant(
+          of: find.byType(WalletCard),
+          matching: find.text(formatMoney(amount)),
+        ),
+        findsOneWidget,
+      );
+    }
+
+    testWidgets(
+      'a conta vencida antes do saldo informado já estava descontada',
+      (tester) async {
+        await openWithCheck(tester);
+        await tester.tap(find.byIcon(Icons.chevron_left));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Aluguel'));
+        await tester.pumpAndSettle();
+        expect(_inSheet('Sai de Salário'), findsOneWidget);
+
+        await tester.tap(find.text('Marcar como paga'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('O valor já tinha saído?'), findsOneWidget);
+
+        await tester.tap(find.text('Sim, já estava descontado'));
+        await tester.pumpAndSettle();
+
+        expect(_inSheet('Quitada'), findsOneWidget);
+        await expectWalletBalance(tester, 850);
+      },
+    );
+
+    testWidgets('paga com uma data passada escolhida no calendário', (
+      tester,
+    ) async {
+      await openWithCheck(tester);
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Aluguel'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Outro valor ou data'));
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(PaySheet);
+      await tester.tap(
+        find.descendant(
+          of: sheet,
+          matching: find.byIcon(Icons.edit_calendar_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(CalendarDatePicker),
+          matching: find.text('5'),
+        ),
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      final day = previousMonth.dayOf(5);
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.textContaining(DateFormat.yMMMMd('pt_BR').format(day)),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+
+      expect(_inSheet('Quitada'), findsOneWidget);
+      expect(_inSheet(DateFormat.yMMMd('pt_BR').format(day)), findsOneWidget);
+      final payment = (await ExpenseRepository(
+        database,
+        DataChanges(),
+      ).fetchPayments()).single;
+      expect(payment.paidAt, DateTime(day.year, day.month, day.day, 12));
+      await expectWalletBalance(tester, 850);
+    });
+
+    testWidgets('outro dinheiro quita a conta sem mexer no saldo', (
+      tester,
+    ) async {
+      await openWithCheck(tester);
+
+      await tester.tap(find.text('Academia'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Outro valor ou data'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ChoiceChip),
+          matching: find.text('Outro dinheiro'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Não mexe no saldo'), findsOneWidget);
+
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+
+      expect(_inSheet('Quitada'), findsOneWidget);
+      expect(_inSheet('Outro dinheiro'), findsOneWidget);
+      final payment = (await ExpenseRepository(
+        database,
+        DataChanges(),
+      ).fetchPayments()).single;
+      expect(payment.settledOutside, isTrue);
+      await expectWalletBalance(tester, 850);
+    });
+  });
+
   group('mudar a regra da despesa', () {
     Future<void> openExpenses(WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
@@ -629,6 +774,59 @@ Future<void> _seedMarketExpense(AppDatabase database) async {
   );
 }
 
+Future<void> _seedRentAndGymWithCheck(
+  AppDatabase database, {
+  required Month since,
+}) async {
+  final changes = DataChanges();
+  final wallets = WalletRepository(database, changes);
+  final expenses = ExpenseRepository(database, changes);
+
+  final salaryId = await wallets.saveWallet(
+    Wallet(
+      name: 'Salário',
+      kind: WalletKind.salary,
+      colorIndex: 0,
+      createdAt: since.firstDay,
+    ),
+  );
+  await wallets.saveBalanceCheck(
+    BalanceCheck(walletId: salaryId, amount: 850, checkedAt: DateTime.now()),
+  );
+  await expenses.saveExpense(
+    Expense(
+      name: 'Aluguel',
+      type: ExpenseType.recurring,
+      amount: 1100,
+      dueDay: 10,
+      startMonth: since,
+      walletId: salaryId,
+      createdAt: since.firstDay,
+    ),
+  );
+  await expenses.saveExpense(
+    Expense(
+      name: 'Academia',
+      type: ExpenseType.single,
+      amount: 120,
+      dueDay: 10,
+      startMonth: Month.current(),
+      walletId: salaryId,
+      createdAt: DateTime.now(),
+    ),
+  );
+}
+
+Future<void> _tapTab(WidgetTester tester, IconData icon) async {
+  await tester.tap(
+    find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.byIcon(icon),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 Finder _inSheet(String text) => find.descendant(
   of: find.byType(ExpenseLedgerSheet),
   matching: find.textContaining(text),
@@ -639,7 +837,7 @@ Future<void> _addLedgerPayment(
   required String wallet,
   required String amount,
 }) async {
-  await tester.tap(find.text('Adicionar pagamento'));
+  await tester.tap(find.text('Outro valor ou data'));
   await tester.pumpAndSettle();
 
   await tester.tap(
@@ -746,7 +944,7 @@ Future<void> _payFirstExpense(WidgetTester tester) async {
 
   expect(find.byType(ExpenseLedgerSheet), findsOneWidget);
 
-  await tester.tap(find.text('Quitar com Salário'));
+  await tester.tap(find.text('Marcar como paga'));
   await tester.pumpAndSettle();
 
   expect(_inSheet('Quitada'), findsOneWidget);

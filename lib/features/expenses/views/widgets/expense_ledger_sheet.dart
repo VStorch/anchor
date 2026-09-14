@@ -9,8 +9,10 @@ import '../../models/expense.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/expense_payment.dart';
 import '../../models/expense_type.dart';
+import '../../models/payable.dart';
 import '../../viewmodels/expenses_view_model.dart';
 import '../expense_form_page.dart';
+import 'pay_sheet.dart';
 
 class ExpenseLedgerSheet extends StatefulWidget {
   const ExpenseLedgerSheet({super.key, required this.expenseId});
@@ -41,8 +43,6 @@ class ExpenseLedgerSheet extends StatefulWidget {
 
 class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
   bool _isEditingAmount = false;
-  int? _editingPaymentId;
-  bool _isAddingPayment = false;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +97,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            if (occurrence.payments.isEmpty && !_isAddingPayment)
+            if (occurrence.payments.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
@@ -110,33 +110,6 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
             ...occurrence.payments.map(
               (payment) => _paymentLine(context, viewModel, wallets, payment),
             ),
-            if (occurrence.offRule)
-              const SizedBox.shrink()
-            else if (_isAddingPayment)
-              _PaymentEditor(
-                key: const ValueKey('new-payment'),
-                wallets: wallets,
-                initialWalletId: viewModel.defaultWalletIdFor(occurrence),
-                initialAmount: occurrence.remaining,
-                onCancel: () => setState(() => _isAddingPayment = false),
-                onConfirm: (walletId, amount) async {
-                  await viewModel.savePaymentLine(
-                    occurrence,
-                    walletId: walletId,
-                    amount: amount,
-                  );
-                  if (mounted) setState(() => _isAddingPayment = false);
-                },
-              )
-            else
-              TextButton.icon(
-                onPressed: () => setState(() {
-                  _isAddingPayment = true;
-                  _editingPaymentId = null;
-                }),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Adicionar pagamento'),
-              ),
             const SizedBox(height: 12),
             _footer(context, viewModel, occurrence, wallets),
           ],
@@ -198,46 +171,23 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
     List<Wallet> wallets,
     ExpensePayment payment,
   ) {
-    if (_editingPaymentId == payment.id) {
-      return _PaymentEditor(
-        key: ValueKey('payment-${payment.id}'),
-        wallets: wallets,
-        initialWalletId: payment.walletId,
-        initialAmount: payment.amount,
-        onCancel: () => setState(() => _editingPaymentId = null),
-        onConfirm: (walletId, amount) async {
-          final occurrence = viewModel.occurrenceOf(widget.expenseId);
-          if (occurrence == null) return;
-          await viewModel.savePaymentLine(
-            occurrence,
-            id: payment.id,
-            walletId: walletId,
-            amount: amount,
-          );
-          if (mounted) setState(() => _editingPaymentId = null);
-        },
-      );
-    }
-
     final theme = Theme.of(context);
     final wallet = _walletById(wallets, payment.walletId);
+    final color = wallet?.color ?? theme.colorScheme.onSurfaceVariant;
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      onTap: () => setState(() {
-        _editingPaymentId = payment.id;
-        _isAddingPayment = false;
-      }),
+      onTap: () => _editPayment(context, viewModel, wallets, payment),
       leading: CircleAvatar(
-        backgroundColor: (wallet?.color ?? theme.colorScheme.primary)
-            .withValues(alpha: 0.16),
+        backgroundColor: color.withValues(alpha: 0.16),
         child: Icon(
           wallet?.icon ?? Icons.payments_outlined,
           size: 20,
-          color: wallet?.color ?? theme.colorScheme.primary,
+          color: color,
         ),
       ),
-      title: Text(wallet?.name ?? 'Sem carteira'),
+      title: Text(wallet?.name ?? 'Outro dinheiro'),
+      subtitle: Text(DateFormat.yMMMd('pt_BR').format(payment.paidAt)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -263,6 +213,73 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
         ],
       ),
     );
+  }
+
+  Future<void> _editPayment(
+    BuildContext context,
+    ExpensesViewModel viewModel,
+    List<Wallet> wallets,
+    ExpensePayment payment,
+  ) async {
+    final edit = await PaySheet.show(
+      context,
+      title: 'Editar pagamento',
+      wallets: wallets,
+      origin: payment.origin,
+      paidAt: payment.paidAt,
+      amount: payment.amount,
+    );
+    final occurrence = viewModel.occurrenceOf(widget.expenseId);
+    if (edit == null || occurrence == null) return;
+
+    await viewModel.savePaymentLine(
+      occurrence,
+      id: payment.id,
+      origin: edit.origin,
+      amount: edit.amount,
+      paidAt: edit.paidAt,
+    );
+  }
+
+  Future<void> _payAnotherWay(
+    BuildContext context,
+    ExpensesViewModel viewModel,
+    ExpenseOccurrence occurrence,
+    List<Wallet> wallets,
+  ) async {
+    final edit = await PaySheet.show(
+      context,
+      title: 'Pagar ${occurrence.expense.name}',
+      wallets: wallets,
+      origin: viewModel.defaultOriginFor(occurrence),
+      paidAt: occurrence.suggestedPaidAt(DateTime.now()),
+      amount: occurrence.remaining,
+    );
+    if (edit == null) return;
+
+    await viewModel.savePaymentLine(
+      occurrence,
+      origin: edit.origin,
+      amount: edit.amount,
+      paidAt: edit.paidAt,
+    );
+  }
+
+  Future<void> _markPaid(
+    BuildContext context,
+    ExpensesViewModel viewModel,
+    ExpenseOccurrence occurrence,
+  ) async {
+    final origin = viewModel.defaultOriginFor(occurrence);
+    final paidAt = await choosePaidAt(
+      context,
+      viewModel: viewModel,
+      payable: occurrence,
+      walletId: origin.walletId,
+    );
+    if (paidAt == null) return;
+
+    await viewModel.settle(occurrence, origin: origin, paidAt: paidAt);
   }
 
   Widget _footer(
@@ -297,8 +314,10 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
       );
     }
 
-    final walletId = viewModel.defaultWalletIdFor(occurrence);
-    final wallet = _walletById(wallets, walletId);
+    final wallet = _walletById(
+      wallets,
+      viewModel.defaultWalletIdFor(occurrence),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -312,8 +331,21 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
         ),
         const SizedBox(height: 12),
         FilledButton(
-          onPressed: () => viewModel.settle(occurrence, walletId: walletId),
-          child: Text(wallet == null ? 'Quitar' : 'Quitar com ${wallet.name}'),
+          onPressed: () => _markPaid(context, viewModel, occurrence),
+          child: const Text('Marcar como paga'),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          wallet == null ? 'Outro dinheiro' : 'Sai de ${wallet.name}',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        TextButton(
+          onPressed: () =>
+              _payAnotherWay(context, viewModel, occurrence, wallets),
+          child: const Text('Outro valor ou data'),
         ),
       ],
     );
@@ -490,83 +522,6 @@ class _AmountEditorState extends State<_AmountEditor> {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _PaymentEditor extends StatefulWidget {
-  const _PaymentEditor({
-    super.key,
-    required this.wallets,
-    required this.initialWalletId,
-    required this.initialAmount,
-    required this.onCancel,
-    required this.onConfirm,
-  });
-
-  final List<Wallet> wallets;
-  final int? initialWalletId;
-  final double initialAmount;
-  final VoidCallback onCancel;
-  final Future<void> Function(int? walletId, double amount) onConfirm;
-
-  @override
-  State<_PaymentEditor> createState() => _PaymentEditorState();
-}
-
-class _PaymentEditorState extends State<_PaymentEditor> {
-  late int? _walletId = widget.initialWalletId;
-  late double _amount = widget.initialAmount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: widget.wallets
-                  .map(
-                    (wallet) => ChoiceChip(
-                      label: Text(wallet.name),
-                      selected: _walletId == wallet.id,
-                      onSelected: (_) => setState(() => _walletId = wallet.id),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 12),
-            MoneyField(
-              initialValue: _amount,
-              label: 'Valor pago',
-              onChanged: (value) => setState(() => _amount = value),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: widget.onCancel,
-                  child: const Text('Cancelar'),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _amount > 0
-                        ? () => widget.onConfirm(_walletId, _amount)
-                        : null,
-                    child: const Text('Lançar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

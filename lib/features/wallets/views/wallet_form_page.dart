@@ -129,13 +129,22 @@ class _WalletFormView extends StatelessWidget {
     final viewModel = context.read<WalletsViewModel>();
     final navigator = Navigator.of(context);
 
+    final paidBills = viewModel.paymentCountOf(wallet);
+    final paidNote = switch (paidBills) {
+      0 => '',
+      1 => '\n\n1 conta paga com ela continua paga, como “Outro dinheiro”.',
+      _ =>
+        '\n\n$paidBills contas pagas com ela continuam pagas, '
+            'como “Outro dinheiro”.',
+    };
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Excluir ${wallet.name}?'),
-        content: const Text(
+        content: Text(
           'O calendário de recebimentos e todas as entradas dessa carteira '
-          'também serão apagados.',
+          'também serão apagados.$paidNote',
         ),
         actions: [
           TextButton(

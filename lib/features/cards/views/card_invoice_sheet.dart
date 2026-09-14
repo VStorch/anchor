@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../../../core/utils/money.dart';
 import '../../expenses/models/expense_occurrence.dart';
+import '../../expenses/models/expense_payment.dart';
+import '../../expenses/models/payable.dart';
 import '../../expenses/viewmodels/expenses_view_model.dart';
 import '../../expenses/views/expense_form_page.dart';
 import '../../expenses/views/widgets/expense_ledger_sheet.dart';
+import '../../expenses/views/widgets/pay_sheet.dart';
 import '../models/card_invoice.dart';
 import 'card_form_page.dart';
 
@@ -147,6 +150,43 @@ class _Footer extends StatelessWidget {
 
   final CardInvoice invoice;
 
+  Future<void> _pay(
+    BuildContext context,
+    ExpensesViewModel viewModel,
+    PaymentOrigin origin,
+  ) async {
+    final paidAt = await choosePaidAt(
+      context,
+      viewModel: viewModel,
+      payable: invoice,
+      walletId: origin.walletId,
+    );
+    if (paidAt == null) return;
+
+    await viewModel.payInvoice(invoice, origin: origin, paidAt: paidAt);
+  }
+
+  Future<void> _payAnotherWay(
+    BuildContext context,
+    ExpensesViewModel viewModel,
+    PaymentOrigin origin,
+  ) async {
+    final edit = await PaySheet.show(
+      context,
+      title: 'Pagar ${invoice.name}',
+      wallets: viewModel.snapshot.wallets,
+      origin: origin,
+      paidAt: invoice.suggestedPaidAt(DateTime.now()),
+    );
+    if (edit == null) return;
+
+    await viewModel.payInvoice(
+      invoice,
+      origin: edit.origin,
+      paidAt: edit.paidAt,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.read<ExpensesViewModel>();
@@ -173,8 +213,8 @@ class _Footer extends StatelessWidget {
       );
     }
 
-    final walletId = viewModel.defaultWalletIdForInvoice(invoice);
-    final wallet = viewModel.snapshot.walletById(walletId);
+    final origin = viewModel.defaultOriginForInvoice(invoice);
+    final wallet = viewModel.snapshot.walletById(origin.walletId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -188,10 +228,14 @@ class _Footer extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         FilledButton(
-          onPressed: () => viewModel.payInvoice(invoice, walletId: walletId),
+          onPressed: () => _pay(context, viewModel, origin),
           child: Text(
             wallet == null ? 'Pagar fatura' : 'Pagar fatura com ${wallet.name}',
           ),
+        ),
+        TextButton(
+          onPressed: () => _payAnotherWay(context, viewModel, origin),
+          child: const Text('Outro dinheiro ou data'),
         ),
       ],
     );

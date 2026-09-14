@@ -1,5 +1,6 @@
 import '../../../core/state/data_changes.dart';
 import '../../../core/state/month_selection.dart';
+import '../../../core/utils/moment.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/viewmodels/reactive_view_model.dart';
@@ -7,6 +8,7 @@ import '../../budget/models/budget_snapshot.dart';
 import '../../budget/models/month_summary.dart';
 import '../../budget/services/budget_service.dart';
 import '../../cards/models/card_invoice.dart';
+import '../../wallets/models/balance_check.dart';
 import '../models/expense.dart';
 import '../models/expense_month.dart';
 import '../models/expense_occurrence.dart';
@@ -102,28 +104,31 @@ class ExpensesViewModel extends ReactiveViewModel {
   Future<void> savePaymentLine(
     ExpenseOccurrence occurrence, {
     int? id,
-    required int? walletId,
+    required PaymentOrigin origin,
     required double amount,
+    required DateTime paidAt,
   }) => _expenseRepository.savePayment(
-    ExpensePayment(
+    ExpensePayment.fromOrigin(
       id: id,
       expenseId: occurrence.expense.id!,
-      walletId: walletId,
+      origin: origin,
       month: occurrence.month,
       amount: amount,
-      paidAt: DateTime.now(),
+      paidAt: paidAt,
     ),
   );
 
   Future<void> settle(
     ExpenseOccurrence occurrence, {
-    required int? walletId,
+    required PaymentOrigin origin,
+    required DateTime paidAt,
   }) async {
     if (occurrence.remaining <= 0) return;
     await savePaymentLine(
       occurrence,
-      walletId: walletId,
+      origin: origin,
       amount: occurrence.remaining,
+      paidAt: paidAt,
     );
   }
 
@@ -137,39 +142,81 @@ class ExpensesViewModel extends ReactiveViewModel {
     final existing = occurrence.payments;
     if (existing.length > 1) return;
 
+    if (existing.isEmpty) {
+      return savePaymentLine(
+        occurrence,
+        origin: defaultOriginFor(occurrence),
+        amount: amount,
+        paidAt: occurrence.suggestedPaidAt(DateTime.now()),
+      );
+    }
+
+    final payment = existing.single;
     await savePaymentLine(
       occurrence,
-      id: existing.isEmpty ? null : existing.single.id,
-      walletId: existing.isEmpty
-          ? defaultWalletIdFor(occurrence)
-          : existing.single.walletId ?? defaultWalletIdFor(occurrence),
+      id: payment.id,
+      origin: payment.origin,
       amount: amount,
+      paidAt: payment.paidAt,
     );
   }
 
-  int? defaultWalletIdFor(ExpenseOccurrence occurrence) {
-    final planned = occurrence.plannedWalletId;
+  int? defaultWalletIdFor(ExpenseOccurrence occurrence) =>
+      _defaultWalletId(occurrence.plannedWalletId);
+
+  int? defaultWalletIdForInvoice(CardInvoice invoice) =>
+      _defaultWalletId(invoice.card.walletId);
+
+  PaymentOrigin defaultOriginFor(ExpenseOccurrence occurrence) =>
+      _originOf(defaultWalletIdFor(occurrence));
+
+  PaymentOrigin defaultOriginForInvoice(CardInvoice invoice) =>
+      _originOf(defaultWalletIdForInvoice(invoice));
+
+  PaymentOrigin _originOf(int? walletId) =>
+      (walletId: walletId, outside: walletId == null);
+
+  int? _defaultWalletId(int? planned) {
     if (_snapshot.walletById(planned) != null) return planned;
     return _snapshot.wallets.isEmpty ? null : _snapshot.wallets.first.id;
   }
 
-  int? defaultWalletIdForInvoice(CardInvoice invoice) {
-    final planned = invoice.card.walletId;
-    if (_snapshot.walletById(planned) != null) return planned;
-    return _snapshot.wallets.isEmpty ? null : _snapshot.wallets.first.id;
+  /// The wallet's balance was informed after this bill fell due and nothing
+  /// was paid on it yet: the informed amount may already be without it.
+  BalanceCheck? checkCoveringDue(Payable payable, int? walletId) {
+    if (walletId == null || payable.paidAmount > 0) return null;
+    final check = _snapshot.latestCheckOf(walletId);
+    if (check == null || !check.checkedAt.isAfter(payable.dueDate)) {
+      return null;
+    }
+    return check;
   }
 
-  Future<void> payInvoice(CardInvoice invoice, {required int? walletId}) =>
-      _expenseRepository.savePayments([
-        for (final (item, amount) in invoice.settlement)
-          ExpensePayment(
-            expenseId: item.expense.id!,
-            walletId: walletId,
-            month: item.month,
-            amount: amount,
-            paidAt: DateTime.now(),
-          ),
-      ]);
+  /// Dated inside the informed balance, so marking it paid moves nothing.
+  DateTime paidBeforeCheck(
+    Payable payable,
+    BalanceCheck check, {
+    DateTime? now,
+  }) {
+    final dueStamp = stampFor(payable.dueDate, now: now);
+    final justBefore = check.checkedAt.subtract(const Duration(seconds: 1));
+    return dueStamp.isBefore(justBefore) ? dueStamp : justBefore;
+  }
+
+  Future<void> payInvoice(
+    CardInvoice invoice, {
+    required PaymentOrigin origin,
+    required DateTime paidAt,
+  }) => _expenseRepository.savePayments([
+    for (final (item, amount) in invoice.settlement)
+      ExpensePayment.fromOrigin(
+        expenseId: item.expense.id!,
+        origin: origin,
+        month: item.month,
+        amount: amount,
+        paidAt: paidAt,
+      ),
+  ]);
 
   Future<void> clearInvoicePayments(CardInvoice invoice) =>
       _expenseRepository.deletePaymentsOfMany(

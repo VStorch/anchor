@@ -89,6 +89,7 @@ void main() {
         month: month,
         amount: 1200,
         paidAt: clock,
+        settledOutside: true,
       ),
     );
     await viewModel.idle;

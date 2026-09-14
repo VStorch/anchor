@@ -26,6 +26,7 @@ class ExpenseOccurrence implements Payable {
        offRule = true;
 
   final Expense expense;
+  @override
   final Month month;
   final int? installmentNumber;
   final double? monthAmount;
@@ -43,6 +44,14 @@ class ExpenseOccurrence implements Payable {
   @override
   double get paidAmount =>
       payments.fold(0, (total, payment) => total + payment.amount);
+
+  /// What actually left a wallet; money from outside settles the bill only.
+  double get paidFromWallets => payments
+      .where((payment) => !payment.settledOutside)
+      .fold(0, (total, payment) => total + payment.amount);
+
+  bool get hasOutsidePayments =>
+      payments.any((payment) => payment.settledOutside);
 
   @override
   double get remaining => isPaid ? 0 : roundCents(max(0, amount - paidAmount));
@@ -109,6 +118,10 @@ extension OccurrenceTotals on Iterable<ExpenseOccurrence> {
 
   double get totalPaid =>
       roundCents(fold(0, (total, occurrence) => total + occurrence.paidAmount));
+
+  double get totalPaidFromWallets => roundCents(
+    fold(0, (total, occurrence) => total + occurrence.paidFromWallets),
+  );
 
   /// Summed per occurrence, so an overpaid bill never hides one still open.
   double get totalRemaining =>

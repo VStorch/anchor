@@ -129,10 +129,11 @@ class ExpenseTile extends StatelessWidget {
           ? 'Parcela ${occurrence.installmentLabel}'
           : occurrence.expense.type.label,
       ..._walletNames(
-        occurrence.paidWalletIds.isNotEmpty
+        occurrence.payments.isNotEmpty
             ? occurrence.paidWalletIds
             : [?occurrence.plannedWalletId],
       ),
+      if (occurrence.hasOutsidePayments) 'Outro dinheiro',
     ].join(' · '),
     CardInvoice invoice => [
       invoice.items.length == 1

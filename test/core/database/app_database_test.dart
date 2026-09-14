@@ -396,6 +396,46 @@ void main() {
     expect(wallet.payouts.single.startMonth, const Month(2026, 8));
   });
 
+  test(
+    'a migração marca o pagamento sem carteira como outro dinheiro',
+    () async {
+      final v8 = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: path,
+        schemaVersion: 8,
+      );
+      await (await v8.database).insert('expense_payments', <String, Object?>{
+        'expense_id': 1,
+        'wallet_id': null,
+        'month_key': '2026-09',
+        'amount': 80.0,
+        'paid_at': DateTime(2026, 9, 10).toIso8601String(),
+      });
+      await v8.close();
+
+      final database = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: path,
+      );
+      addTearDown(database.close);
+
+      final payments = await ExpenseRepository(
+        database,
+        DataChanges(),
+      ).fetchPayments();
+
+      final outside = payments.where((payment) => payment.walletId == null);
+      expect(outside.single.amount, 80);
+      expect(outside.single.settledOutside, isTrue);
+      expect(
+        payments
+            .where((payment) => payment.walletId != null)
+            .every((payment) => !payment.settledOutside),
+        isTrue,
+      );
+    },
+  );
+
   test('o banco migrado tem o mesmo esquema de uma instalação nova', () async {
     final migrated = AppDatabase(
       factory: databaseFactoryFfiNoIsolate,

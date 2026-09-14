@@ -11,6 +11,7 @@ class CardInvoice implements Payable {
   });
 
   final CreditCard card;
+  @override
   final Month month;
   final List<ExpenseOccurrence> items;
 

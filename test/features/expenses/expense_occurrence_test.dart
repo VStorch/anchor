@@ -24,6 +24,7 @@ ExpensePayment payment({required double amount, int? walletId}) =>
       month: september,
       amount: amount,
       paidAt: DateTime(2026, 9, 10),
+      settledOutside: walletId == null,
     );
 
 void main() {

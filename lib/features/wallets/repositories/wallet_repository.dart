@@ -100,9 +100,23 @@ class WalletRepository {
     return walletId;
   }
 
+  /// The bills paid with the wallet stay paid: their payments turn into
+  /// money from outside the app instead of vanishing with the wallet.
   Future<void> deleteWallet(int id) async {
     final db = await _database.database;
-    await db.delete(AppDatabase.walletsTable, where: 'id = ?', whereArgs: [id]);
+    await db.transaction((txn) async {
+      await txn.update(
+        AppDatabase.expensePaymentsTable,
+        <String, Object?>{'settled_outside': 1, 'wallet_id': null},
+        where: 'wallet_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        AppDatabase.walletsTable,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
     _changes.publish();
   }
 

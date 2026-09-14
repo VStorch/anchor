@@ -1,6 +1,7 @@
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/state/month_selection.dart';
+import 'package:anchor/core/utils/moment.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/services/budget_service.dart';
 import 'package:anchor/features/cards/models/credit_card.dart';
@@ -11,6 +12,9 @@ import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/viewmodels/expenses_view_model.dart';
+import 'package:anchor/features/wallets/models/balance_check.dart';
+import 'package:anchor/features/wallets/models/payout.dart';
+import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
@@ -104,7 +108,11 @@ void main() {
     expect(invoice.remaining, 100);
 
     final paidBefore = invoice.paidAmount;
-    await viewModel.payInvoice(invoice, walletId: walletId);
+    await viewModel.payInvoice(
+      invoice,
+      origin: (walletId: walletId, outside: false),
+      paidAt: DateTime.now(),
+    );
     await viewModel.refresh();
 
     final paid = viewModel.invoiceOf(cardId)!;
@@ -165,4 +173,175 @@ void main() {
       expect((await expenses.fetchPayments()).single.paidAt, before.paidAt);
     },
   );
+
+  group('saldo informado depois do vencimento', () {
+    const september = Month(2026, 9);
+    final checkedAt = DateTime(2026, 9, 13, 18);
+    final afterCheck = DateTime(2026, 9, 13, 19);
+
+    Future<int> saveMonthly(String name, double amount, int dueDay) async {
+      await expenses.saveExpense(
+        Expense(
+          name: name,
+          type: ExpenseType.recurring,
+          amount: amount,
+          dueDay: dueDay,
+          startMonth: september,
+          walletId: walletId,
+          createdAt: DateTime(2026, 9, 1),
+        ),
+      );
+      return (await expenses.fetchExpenses())
+          .firstWhere((expense) => expense.name == name)
+          .id!;
+    }
+
+    Future<void> openSeptemberWithCheck() async {
+      await wallets.saveBalanceCheck(
+        BalanceCheck(walletId: walletId, amount: 850, checkedAt: checkedAt),
+      );
+      viewModel.dispose();
+      final selection = MonthSelection()..current = september;
+      viewModel = ExpensesViewModel(
+        budgetService: BudgetService(expenses, wallets, cards),
+        expenseRepository: expenses,
+        monthSelection: selection,
+        changes: changes,
+      );
+      await viewModel.initialize();
+    }
+
+    double balance() => viewModel.snapshot.summaryFor(walletId)!.balance;
+
+    test('pergunta quando a conta venceu antes do saldo informado', () async {
+      final rent = await saveMonthly('Aluguel', 1100, 5);
+      final gym = await saveMonthly('Academia', 120, 20);
+      await openSeptemberWithCheck();
+
+      final check = viewModel.checkCoveringDue(
+        viewModel.occurrenceOf(rent)!,
+        walletId,
+      );
+      expect(check?.amount, 850);
+      expect(
+        viewModel.checkCoveringDue(viewModel.occurrenceOf(gym)!, walletId),
+        isNull,
+      );
+      expect(
+        viewModel.checkCoveringDue(viewModel.occurrenceOf(rent)!, null),
+        isNull,
+      );
+    });
+
+    test('a conta com pagamento lançado não pergunta de novo', () async {
+      final rent = await saveMonthly('Aluguel', 1100, 5);
+      await openSeptemberWithCheck();
+      await viewModel.savePaymentLine(
+        viewModel.occurrenceOf(rent)!,
+        origin: (walletId: walletId, outside: false),
+        amount: 100,
+        paidAt: afterCheck,
+      );
+      await viewModel.refresh();
+
+      expect(
+        viewModel.checkCoveringDue(viewModel.occurrenceOf(rent)!, walletId),
+        isNull,
+      );
+    });
+
+    test('o pagamento já descontado fica antes do saldo informado', () async {
+      final rent = await saveMonthly('Aluguel', 1100, 5);
+      await openSeptemberWithCheck();
+      final occurrence = viewModel.occurrenceOf(rent)!;
+      final check = viewModel.checkCoveringDue(occurrence, walletId)!;
+
+      expect(
+        viewModel.paidBeforeCheck(occurrence, check, now: afterCheck),
+        DateTime(2026, 9, 5, 12),
+      );
+
+      final sameDay = BalanceCheck(
+        walletId: walletId,
+        amount: 850,
+        checkedAt: DateTime(2026, 9, 5, 9),
+      );
+      expect(
+        viewModel.paidBeforeCheck(occurrence, sameDay, now: afterCheck),
+        DateTime(2026, 9, 5, 8, 59, 59),
+      );
+    });
+
+    test('responder "já estava descontado" mantém o saldo em 850', () async {
+      final rent = await saveMonthly('Aluguel', 1100, 5);
+      await openSeptemberWithCheck();
+      final occurrence = viewModel.occurrenceOf(rent)!;
+      final check = viewModel.checkCoveringDue(occurrence, walletId)!;
+
+      await viewModel.settle(
+        occurrence,
+        origin: viewModel.defaultOriginFor(occurrence),
+        paidAt: viewModel.paidBeforeCheck(occurrence, check, now: afterCheck),
+      );
+      await viewModel.refresh();
+
+      expect(viewModel.occurrenceOf(rent)!.isPaid, isTrue);
+      expect(balance(), 850);
+    });
+
+    test('responder "paguei agora" desconta do saldo informado', () async {
+      final rent = await saveMonthly('Aluguel', 1100, 5);
+      await openSeptemberWithCheck();
+
+      await viewModel.settle(
+        viewModel.occurrenceOf(rent)!,
+        origin: (walletId: walletId, outside: false),
+        paidAt: afterCheck,
+      );
+      await viewModel.refresh();
+
+      expect(balance(), -250);
+    });
+
+    test(
+      'cenário da usuária: aluguel no dia 10 e academia com outro dinheiro',
+      () async {
+        await wallets.savePayout(
+          Payout(
+            walletId: walletId,
+            label: 'Salário',
+            amount: 3200,
+            day: 5,
+            schedule: PayoutSchedule.businessDay,
+            createdAt: DateTime(2026, 9, 1),
+          ),
+        );
+        final rent = await saveMonthly('Aluguel', 1100, 10);
+        final gym = await saveMonthly('Academia', 120, 15);
+        await openSeptemberWithCheck();
+        expect(balance(), 850);
+
+        await viewModel.savePaymentLine(
+          viewModel.occurrenceOf(rent)!,
+          origin: (walletId: walletId, outside: false),
+          amount: 1100,
+          paidAt: stampFor(DateTime(2026, 9, 10), now: afterCheck),
+        );
+        await viewModel.settle(
+          viewModel.occurrenceOf(gym)!,
+          origin: (walletId: null, outside: true),
+          paidAt: afterCheck,
+        );
+        await viewModel.refresh();
+
+        final gymOccurrence = viewModel.occurrenceOf(gym)!;
+        expect(viewModel.occurrenceOf(rent)!.isPaid, isTrue);
+        expect(gymOccurrence.isPaid, isTrue);
+        expect(gymOccurrence.payments.single.settledOutside, isTrue);
+        expect(balance(), 850);
+        expect(viewModel.summary.totalPaid, 1220);
+        expect(viewModel.summary.totalSpent, 1100);
+      },
+    );
+  });
 }
