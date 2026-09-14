@@ -11,6 +11,7 @@ import '../../cards/models/credit_card.dart';
 import '../../wallets/models/wallet.dart';
 import '../../wallets/models/wallet_kind.dart';
 import '../models/expense.dart';
+import '../models/expense_payment.dart';
 import '../models/expense_type.dart';
 import '../repositories/expense_repository.dart';
 import '../viewmodels/expense_form_view_model.dart';
@@ -23,6 +24,7 @@ class ExpenseFormPage extends StatelessWidget {
     this.cards = const <CreditCard>[],
     this.expense,
     this.card,
+    this.payments = const <ExpensePayment>[],
   });
 
   static Future<void> open(
@@ -32,6 +34,7 @@ class ExpenseFormPage extends StatelessWidget {
     List<CreditCard> cards = const <CreditCard>[],
     Expense? expense,
     CreditCard? card,
+    List<ExpensePayment> payments = const <ExpensePayment>[],
   }) => Navigator.of(context).push(
     route(
       referenceMonth: referenceMonth,
@@ -39,6 +42,7 @@ class ExpenseFormPage extends StatelessWidget {
       cards: cards,
       expense: expense,
       card: card,
+      payments: payments,
     ),
   );
 
@@ -48,6 +52,7 @@ class ExpenseFormPage extends StatelessWidget {
     List<CreditCard> cards = const <CreditCard>[],
     Expense? expense,
     CreditCard? card,
+    List<ExpensePayment> payments = const <ExpensePayment>[],
   }) => MaterialPageRoute<void>(
     builder: (_) => ExpenseFormPage(
       referenceMonth: referenceMonth,
@@ -55,6 +60,7 @@ class ExpenseFormPage extends StatelessWidget {
       cards: cards,
       expense: expense,
       card: card,
+      payments: payments,
     ),
   );
 
@@ -63,6 +69,7 @@ class ExpenseFormPage extends StatelessWidget {
   final List<CreditCard> cards;
   final Expense? expense;
   final CreditCard? card;
+  final List<ExpensePayment> payments;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +81,7 @@ class ExpenseFormPage extends StatelessWidget {
         likelyWalletId: _likelyWalletId(),
         cards: cards,
         card: card,
+        payments: payments,
       ),
       child: _ExpenseFormView(wallets: wallets, cards: cards),
     );
@@ -149,6 +157,10 @@ class _ExpenseFormView extends StatelessWidget {
                 : 'Primeira cobrança',
           ),
           _MonthField(viewModel: viewModel),
+          if (viewModel.type == ExpenseType.recurring) ...[
+            const SizedBox(height: 12),
+            _EndMonthField(viewModel: viewModel),
+          ],
           if (viewModel.card == null) ...[
             const SizedBox(height: 20),
             Text(
@@ -168,10 +180,7 @@ class _ExpenseFormView extends StatelessWidget {
           const SizedBox(height: 20),
           FilledButton(
             onPressed: viewModel.isValid && !viewModel.isSaving
-                ? () async {
-                    await viewModel.save();
-                    if (context.mounted) Navigator.of(context).pop();
-                  }
+                ? () => _save(context, viewModel)
                 : null,
             child: Text(
               viewModel.isEditing ? 'Salvar alterações' : 'Cadastrar despesa',
@@ -181,6 +190,38 @@ class _ExpenseFormView extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _save(BuildContext context, ExpenseFormViewModel viewModel) async {
+  final leftOut = viewModel.monthsLeftOffRule.length;
+  if (leftOut > 0) {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mudar a regra?'),
+        content: Text(
+          leftOut == 1
+              ? '1 mês já pago fica fora da nova regra e continua no histórico.'
+              : '$leftOut meses já pagos ficam fora da nova regra e continuam '
+                    'no histórico.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+  }
+
+  await viewModel.save();
+  if (context.mounted) Navigator.of(context).pop();
 }
 
 class _TypeDropdown extends StatelessWidget {
@@ -299,6 +340,64 @@ class _MonthField extends StatelessWidget {
         );
         if (month != null) viewModel.setStartMonth(month);
       },
+    );
+  }
+}
+
+class _EndMonthField extends StatelessWidget {
+  const _EndMonthField({required this.viewModel});
+
+  final ExpenseFormViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final endMonth = viewModel.endMonth;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: const EdgeInsets.only(left: 16, right: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          tileColor: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.4,
+          ),
+          leading: const Icon(Icons.event_busy_outlined),
+          title: const Text('Termina em'),
+          subtitle: Text(endMonth?.label ?? 'Sem fim'),
+          trailing: endMonth == null
+              ? const Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: Icon(Icons.edit_calendar_outlined),
+                )
+              : IconButton(
+                  onPressed: () => viewModel.setEndMonth(null),
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Sem fim',
+                ),
+          onTap: () async {
+            final month = await MonthPickerSheet.show(
+              context,
+              initialMonth: endMonth ?? viewModel.startMonth,
+              title: 'Último mês da cobrança',
+            );
+            if (month != null) viewModel.setEndMonth(month);
+          },
+        ),
+        if (viewModel.endsBeforeStart)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Text(
+              'Termina antes de começar',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

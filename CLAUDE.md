@@ -102,6 +102,15 @@ side mirrors this, since `registerDuePayouts` starts at the later of the wallet'
 to fill in a past month the user navigates to it, and the receipt and outflow sheets default to a date
 inside the month on screen (`Month.suggestedDate`), not to today.
 
+Changing a rule never rewrites history. When `occurrenceIn(month)` is null but the month has payments
+for the expense (the rule was ended, its start moved, its parcels cut or its type changed),
+`MonthSummary.build` adds an `ExpenseOccurrence.offRule` — `amount` is the month amount or else what
+was paid, and `projectsBackIntoPast` does not apply — so the list, `totalExpenses` and `Saiu` keep
+matching the payments. The tile and ledger label it "Fora da regra atual"; removing its payments is
+what makes it go away. The expense form only warns (`ExpenseFormViewModel.monthsLeftOffRule`, paid
+months the edit newly leaves out) and refuses an end month before the start; deleting an expense with
+payments says how many the CASCADE takes and offers "Encerrar neste mês" for a recurring one.
+
 `ExpenseOccurrence` is where the two meet: `amount` (month value), `paidAmount`, `remaining`, `isPaid`,
 `isPartlyPaid`. Views read those — never re-derive them.
 

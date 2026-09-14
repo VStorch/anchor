@@ -88,4 +88,76 @@ void main() {
       );
     });
   });
+
+  group('mudança de regra', () {
+    final paidMonths = [
+      const Month(2026, 8),
+      const Month(2026, 9),
+      const Month(2026, 10),
+    ];
+
+    test('copyWith limpa o mês final quando pedido', () {
+      final ended = buildExpense(
+        type: ExpenseType.recurring,
+        endMonth: const Month(2026, 12),
+      );
+
+      expect(ended.copyWith(name: 'Outra').endMonth, const Month(2026, 12));
+      expect(ended.copyWith(clearEndMonth: true).endMonth, isNull);
+      expect(
+        ended
+            .copyWith(endMonth: const Month(2027, 1), clearEndMonth: true)
+            .endMonth,
+        isNull,
+      );
+    });
+
+    test('encerrar a recorrente deixa de fora os meses pagos depois', () {
+      final ended = buildExpense(
+        type: ExpenseType.recurring,
+        endMonth: const Month(2026, 8),
+      );
+
+      expect(ended.monthsOffRule(paidMonths), {
+        const Month(2026, 9),
+        const Month(2026, 10),
+      });
+    });
+
+    test('reduzir as parcelas deixa de fora as últimas pagas', () {
+      final shorter = buildExpense(
+        type: ExpenseType.installment,
+        totalInstallments: 2,
+      );
+
+      expect(shorter.monthsOffRule(paidMonths), {const Month(2026, 10)});
+    });
+
+    test('trocar para avulsa deixa de fora os outros meses', () {
+      final single = buildExpense(type: ExpenseType.single);
+
+      expect(single.monthsOffRule(paidMonths), {
+        const Month(2026, 9),
+        const Month(2026, 10),
+      });
+    });
+
+    test('mover o início deixa de fora os meses anteriores', () {
+      final moved = buildExpense(
+        type: ExpenseType.recurring,
+        startMonth: const Month(2026, 10),
+      );
+
+      expect(moved.monthsOffRule(paidMonths), {
+        const Month(2026, 8),
+        const Month(2026, 9),
+      });
+    });
+
+    test('a regra que ainda projeta os meses pagos não deixa nada de fora', () {
+      final recurring = buildExpense(type: ExpenseType.recurring);
+
+      expect(recurring.monthsOffRule(paidMonths), isEmpty);
+    });
+  });
 }

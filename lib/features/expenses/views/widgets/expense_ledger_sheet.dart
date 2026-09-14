@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/utils/money.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../wallets/models/wallet.dart';
+import '../../models/expense.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/expense_payment.dart';
 import '../../models/expense_type.dart';
@@ -79,8 +80,10 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Vence em ${DateFormat.yMMMMd('pt_BR').format(occurrence.dueDate)}'
-              '${occurrence.installmentLabel != null ? ' · parcela ${occurrence.installmentLabel}' : ''}',
+              occurrence.offRule
+                  ? 'Fora da regra atual'
+                  : 'Vence em ${DateFormat.yMMMMd('pt_BR').format(occurrence.dueDate)}'
+                        '${occurrence.installmentLabel != null ? ' · parcela ${occurrence.installmentLabel}' : ''}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -107,7 +110,9 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
             ...occurrence.payments.map(
               (payment) => _paymentLine(context, viewModel, wallets, payment),
             ),
-            if (_isAddingPayment)
+            if (occurrence.offRule)
+              const SizedBox.shrink()
+            else if (_isAddingPayment)
               _PaymentEditor(
                 key: const ValueKey('new-payment'),
                 wallets: wallets,
@@ -243,7 +248,15 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
             ),
           ),
           IconButton(
-            onPressed: () => viewModel.removePayment(payment),
+            onPressed: () {
+              final occurrence = viewModel.occurrenceOf(widget.expenseId);
+              if (occurrence != null &&
+                  occurrence.offRule &&
+                  occurrence.payments.length == 1) {
+                Navigator.of(context).pop();
+              }
+              viewModel.removePayment(payment);
+            },
             icon: const Icon(Icons.close, size: 18),
             tooltip: 'Remover pagamento',
           ),
@@ -273,7 +286,10 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => viewModel.clearPayments(occurrence),
+            onPressed: () {
+              if (occurrence.offRule) Navigator.of(context).pop();
+              viewModel.clearPayments(occurrence);
+            },
             icon: const Icon(Icons.undo, size: 18),
             label: const Text('Desfazer pagamentos'),
           ),
@@ -358,34 +374,64 @@ class _ExpenseMenu extends StatelessWidget {
             wallets: viewModel.snapshot.wallets,
             cards: viewModel.snapshot.cards,
             expense: expense,
+            payments: viewModel.snapshot.paymentsOf(expense.id!),
           ),
         );
       case _ExpenseMenuAction.endHere:
         navigator.pop();
         await viewModel.endRecurringExpense(expense, viewModel.month);
       case _ExpenseMenuAction.delete:
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Excluir ${expense.name}?'),
-            content: const Text('Os pagamentos dela saem de todos os meses.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Excluir'),
-              ),
-            ],
-          ),
-        );
-        if (confirmed != true) return;
+        final choice = await _confirmDelete(context, viewModel, expense);
+        if (choice == null) return;
         navigator.pop();
+        if (choice == _DeleteChoice.endHere) {
+          await viewModel.endRecurringExpense(expense, viewModel.month);
+          return;
+        }
         await viewModel.deleteExpense(expense);
     }
   }
+}
+
+enum _DeleteChoice { endHere, deleteAll }
+
+Future<_DeleteChoice?> _confirmDelete(
+  BuildContext context,
+  ExpensesViewModel viewModel,
+  Expense expense,
+) {
+  final paymentCount = viewModel.snapshot.paymentsOf(expense.id!).length;
+  final paidTotal = formatMoney(viewModel.snapshot.totalPaidOf(expense.id!));
+
+  return showDialog<_DeleteChoice>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Excluir ${expense.name}?'),
+      content: Text(
+        paymentCount == 0
+            ? 'Ela sai de todos os meses.'
+            : paymentCount == 1
+            ? 'Excluir apaga também 1 pagamento ($paidTotal) do histórico.'
+            : 'Excluir apaga também $paymentCount pagamentos ($paidTotal) '
+                  'do histórico.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        if (paymentCount > 0 && expense.type == ExpenseType.recurring)
+          TextButton(
+            onPressed: () => Navigator.pop(context, _DeleteChoice.endHere),
+            child: const Text('Encerrar neste mês'),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _DeleteChoice.deleteAll),
+          child: Text(paymentCount == 0 ? 'Excluir' : 'Excluir tudo'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _AmountEditor extends StatefulWidget {

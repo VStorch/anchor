@@ -80,6 +80,13 @@ class Expense {
     };
   }
 
+  /// Paid months this rule no longer projects: they stay in the history as
+  /// off-rule occurrences instead of vanishing with their payments.
+  Set<Month> monthsOffRule(Iterable<Month> paidMonths) => {
+    for (final month in paidMonths)
+      if (occurrenceIn(month) == null) month,
+  };
+
   ExpenseOccurrence? _installmentOccurrence(Month month) {
     final total = totalInstallments;
     if (total == null) return null;
@@ -117,6 +124,7 @@ class Expense {
     int? dueDay,
     Month? startMonth,
     Month? endMonth,
+    bool clearEndMonth = false,
     int? totalInstallments,
     int? settledInstallments,
     int? walletId,
@@ -129,7 +137,7 @@ class Expense {
     amount: amount ?? this.amount,
     dueDay: dueDay ?? this.dueDay,
     startMonth: startMonth ?? this.startMonth,
-    endMonth: endMonth ?? this.endMonth,
+    endMonth: clearEndMonth ? null : endMonth ?? this.endMonth,
     totalInstallments: totalInstallments ?? this.totalInstallments,
     settledInstallments: settledInstallments ?? this.settledInstallments,
     walletId: walletId ?? this.walletId,

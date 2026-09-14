@@ -13,12 +13,15 @@ import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:anchor/core/widgets/money_field.dart';
+import 'package:anchor/core/widgets/month_picker_sheet.dart';
+import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -373,6 +376,164 @@ void main() {
       findsOneWidget,
     );
   });
+
+  group('mudar a regra da despesa', () {
+    Future<void> openExpenses(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+
+      final settings = SettingsViewModel();
+      await settings.initialize();
+      await tester.pumpWidget(
+        AnchorApp(
+          reminderNotifications: FakeReminderNotifications(),
+          settings: settings,
+          database: database,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.receipt_long_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> editExpense(WidgetTester tester, String name) async {
+      await tester.tap(find.text(name));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Mais opções'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Editar despesa'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('excluir com pagamentos avisa e oferece encerrar', (
+      tester,
+    ) async {
+      final month = Month.current();
+      await _seedGym(
+        database,
+        startMonth: month.previous,
+        paidMonths: [month.previous],
+      );
+      await openExpenses(tester);
+
+      await tester.tap(find.text('Academia'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Mais opções'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Excluir despesa'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Excluir apaga também 1 pagamento'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextButton, 'Excluir tudo'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Encerrar neste mês'));
+      await tester.pumpAndSettle();
+
+      final repository = ExpenseRepository(database, DataChanges());
+      expect((await repository.fetchExpenses()).single.endMonth, month);
+      expect(await repository.fetchPayments(), hasLength(1));
+    });
+
+    testWidgets('a recorrente com início depois do fim não salva', (
+      tester,
+    ) async {
+      final month = Month.current();
+      await _seedGym(database, startMonth: month, endMonth: month);
+      await openExpenses(tester);
+      await editExpense(tester, 'Academia');
+
+      expect(find.text(month.label), findsNWidgets(2));
+      await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+      await tester.pumpAndSettle();
+      await _pickMonth(tester, from: month, target: month.next);
+
+      expect(find.text('Termina antes de começar'), findsOneWidget);
+      final save = find.widgetWithText(FilledButton, 'Salvar alterações');
+      await tester.scrollUntilVisible(
+        save,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+
+      final saved = (await ExpenseRepository(
+        database,
+        DataChanges(),
+      ).fetchExpenses()).single;
+      expect(saved.startMonth, month);
+    });
+
+    testWidgets('encerrar antes de um mês pago mantém o item e o que saiu', (
+      tester,
+    ) async {
+      final month = Month.current();
+      await _seedGym(database, startMonth: month.previous, paidMonths: [month]);
+      await openExpenses(tester);
+      await editExpense(tester, 'Academia');
+
+      await tester.tap(find.text('Termina em'));
+      await tester.pumpAndSettle();
+      await _pickMonth(tester, from: month.previous, target: month.previous);
+      expect(find.text(month.previous.label), findsWidgets);
+
+      final save = find.widgetWithText(FilledButton, 'Salvar alterações');
+      await tester.scrollUntilVisible(
+        save,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          '1 mês já pago fica fora da nova regra e continua no histórico.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Salvar'));
+      await tester.pumpAndSettle();
+
+      final repository = ExpenseRepository(database, DataChanges());
+      expect(
+        (await repository.fetchExpenses()).single.endMonth,
+        month.previous,
+      );
+      expect(await repository.fetchPayments(), hasLength(1));
+
+      expect(find.text('Academia'), findsOneWidget);
+      expect(find.textContaining('Fora da regra atual'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.pie_chart_outline),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final spent = find.ancestor(
+        of: find.text('Saiu'),
+        matching: find.byType(Column),
+      );
+      expect(
+        find.descendant(
+          of: spent.first,
+          matching: find.textContaining('120,00'),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
 }
 
 Future<void> _seedWalletlessExpense(AppDatabase database) async {
@@ -610,3 +771,80 @@ Finder _dayCell(int day) => find.descendant(
   of: find.byType(DayOfMonthPicker),
   matching: find.text('$day'),
 );
+
+Future<void> _seedGym(
+  AppDatabase database, {
+  required Month startMonth,
+  Month? endMonth,
+  List<Month> paidMonths = const <Month>[],
+}) async {
+  final changes = DataChanges();
+  final wallets = WalletRepository(database, changes);
+  final expenses = ExpenseRepository(database, changes);
+  final createdAt = startMonth.firstDay;
+
+  final salaryId = await wallets.saveWallet(
+    Wallet(
+      name: 'Salário',
+      kind: WalletKind.salary,
+      colorIndex: 0,
+      createdAt: createdAt,
+    ),
+  );
+  await expenses.saveExpense(
+    Expense(
+      name: 'Academia',
+      type: ExpenseType.recurring,
+      amount: 120,
+      dueDay: 10,
+      startMonth: startMonth,
+      endMonth: endMonth,
+      walletId: salaryId,
+      createdAt: createdAt,
+    ),
+  );
+  final expenseId = (await expenses.fetchExpenses()).single.id!;
+  for (final month in paidMonths) {
+    await expenses.savePayment(
+      ExpensePayment(
+        expenseId: expenseId,
+        walletId: salaryId,
+        month: month,
+        amount: 120,
+        paidAt: month.dayOf(10),
+      ),
+    );
+  }
+}
+
+Future<void> _pickMonth(
+  WidgetTester tester, {
+  required Month from,
+  required Month target,
+}) async {
+  final sheet = find.byType(MonthPickerSheet);
+  for (var year = from.year; year != target.year;) {
+    final forward = target.year > year;
+    await tester.tap(
+      find.descendant(
+        of: sheet,
+        matching: find.byIcon(
+          forward ? Icons.chevron_right : Icons.chevron_left,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    year += forward ? 1 : -1;
+  }
+  await tester.tap(
+    find.descendant(
+      of: sheet,
+      matching: find.text(
+        toBeginningOfSentenceCase(
+          DateFormat.MMMM('pt_BR').format(target.firstDay),
+        )!,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}

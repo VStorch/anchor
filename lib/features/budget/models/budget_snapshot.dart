@@ -37,6 +37,13 @@ class BudgetSnapshot {
 
   bool get hasWallets => wallets.isNotEmpty;
 
+  List<ExpensePayment> paymentsOf(int expenseId) =>
+      payments.where((payment) => payment.expenseId == expenseId).toList();
+
+  double totalPaidOf(int expenseId) => roundCents(
+    paymentsOf(expenseId).fold(0, (total, payment) => total + payment.amount),
+  );
+
   double get walletsBalance => roundCents(
     walletSummaries.fold(0, (total, summary) => total + summary.balance),
   );

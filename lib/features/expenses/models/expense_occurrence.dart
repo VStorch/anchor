@@ -14,19 +14,29 @@ class ExpenseOccurrence implements Payable {
     this.installmentNumber,
     this.monthAmount,
     this.payments = const <ExpensePayment>[],
-  });
+  }) : offRule = false;
+
+  /// A paid month the current rule no longer projects.
+  const ExpenseOccurrence.offRule({
+    required this.expense,
+    required this.month,
+    this.monthAmount,
+    required this.payments,
+  }) : installmentNumber = null,
+       offRule = true;
 
   final Expense expense;
   final Month month;
   final int? installmentNumber;
   final double? monthAmount;
   final List<ExpensePayment> payments;
+  final bool offRule;
 
   @override
   String get name => expense.name;
 
   @override
-  double get amount => monthAmount ?? expense.amount;
+  double get amount => monthAmount ?? (offRule ? paidAmount : expense.amount);
 
   bool get hasCustomAmount => monthAmount != null;
 
@@ -72,13 +82,20 @@ class ExpenseOccurrence implements Payable {
   ExpenseOccurrence withLedger({
     double? monthAmount,
     List<ExpensePayment> payments = const <ExpensePayment>[],
-  }) => ExpenseOccurrence(
-    expense: expense,
-    month: month,
-    installmentNumber: installmentNumber,
-    monthAmount: monthAmount,
-    payments: payments,
-  );
+  }) => offRule
+      ? ExpenseOccurrence.offRule(
+          expense: expense,
+          month: month,
+          monthAmount: monthAmount,
+          payments: payments,
+        )
+      : ExpenseOccurrence(
+          expense: expense,
+          month: month,
+          installmentNumber: installmentNumber,
+          monthAmount: monthAmount,
+          payments: payments,
+        );
 
   static DateTime get _today {
     final now = DateTime.now();

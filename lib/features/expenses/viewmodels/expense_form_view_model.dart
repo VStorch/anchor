@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/utils/month.dart';
 import '../../cards/models/credit_card.dart';
 import '../models/expense.dart';
+import '../models/expense_payment.dart';
 import '../models/expense_type.dart';
 import '../repositories/expense_repository.dart';
 
@@ -16,9 +17,11 @@ class ExpenseFormViewModel extends ChangeNotifier {
     int? likelyWalletId,
     List<CreditCard> cards = const <CreditCard>[],
     CreditCard? card,
+    List<ExpensePayment> payments = const <ExpensePayment>[],
   }) : _repository = repository,
        _cards = cards,
        _expense = expense,
+       _payments = payments,
        _name = expense?.name ?? '',
        _type =
            expense?.type ??
@@ -26,6 +29,9 @@ class ExpenseFormViewModel extends ChangeNotifier {
        _amount = expense?.amount ?? 0,
        _dueDay = expense?.dueDay ?? 5,
        _startMonth = expense?.startMonth ?? referenceMonth,
+       _endMonth = expense?.type == ExpenseType.recurring
+           ? expense?.endMonth
+           : null,
        _totalInstallments = expense?.totalInstallments ?? 12,
        _settledInstallments = expense?.settledInstallments ?? 0,
        _walletId = expense == null ? likelyWalletId : expense.walletId,
@@ -34,12 +40,14 @@ class ExpenseFormViewModel extends ChangeNotifier {
   final ExpenseRepository _repository;
   final Expense? _expense;
   final List<CreditCard> _cards;
+  final List<ExpensePayment> _payments;
 
   String _name;
   ExpenseType _type;
   double _amount;
   int _dueDay;
   Month _startMonth;
+  Month? _endMonth;
   int _totalInstallments;
   int _settledInstallments;
   int? _walletId;
@@ -57,6 +65,13 @@ class ExpenseFormViewModel extends ChangeNotifier {
   int get dueDay => _dueDay;
 
   Month get startMonth => _startMonth;
+
+  Month? get endMonth => _endMonth;
+
+  bool get endsBeforeStart =>
+      _type == ExpenseType.recurring &&
+      _endMonth != null &&
+      _endMonth! < _startMonth;
 
   int get totalInstallments => _totalInstallments;
 
@@ -88,7 +103,20 @@ class ExpenseFormViewModel extends ChangeNotifier {
   bool get isValid =>
       _name.trim().isNotEmpty &&
       _amount > 0 &&
+      !endsBeforeStart &&
       (!isInstallment || remainingInstallments > 0);
+
+  /// Paid months the edited rule would stop projecting, leaving out those the
+  /// saved rule already did not project.
+  Set<Month> get monthsLeftOffRule {
+    final expense = _expense;
+    if (expense == null || _payments.isEmpty) return const <Month>{};
+
+    final paidMonths = _payments.map((payment) => payment.month);
+    return _draft
+        .monthsOffRule(paidMonths)
+        .difference(expense.monthsOffRule(paidMonths));
+  }
 
   String? get installmentPlan => isInstallment
       ? 'Faltam $remainingInstallments parcelas até ${lastMonth.label}'
@@ -105,6 +133,9 @@ class ExpenseFormViewModel extends ChangeNotifier {
     if (value != ExpenseType.installment) {
       _settledInstallments = 0;
     }
+    if (value != ExpenseType.recurring) {
+      _endMonth = null;
+    }
     notifyListeners();
   }
 
@@ -120,6 +151,11 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   void setStartMonth(Month value) {
     _startMonth = value;
+    notifyListeners();
+  }
+
+  void setEndMonth(Month? value) {
+    _endMonth = value;
     notifyListeners();
   }
 
@@ -151,25 +187,27 @@ class ExpenseFormViewModel extends ChangeNotifier {
     _isSaving = true;
     notifyListeners();
 
-    final card = this.card;
-    await _repository.saveExpense(
-      Expense(
-        id: _expense?.id,
-        name: _name.trim(),
-        type: _type,
-        amount: _amount,
-        dueDay: card?.dueDay ?? _dueDay,
-        startMonth: _startMonth,
-        endMonth: _type == ExpenseType.recurring ? _expense?.endMonth : null,
-        totalInstallments: isInstallment ? _totalInstallments : null,
-        settledInstallments: isInstallment ? _settledInstallments : 0,
-        walletId: card == null ? _walletId : card.walletId,
-        cardId: card?.id,
-        createdAt: _expense?.createdAt ?? DateTime.now(),
-      ),
-    );
+    await _repository.saveExpense(_draft);
 
     _isSaving = false;
     notifyListeners();
+  }
+
+  Expense get _draft {
+    final card = this.card;
+    return Expense(
+      id: _expense?.id,
+      name: _name.trim(),
+      type: _type,
+      amount: _amount,
+      dueDay: card?.dueDay ?? _dueDay,
+      startMonth: _startMonth,
+      endMonth: _type == ExpenseType.recurring ? _endMonth : null,
+      totalInstallments: isInstallment ? _totalInstallments : null,
+      settledInstallments: isInstallment ? _settledInstallments : 0,
+      walletId: card == null ? _walletId : card.walletId,
+      cardId: card?.id,
+      createdAt: _expense?.createdAt ?? DateTime.now(),
+    );
   }
 }

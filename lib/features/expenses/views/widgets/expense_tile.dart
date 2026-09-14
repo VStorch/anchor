@@ -123,7 +123,9 @@ class ExpenseTile extends StatelessWidget {
 
   String _subtitle() => switch (payable) {
     ExpenseOccurrence occurrence => [
-      occurrence.installmentLabel != null
+      occurrence.offRule
+          ? 'Fora da regra atual'
+          : occurrence.installmentLabel != null
           ? 'Parcela ${occurrence.installmentLabel}'
           : occurrence.expense.type.label,
       ..._walletNames(

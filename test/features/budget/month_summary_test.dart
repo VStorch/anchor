@@ -1,3 +1,4 @@
+import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/models/month_summary.dart';
 import 'package:anchor/features/budget/models/wallet_summary.dart';
@@ -613,6 +614,119 @@ void main() {
 
       expect(summary.balance.isNegative, isFalse);
       expect(wallet.balance.isNegative, isFalse);
+    });
+  });
+
+  group('pagamento fora da regra atual', () {
+    final ended = Expense(
+      id: 7,
+      name: 'Academia',
+      type: ExpenseType.recurring,
+      amount: 120,
+      dueDay: 10,
+      startMonth: const Month(2026, 6),
+      endMonth: const Month(2026, 7),
+      walletId: 1,
+      createdAt: DateTime(2026, 6),
+    );
+    final augustPayments = [
+      ExpensePayment(
+        expenseId: 7,
+        walletId: 1,
+        month: august,
+        amount: 80,
+        paidAt: DateTime(2026, 8, 10),
+      ),
+      ExpensePayment(
+        expenseId: 7,
+        walletId: 2,
+        month: august,
+        amount: 40,
+        paidAt: DateTime(2026, 8, 11),
+      ),
+      ExpensePayment(
+        expenseId: 1,
+        walletId: 1,
+        month: august,
+        amount: 500,
+        paidAt: DateTime(2026, 8, 10),
+      ),
+    ];
+    final outflows = [
+      Outflow(
+        walletId: 1,
+        description: 'Mercado',
+        amount: 47.9,
+        spentAt: DateTime(2026, 8, 12),
+      ),
+    ];
+
+    MonthSummary buildWithEnded() => MonthSummary.build(
+      month: august,
+      expenses: [...expenses, ended],
+      payments: augustPayments,
+      receipts: receipts,
+      outflows: outflows,
+    );
+
+    test('continua no mês, marcado como fora da regra e pago', () {
+      final occurrence = buildWithEnded().occurrenceOf(7)!;
+
+      expect(occurrence.offRule, isTrue);
+      expect(occurrence.amount, 120);
+      expect(occurrence.isPaid, isTrue);
+      expect(occurrence.installmentNumber, isNull);
+    });
+
+    test('soma no que saiu e não muda o que falta pagar', () {
+      final summary = buildWithEnded();
+      final withoutEnded = MonthSummary.build(
+        month: august,
+        expenses: expenses,
+        payments: augustPayments,
+        receipts: receipts,
+        outflows: outflows,
+      );
+
+      expect(summary.totalExpenses, withoutEnded.totalExpenses + 120);
+      expect(summary.totalPending, withoutEnded.totalPending);
+      expect(summary.totalSpent, 667.9);
+      expect(
+        roundCents(summary.totalSpent - summary.totalOutflows),
+        roundCents(
+          augustPayments.fold<double>(
+            0,
+            (sum, payment) => sum + payment.amount,
+          ),
+        ),
+      );
+    });
+
+    test('o mês sem pagamento não ganha a ocorrência', () {
+      final summary = MonthSummary.build(
+        month: august,
+        expenses: [ended],
+        payments: const [],
+        receipts: const [],
+      );
+
+      expect(summary.occurrences, isEmpty);
+    });
+
+    test('o valor do mês registrado vale sobre a soma paga', () {
+      final summary = MonthSummary.build(
+        month: august,
+        expenses: [ended],
+        payments: augustPayments.take(1).toList(),
+        receipts: const [],
+        monthAmounts: [
+          const ExpenseMonth(expenseId: 7, month: august, amount: 150),
+        ],
+      );
+
+      final occurrence = summary.occurrenceOf(7)!;
+      expect(occurrence.amount, 150);
+      expect(occurrence.remaining, 70);
     });
   });
 }
