@@ -130,8 +130,8 @@ still owed on the rules". The Carteiras tab lists receipts, expense payments and
 as `WalletMovement`; only receipts and outflows are editable there.
 
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
-because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday only —
-no holiday table, so a month with a holiday early on needs the receipt corrected by hand.
+because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
+national holidays (`BrazilianHolidays`); state and city holidays still need a manual correction.
 
 A receipt also carries a `ReceiptKind`. `adjustment` is how the user says "this wallet really holds X"
 — `adjustBalance` stores only the difference, so a balance that existed before the app did is one

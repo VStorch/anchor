@@ -1,3 +1,4 @@
+import 'package:anchor/core/utils/holidays.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,9 +39,13 @@ void main() {
       expect(const Month(2026, 1).dayOf(15), DateTime(2026, 1, 15));
     });
 
-    test('encontra o quinto dia útil pulando o fim de semana', () {
-      expect(const Month(2026, 9).businessDay(5), DateTime(2026, 9, 7));
-      expect(const Month(2026, 11).businessDay(5), DateTime(2026, 11, 6));
+    test('encontra o quinto dia útil pulando o fim de semana e o feriado', () {
+      expect(const Month(2026, 9).businessDay(5), DateTime(2026, 9, 8));
+      expect(const Month(2026, 11).businessDay(5), DateTime(2026, 11, 9));
+    });
+
+    test('pula o feriado que cai no primeiro dia útil', () {
+      expect(const Month(2026, 11).businessDay(1), DateTime(2026, 11, 3));
     });
 
     test('ignora o fim de semana no começo do mês', () {
@@ -50,6 +55,27 @@ void main() {
 
     test('para no último dia útil quando o mês não tem tantos', () {
       expect(const Month(2026, 8).businessDay(30), DateTime(2026, 8, 31));
+    });
+  });
+
+  group('BrazilianHolidays', () {
+    test('calcula a Páscoa', () {
+      expect(BrazilianHolidays.easter(2026), DateTime(2026, 4, 5));
+      expect(BrazilianHolidays.easter(2027), DateTime(2027, 3, 28));
+    });
+
+    test('reconhece os feriados móveis', () {
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 2, 16)), isTrue);
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 2, 17)), isTrue);
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 4, 3)), isTrue);
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 6, 4)), isTrue);
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 2, 18)), isFalse);
+    });
+
+    test('reconhece os feriados fixos', () {
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 9, 7)), isTrue);
+      expect(BrazilianHolidays.isHoliday(DateTime(2027, 11, 20)), isTrue);
+      expect(BrazilianHolidays.isHoliday(DateTime(2026, 9, 8)), isFalse);
     });
   });
 }

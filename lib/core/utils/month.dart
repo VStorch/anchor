@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import 'holidays.dart';
+
 @immutable
 class Month implements Comparable<Month> {
   const Month(this.year, this.month);
@@ -53,7 +55,10 @@ class Month implements Comparable<Month> {
     var lastBusinessDay = 1;
 
     for (var day = 1; day <= lengthInDays; day++) {
-      if (DateTime(year, month, day).weekday > DateTime.friday) continue;
+      final date = DateTime(year, month, day);
+      if (date.weekday > DateTime.friday || BrazilianHolidays.isHoliday(date)) {
+        continue;
+      }
       lastBusinessDay = day;
       if (++found == position) return DateTime(year, month, day);
     }

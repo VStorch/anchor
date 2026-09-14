@@ -208,7 +208,7 @@ void main() {
 
     final payout = (await repository.fetchWallets()).single.payouts.single;
 
-    expect(payout.dateIn(const Month(2026, 9)), DateTime(2026, 9, 7));
+    expect(payout.dateIn(const Month(2026, 9)), DateTime(2026, 9, 8));
     expect(payout.scheduleLabel, '5º dia útil');
   });
 
