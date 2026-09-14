@@ -40,12 +40,24 @@ Wiring is `provider`; persistence is `sqflite`.
 
 ### The two cross-cutting pieces
 
-The dashboard card headlines `BudgetSnapshot.walletsBalance` — the money that exists — and the three
-figures under it (`Entrou`/`Saiu`/`Sobrou`) are all month-scoped and all measured from what actually
-happened, so `totalReceived - totalSpent == balance` reconciles on screen. `MonthSummary` therefore
-carries no notion of planned income; the payout calendar's total lives on `Wallet.monthlyIncome` and
-is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a real
-one in the same block.**
+The dashboard stacks three blocks that never share a figure. **Você tem hoje** (`TodayCard`) is
+`BudgetSnapshot.walletsBalance`, the money that exists, whatever month is on screen; when the current
+month has receipts still `predicted` it adds a "Confirmar R$ X" button (`awaitingConfirmation`) that
+leads to Carteiras. **Previsão até o fim de <mês>** (`ForecastCard`) renders `BudgetSnapshot.forecast`,
+a `MonthForecast` built in `features/budget` only for the current month or a later one: per wallet,
+today's balance plus what is still expected in (`predicted` receipts, overdue or not, and active
+payouts with no receipt yet) minus the `remaining` of the occurrences planned on it, over every month
+from the current one to the one on screen; bills with no wallet go to `unassignedToPay`. It is
+outlined and coloured `MoneyColors.predicted`, and holds no real number. **<Mês> até agora** (current
+month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou`/`Saiu`/`Diferença`,
+confirmed money only, so `totalReceived - totalSpent == difference` reconciles on screen.
+`MonthSummary` carries no planned income; the payout calendar's total lives on `Wallet.monthlyIncome`
+and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
+real one in the same block.**
+
+"Today" is injectable: `MonthSummary.build(today:)` keeps it in `summary.today`, and
+`BudgetService.loadSnapshot(month, now:)` passes the same instant to `registerDuePayouts(now:)`, the
+summaries and the forecast, so a service test pins the date instead of reading the clock.
 
 - **`features/budget/`** is not a screen. It is the aggregation layer every other feature reads:
   `BudgetService.loadSnapshot(month)` reads all four repositories and returns a `BudgetSnapshot`
@@ -146,7 +158,7 @@ carries across months; the month figures on `WalletSummary` are separate.
 An **outflow** (`outflows`) is money spent straight from a wallet with no expense rule behind it —
 the everyday spending that drains a benefit card. It exists because an `expense` is a *rule* with a
 due day, which is the wrong shape for "gastei R$ 47 no mercado hoje". Outflows lower the wallet
-balance and `spentInMonth`, and count in `MonthSummary.totalSpent` (hence in `balance`), but never in
+balance and `spentInMonth`, and count in `MonthSummary.totalSpent` (hence in `difference`), but never in
 `totalExpenses`/`totalPaid` — those stay about the bills, so `totalPending` keeps meaning "what is
 still owed on the rules". The Carteiras tab lists receipts, expense payments and outflows together
 as `WalletMovement`, with the balance checks; receipts, outflows and checks are editable there, and
@@ -236,6 +248,9 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
 - Clean Code: few comments, names that explain themselves.
 - Theme lives in `app/theme/`; the palette is green tones (`AppPalette`) and the app must work in
   light, dark and system mode (`SettingsViewModel` persists the choice).
+- Money figures take their colour from the `MoneyColors` theme extension (`app/theme/money_colors.dart`,
+  `MoneyColors.of(context)`): `income`, `spending`, `neutral` and `predicted`, one set per brightness.
+  `test/app/theme/money_colors_test.dart` holds every one of them at 4.5:1 or more against the surfaces.
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
 - `FilledButton` is themed full-width (`minimumSize: Size.fromHeight(52)`), so it only goes inside a
   `Row` wrapped in `Expanded` — loose in a row it asks for infinite width and the layout throws.

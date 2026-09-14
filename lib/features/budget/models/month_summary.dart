@@ -11,13 +11,14 @@ import '../../wallets/models/outflow.dart';
 import '../../wallets/models/receipt.dart';
 
 class MonthSummary {
-  const MonthSummary({
+  MonthSummary({
     required this.month,
     required this.occurrences,
     required this.receipts,
     required this.outflows,
     this.cards = const <CreditCard>[],
-  });
+    DateTime? today,
+  }) : today = today ?? DateTime.now();
 
   factory MonthSummary.build({
     required Month month,
@@ -27,6 +28,7 @@ class MonthSummary {
     List<ExpenseMonth> monthAmounts = const <ExpenseMonth>[],
     List<Outflow> outflows = const <Outflow>[],
     List<CreditCard> cards = const <CreditCard>[],
+    DateTime? today,
   }) {
     final paymentsByExpense = <int, List<ExpensePayment>>{};
     for (final payment in payments) {
@@ -85,6 +87,7 @@ class MonthSummary {
           .toList(),
       outflows: outflows.where((outflow) => outflow.month == month).toList(),
       cards: cards,
+      today: today,
     );
   }
 
@@ -100,6 +103,7 @@ class MonthSummary {
   final List<Receipt> receipts;
   final List<Outflow> outflows;
   final List<CreditCard> cards;
+  final DateTime today;
 
   bool get isEmpty =>
       occurrences.isEmpty && receipts.isEmpty && outflows.isEmpty;
@@ -178,7 +182,7 @@ class MonthSummary {
         .fold(0, (total, receipt) => total + receipt.amount),
   );
 
-  double get balance => roundCents(totalReceived - totalSpent);
+  double get difference => roundCents(totalReceived - totalSpent);
 
   double get paidRatio => occurrences.paidRatio(whenEmpty: 0);
 }

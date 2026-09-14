@@ -162,6 +162,14 @@ void main() {
         );
         await tester.pumpAndSettle();
       }
+
+      final details = find.text('Como chegamos nisso');
+      await tester.ensureVisible(details);
+      await tester.pumpAndSettle();
+      await tester.tap(details);
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
     });
   }
 }

@@ -5,7 +5,8 @@ import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:anchor/core/widgets/money_field.dart';
-import 'package:anchor/features/dashboard/views/widgets/balance_card.dart';
+import 'package:anchor/features/dashboard/views/widgets/month_so_far_card.dart';
+import 'package:anchor/features/dashboard/views/widgets/today_card.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
@@ -121,14 +122,18 @@ void main() {
 
     await goToDashboard(tester);
 
-    final card = find.byType(BalanceCard);
-
     expect(
-      find.descendant(of: card, matching: find.textContaining('5.200,00')),
+      find.descendant(
+        of: find.byType(TodayCard),
+        matching: find.textContaining('5.200,00'),
+      ),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: card, matching: find.textContaining('3.000,00')),
+      find.descendant(
+        of: find.byType(MonthSoFarCard),
+        matching: find.textContaining('3.000,00'),
+      ),
       findsWidgets,
     );
   });

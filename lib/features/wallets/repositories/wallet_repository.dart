@@ -245,11 +245,11 @@ class WalletRepository {
     _changes.publish();
   }
 
-  Future<int> registerDuePayouts(List<Wallet> wallets) async {
+  Future<int> registerDuePayouts(List<Wallet> wallets, {DateTime? now}) async {
     final db = await _database.database;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final currentMonth = Month.current();
+    final clock = now ?? DateTime.now();
+    final today = DateTime(clock.year, clock.month, clock.day);
+    final currentMonth = Month.fromDate(clock);
     var changed = 0;
 
     for (final wallet in wallets) {

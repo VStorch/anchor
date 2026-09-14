@@ -139,8 +139,26 @@ void main() {
       expect(buildSummary().totalReceived, 3600);
     });
 
-    test('calcula o saldo como recebido menos pago', () {
-      expect(buildSummary().balance, 3100);
+    test('a diferença é o que entrou menos o que saiu', () {
+      final summary = buildSummary();
+
+      expect(summary.difference, 3100);
+      expect(summary.totalReceived - summary.totalSpent, summary.difference);
+    });
+
+    test('guarda o dia de hoje com que foi montado', () {
+      final today = DateTime(2026, 9, 13);
+
+      expect(
+        MonthSummary.build(
+          month: august,
+          expenses: expenses,
+          payments: payments,
+          receipts: receipts,
+          today: today,
+        ).today,
+        today,
+      );
     });
 
     test('ordena as ocorrências por vencimento', () {
@@ -402,7 +420,7 @@ void main() {
       final summary = buildWithOutflows();
 
       expect(summary.totalSpent, 620);
-      expect(summary.balance, 2980);
+      expect(summary.difference, 2980);
     });
 
     test('não entra no total das contas do mês', () {
@@ -705,7 +723,7 @@ void main() {
         occurrences: summary.occurrences,
       ).single;
 
-      expect(summary.balance.isNegative, isFalse);
+      expect(summary.difference.isNegative, isFalse);
       expect(wallet.balance.isNegative, isFalse);
       expect(wallet.balance, 0);
       expect(wallet.pendingInMonth, 0);
@@ -745,7 +763,7 @@ void main() {
         occurrences: summary.occurrences,
       ).single;
 
-      expect(summary.balance.isNegative, isFalse);
+      expect(summary.difference.isNegative, isFalse);
       expect(wallet.balance.isNegative, isFalse);
     });
   });
@@ -887,7 +905,7 @@ void main() {
       expect(summary.totalPaid, 500);
       expect(summary.totalPending, 500);
       expect(summary.totalSpent, 0);
-      expect(summary.balance, 3600);
+      expect(summary.difference, 3600);
     });
 
     test('não mexe no saldo nem no gasto da carteira', () {

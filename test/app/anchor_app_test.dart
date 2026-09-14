@@ -2,6 +2,11 @@ import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/widgets/anchor_logo.dart';
+import 'package:anchor/core/widgets/section_header.dart';
+import 'package:anchor/features/dashboard/views/widgets/forecast_card.dart';
+import 'package:anchor/features/dashboard/views/widgets/month_so_far_card.dart';
+import 'package:anchor/features/dashboard/views/widgets/today_card.dart';
+import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -15,6 +20,7 @@ import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_reminder_notifications.dart';
@@ -60,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> seedSalaryAndExpense() async {
+  Future<void> seedSalaryAndExpense({bool confirmSalary = true}) async {
     final changes = DataChanges();
     final wallets = WalletRepository(database, changes);
     final expenses = ExpenseRepository(database, changes);
@@ -83,7 +89,11 @@ void main() {
         createdAt: DateTime(today.year, today.month),
       ),
     );
-    await confirmDuePayouts(wallets);
+    if (confirmSalary) {
+      await confirmDuePayouts(wallets);
+    } else {
+      await wallets.registerDuePayouts(await wallets.fetchWallets());
+    }
     await expenses.saveExpense(
       Expense(
         name: 'Plano de saúde',
@@ -123,18 +133,141 @@ void main() {
     expect(find.text('Cadastrar meu salário'), findsOneWidget);
   });
 
-  testWidgets('a capa mostra o saldo real e o resultado do mês', (
+  testWidgets('a capa separa o que se tem hoje, a previsão e o mês', (
     tester,
   ) async {
     await seedSalaryAndExpense();
     await pumpApp(tester);
 
-    expect(find.text('Saldo total'), findsWidgets);
-    expect(find.text('Entrou'), findsOneWidget);
-    expect(find.text('Saiu'), findsOneWidget);
-    expect(find.text('Sobrou'), findsOneWidget);
-    expect(find.textContaining('3.000,00'), findsWidgets);
-    expect(find.textContaining('450,00 a pagar em'), findsOneWidget);
+    final monthName = DateFormat.MMMM('pt_BR').format(DateTime.now());
+
+    expect(
+      find.descendant(
+        of: find.byType(TodayCard),
+        matching: find.text('Você tem hoje'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(TodayCard),
+        matching: find.textContaining('3.000,00'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Confirmar'), findsNothing);
+
+    final forecast = find.byType(ForecastCard);
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Previsão até o fim de $monthName'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Vai sobrar ${formatMoney(2550)}'),
+      ),
+      findsOneWidget,
+    );
+
+    final month = find.byType(MonthSoFarCard);
+    expect(
+      find.descendant(of: month, matching: find.textContaining('até agora')),
+      findsOneWidget,
+    );
+    for (final label in ['Entrou', 'Saiu', 'Diferença']) {
+      expect(
+        find.descendant(of: month, matching: find.text(label)),
+        findsOneWidget,
+      );
+    }
+    expect(find.text('Sobrou'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.text('Ver todas'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      find.descendant(
+        of: find.widgetWithText(SectionHeader, 'A pagar'),
+        matching: find.textContaining('450,00 a pagar'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a previsão abre o detalhe por carteira', (tester) async {
+    await seedSalaryAndExpense();
+    await pumpApp(tester);
+
+    expect(find.text('A receber'), findsNothing);
+
+    await tester.tap(find.text('Como chegamos nisso'));
+    await tester.pumpAndSettle();
+
+    final forecast = find.byType(ForecastCard);
+    expect(
+      find.descendant(of: forecast, matching: find.text('+ ${formatMoney(0)}')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('− ${formatMoney(450)}'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: forecast, matching: find.text('Salário')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a previsão some no mês passado e o mês some no futuro', (
+    tester,
+  ) async {
+    await seedSalaryAndExpense();
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('Próximo mês'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ForecastCard), findsOneWidget);
+    expect(find.byType(MonthSoFarCard), findsNothing);
+    expect(find.byType(TodayCard), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Mês anterior'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mês anterior'));
+    await tester.pumpAndSettle();
+
+    final previous = Month.current().previous;
+    expect(find.byType(ForecastCard), findsNothing);
+    expect(find.text(previous.label), findsWidgets);
+    expect(find.byType(MonthSoFarCard), findsOneWidget);
+  });
+
+  testWidgets('a entrada a confirmar leva para as carteiras', (tester) async {
+    await seedSalaryAndExpense(confirmSalary: false);
+    await pumpApp(tester);
+
+    expect(
+      find.descendant(
+        of: find.byType(TodayCard),
+        matching: find.text(formatMoney(0)),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Confirmar ${formatMoney(3000)}'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saldo total'), findsOneWidget);
   });
 
   testWidgets('lista a despesa do mês na aba Despesas', (tester) async {

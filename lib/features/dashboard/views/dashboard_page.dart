@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/app_shell.dart';
+import '../../../core/utils/money.dart';
+import '../../../core/utils/month.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
@@ -9,9 +11,12 @@ import '../../../core/widgets/section_header.dart';
 import '../../expenses/views/widgets/expense_tile.dart';
 import '../../cards/views/payable_sheet.dart';
 import '../../wallets/views/wallet_form_page.dart';
+import '../../budget/models/month_summary.dart';
 import '../viewmodels/dashboard_view_model.dart';
 import 'month_agenda_page.dart';
-import 'widgets/balance_card.dart';
+import 'widgets/forecast_card.dart';
+import 'widgets/month_so_far_card.dart';
+import 'widgets/today_card.dart';
 import 'widgets/wallet_strip.dart';
 
 class DashboardPage extends StatelessWidget {
@@ -57,22 +62,40 @@ class DashboardPage extends StatelessWidget {
   }
 
   Widget _content(BuildContext context, DashboardViewModel viewModel) {
+    final snapshot = viewModel.snapshot;
     final summary = viewModel.summary;
+    final forecast = snapshot.forecast;
     final upcoming = summary.pendingPayables.take(_upcomingLimit).toList();
+    final showsMonthSoFar = summary.month <= Month.fromDate(summary.today);
 
     return RefreshIndicator(
       onRefresh: viewModel.refresh,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
         children: [
+          TodayCard(
+            balance: snapshot.walletsBalance,
+            awaitingConfirmation: snapshot.awaitingConfirmation,
+            onConfirm: () {
+              viewModel.goToCurrentMonth();
+              context.read<AppShellController>().goTo(
+                AppShellController.walletsTab,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
           MonthSwitcher(
             month: viewModel.month,
             onPrevious: viewModel.goToPreviousMonth,
             onNext: viewModel.goToNextMonth,
             onToday: viewModel.goToCurrentMonth,
           ),
-          const SizedBox(height: 12),
-          BalanceCard(snapshot: viewModel.snapshot),
+          const SizedBox(height: 8),
+          if (forecast != null) ...[
+            ForecastCard(forecast: forecast),
+            const SizedBox(height: 12),
+          ],
+          if (showsMonthSoFar) MonthSoFarCard(summary: summary),
           const SizedBox(height: 20),
           SectionHeader(
             title: 'Carteiras',
@@ -92,9 +115,7 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(height: 20),
           SectionHeader(
             title: 'A pagar',
-            subtitle: summary.overduePayables.isNotEmpty
-                ? '${summary.overduePayables.length} em atraso'
-                : null,
+            subtitle: _pendingLine(summary),
             trailing: TextButton(
               onPressed: () => context.read<AppShellController>().goTo(
                 AppShellController.expensesTab,
@@ -119,6 +140,16 @@ class DashboardPage extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _pendingLine(MonthSummary summary) {
+  final overdue = summary.overduePayables.length;
+  final parts = [
+    if (summary.totalPending > 0)
+      '${formatMoney(summary.totalPending)} a pagar',
+    if (overdue > 0) '$overdue em atraso',
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 class _AllSettledCard extends StatelessWidget {

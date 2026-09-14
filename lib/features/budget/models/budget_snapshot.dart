@@ -1,10 +1,12 @@
 import '../../../core/utils/money.dart';
+import '../../../core/utils/month.dart';
 import '../../cards/models/credit_card.dart';
 import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_payment.dart';
 import '../../wallets/models/balance_check.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
+import 'month_forecast.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
 
@@ -18,6 +20,7 @@ class BudgetSnapshot {
     required this.payments,
     this.cards = const <CreditCard>[],
     this.checks = const <BalanceCheck>[],
+    this.forecast,
   });
 
   factory BudgetSnapshot.empty(MonthSummary summary) => BudgetSnapshot(
@@ -37,6 +40,7 @@ class BudgetSnapshot {
   final List<ExpensePayment> payments;
   final List<CreditCard> cards;
   final List<BalanceCheck> checks;
+  final MonthForecast? forecast;
 
   bool get hasWallets => wallets.isNotEmpty;
 
@@ -58,6 +62,18 @@ class BudgetSnapshot {
   double get walletsBalance => roundCents(
     walletSummaries.fold(0, (total, summary) => total + summary.balance),
   );
+
+  /// What the calendar says already came in this month and still waits for
+  /// the user to confirm, whatever month is on screen.
+  double get awaitingConfirmation {
+    final currentMonth = Month.fromDate(summary.today);
+    return roundCents(
+      receipts
+          .where((receipt) => receipt.isPredicted)
+          .where((receipt) => receipt.month == currentMonth)
+          .fold(0, (total, receipt) => total + receipt.amount),
+    );
+  }
 
   WalletSummary? summaryFor(int? walletId) {
     if (walletId == null) return null;

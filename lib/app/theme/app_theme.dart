@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_palette.dart';
+import 'money_colors.dart';
 
 abstract final class AppTheme {
   static ThemeData light() => _build(Brightness.light);
@@ -16,6 +17,9 @@ abstract final class AppTheme {
 
     return ThemeData(
       colorScheme: scheme,
+      extensions: <ThemeExtension<dynamic>>[
+        isDark ? MoneyColors.dark : MoneyColors.light,
+      ],
       scaffoldBackgroundColor: isDark
           ? scheme.surface
           : Color.alphaBlend(
