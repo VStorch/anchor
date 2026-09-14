@@ -119,7 +119,7 @@ class WalletFormViewModel extends ChangeNotifier {
     _isSaving = true;
     notifyListeners();
 
-    final walletId = await _repository.saveWallet(
+    await _repository.saveWalletWithPayouts(
       Wallet(
         id: _wallet?.id,
         name: _name.trim(),
@@ -127,14 +127,9 @@ class WalletFormViewModel extends ChangeNotifier {
         colorIndex: _colorIndex,
         createdAt: _wallet?.createdAt ?? DateTime.now(),
       ),
+      payouts: _payouts,
+      removedPayoutIds: _removedPayoutIds,
     );
-
-    for (final payoutId in _removedPayoutIds) {
-      await _repository.deletePayout(payoutId);
-    }
-    for (final payout in _payouts) {
-      await _repository.savePayout(payout.copyWith(walletId: walletId));
-    }
 
     _isSaving = false;
     notifyListeners();

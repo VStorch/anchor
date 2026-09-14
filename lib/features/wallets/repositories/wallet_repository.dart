@@ -17,7 +17,7 @@ class WalletRepository {
   final DataChanges _changes;
 
   Future<int> _upsert(
-    Database db,
+    DatabaseExecutor db,
     String table,
     Map<String, Object?> values,
     int? id,
@@ -68,6 +68,38 @@ class WalletRepository {
     return id;
   }
 
+  /// The form's save is one user action: the wallet, its payouts and the
+  /// removed ones land together, so a reload never sees a payout half-deleted.
+  Future<int> saveWalletWithPayouts(
+    Wallet wallet, {
+    required List<Payout> payouts,
+    List<int> removedPayoutIds = const <int>[],
+  }) async {
+    final db = await _database.database;
+    final walletId = await db.transaction((txn) async {
+      final walletId = await _upsert(
+        txn,
+        AppDatabase.walletsTable,
+        wallet.toMap(),
+        wallet.id,
+      );
+      for (final payoutId in removedPayoutIds) {
+        await _deletePayout(txn, payoutId);
+      }
+      for (final payout in payouts) {
+        await _upsert(
+          txn,
+          AppDatabase.payoutsTable,
+          payout.copyWith(walletId: walletId).toMap(),
+          payout.id,
+        );
+      }
+      return walletId;
+    });
+    _changes.publish();
+    return walletId;
+  }
+
   Future<void> deleteWallet(int id) async {
     final db = await _database.database;
     await db.delete(AppDatabase.walletsTable, where: 'id = ?', whereArgs: [id]);
@@ -82,13 +114,17 @@ class WalletRepository {
 
   Future<void> deletePayout(int id) async {
     final db = await _database.database;
+    await db.transaction((txn) => _deletePayout(txn, id));
+    _changes.publish();
+  }
+
+  Future<void> _deletePayout(DatabaseExecutor db, int id) async {
     await db.delete(
       AppDatabase.receiptsTable,
       where: 'payout_id = ? AND status = ?',
       whereArgs: [id, ReceiptStatus.predicted.id],
     );
     await db.delete(AppDatabase.payoutsTable, where: 'id = ?', whereArgs: [id]);
-    _changes.publish();
   }
 
   Future<List<Receipt>> fetchReceipts() async {
@@ -188,6 +224,10 @@ class WalletRepository {
         for (final payout in wallet.payouts) {
           if (payout.id == null) continue;
 
+          if (month == currentMonth) {
+            changed += await _resyncPredicted(db, payout, month);
+          }
+
           final payoutDate = payout.dateIn(month);
           if (payoutDate.isAfter(today)) continue;
 
@@ -203,33 +243,32 @@ class WalletRepository {
             ).toMap(),
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
-          if (insertedId != 0) {
-            changed++;
-            continue;
-          }
-
-          changed += await db.update(
-            AppDatabase.receiptsTable,
-            <String, Object?>{
-              'amount': payout.amount,
-              'received_at': payoutDate.toIso8601String(),
-            },
-            where:
-                'payout_id = ? AND month_key = ? AND status = ? '
-                'AND (amount != ? OR received_at != ?)',
-            whereArgs: [
-              payout.id,
-              month.key,
-              ReceiptStatus.predicted.id,
-              payout.amount,
-              payoutDate.toIso8601String(),
-            ],
-          );
+          if (insertedId != 0) changed++;
         }
       }
     }
 
     if (changed > 0) _changes.publish();
     return changed;
+  }
+
+  /// Editing the payout fixes the month on screen now, but a past month keeps
+  /// what it was predicted with, so its balance does not shift behind the user.
+  Future<int> _resyncPredicted(Database db, Payout payout, Month month) {
+    final payoutDate = payout.dateIn(month).toIso8601String();
+    return db.update(
+      AppDatabase.receiptsTable,
+      <String, Object?>{'amount': payout.amount, 'received_at': payoutDate},
+      where:
+          'payout_id = ? AND month_key = ? AND status = ? '
+          'AND (amount != ? OR received_at != ?)',
+      whereArgs: [
+        payout.id,
+        month.key,
+        ReceiptStatus.predicted.id,
+        payout.amount,
+        payoutDate,
+      ],
+    );
   }
 }

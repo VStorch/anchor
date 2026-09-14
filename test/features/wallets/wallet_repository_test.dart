@@ -401,4 +401,122 @@ void main() {
     expect(await repository.fetchWallets(), isEmpty);
     expect(await repository.fetchReceipts(), isEmpty);
   });
+
+  test(
+    'passar o dia do salário para depois de hoje move a entrada prevista',
+    () async {
+      final today = DateTime.now();
+      final month = Month.current();
+      final lastDay = month.dayOf(31);
+      if (!lastDay.isAfter(DateTime(today.year, today.month, today.day))) {
+        markTestSkipped('hoje já é o último dia do mês');
+        return;
+      }
+      final walletId = await createSalary(
+        createdAt: DateTime(today.year, today.month, 1),
+      );
+      await repository.savePayout(
+        Payout(walletId: walletId, label: 'Salário', amount: 3000, day: 1),
+      );
+      await repository.registerDuePayouts(await repository.fetchWallets());
+
+      final payout = (await repository.fetchWallets()).single.payouts.single;
+      await repository.savePayout(payout.copyWith(day: 31, amount: 3200));
+      await repository.registerDuePayouts(await repository.fetchWallets());
+
+      final receipt = (await repository.fetchReceipts()).single;
+      expect(receipt.receivedAt, lastDay);
+      expect(receipt.amount, 3200);
+      expect(receipt.isPredicted, isTrue);
+    },
+  );
+
+  test('mudar o valor do salário não reescreve os meses passados', () async {
+    final month = Month.current();
+    final twoMonthsAgo = month.addMonths(-2);
+    final walletId = await createSalary(
+      createdAt: DateTime(twoMonthsAgo.year, twoMonthsAgo.month, 1),
+    );
+    await repository.savePayout(
+      Payout(walletId: walletId, label: 'Salário', amount: 3000, day: 1),
+    );
+    await repository.registerDuePayouts(await repository.fetchWallets());
+
+    final payout = (await repository.fetchWallets()).single.payouts.single;
+    await repository.savePayout(payout.copyWith(amount: 3500));
+    await repository.registerDuePayouts(await repository.fetchWallets());
+
+    final amountByMonth = {
+      for (final receipt in await repository.fetchReceipts())
+        receipt.month: receipt.amount,
+    };
+    expect(amountByMonth, {
+      twoMonthsAgo: 3000,
+      month.previous: 3000,
+      month: 3500,
+    });
+  });
+
+  group('salvar a carteira com o calendário', () {
+    Future<Wallet> seedWithTwoPayouts() async {
+      final today = DateTime.now();
+      final walletId = await createSalary(
+        createdAt: DateTime(today.year, today.month, 1),
+      );
+      for (final label in ['Adiantamento', 'Salário']) {
+        await repository.savePayout(
+          Payout(walletId: walletId, label: label, amount: 1500, day: 1),
+        );
+      }
+      await repository.registerDuePayouts(await repository.fetchWallets());
+      return (await repository.fetchWallets()).single;
+    }
+
+    test('grava tudo e avisa uma vez só', () async {
+      final changes = DataChanges();
+      repository = WalletRepository(database, changes);
+      final wallet = await seedWithTwoPayouts();
+      final kept = wallet.payouts.last;
+      final removed = wallet.payouts.first;
+
+      var published = 0;
+      changes.addListener(() => published++);
+      await repository.saveWalletWithPayouts(
+        wallet.copyWith(name: 'Salário CLT'),
+        payouts: [
+          kept.copyWith(amount: 3000),
+          Payout(walletId: 0, label: 'Bônus', amount: 400, day: 20),
+        ],
+        removedPayoutIds: [removed.id!],
+      );
+
+      final saved = (await repository.fetchWallets()).single;
+      expect(published, 1);
+      expect(saved.name, 'Salário CLT');
+      expect(saved.payouts.map((payout) => payout.label), ['Salário', 'Bônus']);
+      expect(saved.payouts.first.amount, 3000);
+      expect(
+        (await repository.fetchReceipts()).where(
+          (receipt) => receipt.payoutId == removed.id,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('a carteira nova recebe o calendário com o id dela', () async {
+      final walletId = await repository.saveWalletWithPayouts(
+        Wallet(
+          name: 'Vale',
+          kind: WalletKind.benefit,
+          colorIndex: 1,
+          createdAt: DateTime.now(),
+        ),
+        payouts: [Payout(walletId: 0, label: 'Mensal', amount: 600, day: 1)],
+      );
+
+      final saved = (await repository.fetchWallets()).single;
+      expect(saved.id, walletId);
+      expect(saved.payouts.single.walletId, walletId);
+    });
+  });
 }
