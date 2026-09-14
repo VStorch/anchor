@@ -127,9 +127,10 @@ from an invoice keeps that invoice's month. Deleting a card leaves its purchases
 (`ON DELETE SET NULL`).
 
 A **wallet** (`features/wallets/`) is a money source — salary or a benefit (VR/VA/mercado). It owns
-`payouts` (the flexible calendar) which generate `receipts` (credits). A wallet's balance is *all*
-receipts minus *all* payments charged to it **and all its `outflows`**, so it carries across months;
-the month figures on `WalletSummary` are separate.
+`payouts` (the flexible calendar) which generate `receipts` (credits). A wallet's balance is its
+latest **balance check** plus the confirmed receipts, minus the payments charged to it **and its
+`outflows`**, counting only what is dated *after* that check (all of it when there is none), so it
+carries across months; the month figures on `WalletSummary` are separate.
 
 An **outflow** (`outflows`) is money spent straight from a wallet with no expense rule behind it —
 the everyday spending that drains a benefit card. It exists because an `expense` is a *rule* with a
@@ -137,19 +138,29 @@ due day, which is the wrong shape for "gastei R$ 47 no mercado hoje". Outflows l
 balance and `spentInMonth`, and count in `MonthSummary.totalSpent` (hence in `balance`), but never in
 `totalExpenses`/`totalPaid` — those stay about the bills, so `totalPending` keeps meaning "what is
 still owed on the rules". The Carteiras tab lists receipts, expense payments and outflows together
-as `WalletMovement`; only receipts and outflows are editable there.
+as `WalletMovement`, with the balance checks; receipts, outflows and checks are editable there, and
+what `WalletSummary.countsInBalance` leaves out shows faded as "antes do saldo informado".
 
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
 national holidays (`BrazilianHolidays`); state and city holidays still need a manual correction.
 
-A receipt also carries a `ReceiptKind`. `adjustment` is how the user says "this wallet really holds X"
-— `adjustBalance` stores only the difference, so a balance that existed before the app did is one
-entry. Adjustments count in `WalletSummary.balance` but never in `receivedInMonth` or
-`MonthSummary.totalReceived`.
+A **balance check** (`balance_checks`, `BalanceCheck`) is how the user says "this wallet really
+holds X": it stores the *absolute* amount and the instant (`checked_at`), and whatever is dated up to
+that instant is already inside the amount, so a movement is never discounted twice and a negative
+balance is just a value. The Saldo sheet (`BalanceCheckSheet`) also lists this month's predicted
+receipts due by then ("já caiu"), and `WalletRepository.saveBalanceCheck` confirms the ticked ones
+in the same transaction. A check for today is taken at `now`; one for a past day at the end of that
+day (`WalletsViewModel.checkedAtFor`). Movements picked by day go through `stampFor`
+(`core/utils/moment.dart`): today keeps the current time, another day becomes noon — so the order
+against a check is deterministic. Checks never count in `receivedInMonth` or
+`MonthSummary.totalReceived`. Schema v8 turned the old difference-based adjustments into checks
+with the balance the user saw at the time; `receipts.kind` is vestigial (still in `_schema`, never
+read or written).
 
-A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts in the
-balance, and the UI marks it "a confirmar"), the user confirms it with the real day and amount, and
+A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts nowhere
+real until confirmed — not in the balance, `receivedInMonth` or `totalReceived`; it only shows as
+expected income, marked "a confirmar"), the user confirms it with the real day and amount, and
 `skipped` is how a calendar receipt is dismissed — deleting the row would only make
 `registerDuePayouts` recreate it. Deleting the payout itself keeps the money it already brought in:
 `deletePayout` removes only the rows still `predicted` and lets `ON DELETE SET NULL` turn the

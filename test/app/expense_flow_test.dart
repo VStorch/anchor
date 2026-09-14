@@ -27,6 +27,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_reminder_notifications.dart';
 import '../support/test_database.dart';
+import '../support/wallet_seed.dart';
 
 void main() {
   late AppDatabase database;
@@ -559,6 +560,7 @@ Future<void> _seedWalletlessExpense(AppDatabase database) async {
       createdAt: DateTime(today.year, today.month),
     ),
   );
+  await confirmDuePayouts(wallets);
 
   await expenses.saveExpense(
     Expense(
@@ -689,7 +691,7 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   expect(find.text('Anchor'), findsOneWidget);
-  expect(find.textContaining('3.000,00'), findsWidgets);
+  expect(find.text('Salário'), findsWidgets);
 }
 
 Future<void> _createInstallmentExpense(WidgetTester tester) async {

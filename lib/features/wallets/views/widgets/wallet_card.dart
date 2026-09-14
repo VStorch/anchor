@@ -10,14 +10,14 @@ class WalletCard extends StatelessWidget {
     required this.onTap,
     required this.onRegisterReceipt,
     required this.onRegisterOutflow,
-    required this.onAdjustBalance,
+    required this.onCheckBalance,
   });
 
   final WalletSummary summary;
   final VoidCallback onTap;
   final VoidCallback onRegisterReceipt;
   final VoidCallback onRegisterOutflow;
-  final VoidCallback onAdjustBalance;
+  final VoidCallback onCheckBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +83,7 @@ class WalletCard extends StatelessWidget {
                       color: summary.balance < 0
                           ? theme.colorScheme.error
                           : wallet.color,
-                      onTap: onAdjustBalance,
+                      onTap: onCheckBalance,
                     ),
                   ),
                   const SizedBox(width: 8),

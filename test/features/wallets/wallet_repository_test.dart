@@ -1,10 +1,11 @@
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
-import 'package:anchor/features/wallets/models/receipt_kind.dart';
+import 'package:anchor/features/wallets/models/receipt.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
@@ -294,63 +295,113 @@ void main() {
     expect(await repository.fetchReceipts(), hasLength(1));
   });
 
-  test('ajustar o saldo lança só a diferença', () async {
-    final walletId = await createSalary(createdAt: DateTime.now());
-    final wallet = (await repository.fetchWallets()).single;
+  group('saldo informado', () {
+    Future<Wallet> seedPredictedSalary() async {
+      final today = DateTime.now();
+      final walletId = await createSalary(
+        createdAt: DateTime(today.year, today.month, 1),
+      );
+      await repository.savePayout(
+        Payout(
+          walletId: walletId,
+          label: 'Mensal',
+          amount: 3200,
+          day: 1,
+          createdAt: DateTime(today.year, today.month, 1),
+        ),
+      );
+      await repository.registerDuePayouts(await repository.fetchWallets());
+      return (await repository.fetchWallets()).single;
+    }
 
-    await repository.adjustBalance(
-      wallet: wallet,
-      currentBalance: 0,
-      targetBalance: 2000,
-    );
-    await repository.adjustBalance(
-      wallet: wallet,
-      currentBalance: 2000,
-      targetBalance: 1750.30,
-    );
+    test(
+      'guarda o valor e confirma a entrada que já caiu de uma vez',
+      () async {
+        final changes = DataChanges();
+        repository = WalletRepository(database, changes);
+        final wallet = await seedPredictedSalary();
+        final predicted = (await repository.fetchReceipts()).single;
 
-    final receipts = await repository.fetchReceipts();
+        var published = 0;
+        changes.addListener(() => published++);
+        final checkedAt = DateTime.now();
+        await repository.saveBalanceCheck(
+          BalanceCheck(walletId: wallet.id!, amount: 850, checkedAt: checkedAt),
+          confirm: [predicted],
+        );
 
-    expect(walletId, wallet.id);
-    expect(receipts, hasLength(2));
-    expect(receipts.every((receipt) => receipt.isAdjustment), isTrue);
-    expect(
-      receipts.fold<double>(0, (total, receipt) => total + receipt.amount),
-      closeTo(1750.30, 0.001),
-    );
-  });
-
-  test('ajustar para o saldo que já está não lança nada', () async {
-    await createSalary(createdAt: DateTime.now());
-    final wallet = (await repository.fetchWallets()).single;
-
-    await repository.adjustBalance(
-      wallet: wallet,
-      currentBalance: 1200,
-      targetBalance: 1200,
-    );
-
-    expect(await repository.fetchReceipts(), isEmpty);
-  });
-
-  test('o ajuste de saldo é uma entrada manual removível', () async {
-    await createSalary(createdAt: DateTime.now());
-    final wallet = (await repository.fetchWallets()).single;
-
-    await repository.adjustBalance(
-      wallet: wallet,
-      currentBalance: 0,
-      targetBalance: 500,
+        final check = (await repository.fetchBalanceChecks()).single;
+        final receipt = (await repository.fetchReceipts()).single;
+        expect(published, 1);
+        expect(check.amount, 850);
+        expect(check.checkedAt, checkedAt);
+        expect(receipt.status, ReceiptStatus.confirmed);
+        expect(receipt.receivedAt, predicted.receivedAt);
+      },
     );
 
-    final adjustment = (await repository.fetchReceipts()).single;
+    test('se a confirmação falha, o saldo informado não é gravado', () async {
+      final wallet = await seedPredictedSalary();
+      final predicted = (await repository.fetchReceipts()).single;
+      final orphan = Receipt(
+        id: predicted.id,
+        walletId: 999,
+        month: predicted.month,
+        amount: predicted.amount,
+        receivedAt: predicted.receivedAt,
+        status: ReceiptStatus.predicted,
+      );
 
-    expect(adjustment.kind, ReceiptKind.adjustment);
-    expect(adjustment.isManual, isTrue);
+      await expectLater(
+        repository.saveBalanceCheck(
+          BalanceCheck(
+            walletId: wallet.id!,
+            amount: 850,
+            checkedAt: DateTime.now(),
+          ),
+          confirm: [orphan],
+        ),
+        throwsA(anything),
+      );
 
-    await repository.discardReceipt(adjustment);
+      expect(await repository.fetchBalanceChecks(), isEmpty);
+      expect((await repository.fetchReceipts()).single.isPredicted, isTrue);
+    });
 
-    expect(await repository.fetchReceipts(), isEmpty);
+    test('editar e remover o saldo informado', () async {
+      final wallet = await seedPredictedSalary();
+      await repository.saveBalanceCheck(
+        BalanceCheck(
+          walletId: wallet.id!,
+          amount: 850,
+          checkedAt: DateTime.now(),
+        ),
+      );
+      final check = (await repository.fetchBalanceChecks()).single;
+
+      await repository.saveBalanceCheck(check.copyWith(amount: -120.5));
+      final edited = (await repository.fetchBalanceChecks()).single;
+      expect(edited.id, check.id);
+      expect(edited.amount, -120.5);
+
+      await repository.deleteBalanceCheck(edited.id!);
+      expect(await repository.fetchBalanceChecks(), isEmpty);
+    });
+
+    test('apagar a carteira leva junto o saldo informado', () async {
+      final wallet = await seedPredictedSalary();
+      await repository.saveBalanceCheck(
+        BalanceCheck(
+          walletId: wallet.id!,
+          amount: 850,
+          checkedAt: DateTime.now(),
+        ),
+      );
+
+      await repository.deleteWallet(wallet.id!);
+
+      expect(await repository.fetchBalanceChecks(), isEmpty);
+    });
   });
 
   test('remover o recebimento preserva as entradas já confirmadas', () async {

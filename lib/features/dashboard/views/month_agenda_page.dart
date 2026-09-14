@@ -136,7 +136,7 @@ class _AgendaDay {
 
     return <_AgendaEntry>[
       for (final receipt in monthReceipts)
-        if (receipt.counts && !receipt.isAdjustment)
+        if (receipt.counts)
           _AgendaEntry(
             day: receipt.receivedAt.day,
             title: _incomeTitle(receipt.payoutId, snapshot),

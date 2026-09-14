@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
@@ -58,7 +59,7 @@ class _OutflowSheetState extends State<OutflowSheet> {
   late String _description = widget.outflow?.description ?? '';
   late DateTime _spentAt =
       widget.outflow?.spentAt ??
-      (widget.month ?? Month.current()).suggestedDate;
+      stampFor((widget.month ?? Month.current()).suggestedDate);
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +156,6 @@ class _OutflowSheetState extends State<OutflowSheet> {
 
   Future<void> _pickDate() async {
     final date = await pickMovementDate(context, _spentAt);
-    if (date != null) setState(() => _spentAt = date);
+    if (date != null) setState(() => _spentAt = stampFor(date));
   }
 }

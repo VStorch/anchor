@@ -12,6 +12,7 @@ import '../../cards/models/card_invoice.dart';
 import '../../cards/models/credit_card.dart';
 import '../../cards/views/card_form_page.dart';
 import '../../cards/views/card_invoice_sheet.dart';
+import '../models/balance_check.dart';
 import '../models/outflow.dart';
 import '../models/receipt.dart';
 import '../models/wallet.dart';
@@ -19,7 +20,7 @@ import '../models/wallet_kind.dart';
 import '../models/wallet_movement.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_form_page.dart';
-import 'widgets/balance_adjustment_sheet.dart';
+import 'widgets/balance_check_sheet.dart';
 import 'widgets/outflow_sheet.dart';
 import 'widgets/receipt_sheet.dart';
 import 'widgets/wallet_card.dart';
@@ -124,7 +125,7 @@ class WalletsPage extends StatelessWidget {
         onTap: () => WalletFormPage.open(context, wallet: summary.wallet),
         onRegisterReceipt: () => _registerReceipt(context, summary.wallet),
         onRegisterOutflow: () => _registerOutflow(context, summary.wallet),
-        onAdjustBalance: () => _adjustBalance(context, summary),
+        onCheckBalance: () => _checkBalance(context, summary),
       ),
     );
   }
@@ -162,19 +163,38 @@ class WalletsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _adjustBalance(
+  Future<void> _checkBalance(
     BuildContext context,
-    WalletSummary summary,
-  ) async {
+    WalletSummary summary, {
+    BalanceCheck? check,
+  }) async {
     final viewModel = context.read<WalletsViewModel>();
-    final balance = await BalanceAdjustmentSheet.show(
+    final wallet = summary.wallet;
+    final edit = await BalanceCheckSheet.show(
       context,
-      wallet: summary.wallet,
-      currentBalance: summary.balance,
+      wallet: wallet,
+      calculatedBalance: summary.balance,
+      dueUnconfirmed: (day) => viewModel.dueUnconfirmedOf(
+        wallet,
+        WalletsViewModel.checkedAtFor(day),
+      ),
+      receiptTitle: viewModel.receiptTitle,
+      check: check,
     );
-    if (balance == null) return;
+    if (edit == null) return;
 
-    await viewModel.adjustBalance(summary, balance);
+    if (edit.isRemoved) {
+      await viewModel.deleteBalanceCheck(check!);
+      return;
+    }
+
+    await viewModel.saveBalanceCheck(
+      wallet,
+      amount: edit.amount,
+      day: edit.day,
+      editing: check,
+      confirm: edit.confirm,
+    );
   }
 
   Future<void> _openMovement(
@@ -183,7 +203,15 @@ class WalletsPage extends StatelessWidget {
   ) async {
     final receipt = movement.receipt;
     final outflow = movement.outflow;
+    final check = movement.check;
 
+    if (check != null) {
+      final summary = context.read<WalletsViewModel>().summaryFor(
+        check.walletId,
+      );
+      if (summary == null) return;
+      return _checkBalance(context, summary, check: check);
+    }
     if (receipt != null) return _editReceipt(context, receipt);
     if (outflow != null) return _editOutflow(context, outflow);
   }
@@ -298,44 +326,62 @@ class _MovementTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = wallet?.color ?? theme.colorScheme.primary;
-    final amountColor = movement.isPredicted
+    final amountColor =
+        movement.isPredicted || movement.isCheck || !movement.countsInBalance
         ? theme.colorScheme.onSurfaceVariant
         : movement.isIncome
         ? theme.colorScheme.primary
         : theme.colorScheme.onSurface;
+    final notes = [
+      if (movement.isPredicted) 'a confirmar',
+      if (!movement.countsInBalance) 'antes do saldo informado',
+    ];
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      onTap: movement.isEditable ? onTap : null,
-      leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.16),
-        child: Icon(_icon, size: 18, color: color),
-      ),
-      title: Text(movement.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        '${DateFormat.MMMd('pt_BR').format(movement.date)}'
-        ' · ${wallet?.name ?? 'Carteira removida'}'
-        '${movement.isPredicted ? ' · a confirmar' : ''}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Text(
-        '${movement.amount > 0
-            ? '+'
-            : movement.amount < 0
-            ? '−'
-            : ''}'
-        '${formatMoney(movement.amount.abs())}',
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: amountColor,
+    return Opacity(
+      opacity: movement.countsInBalance ? 1 : 0.6,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        onTap: movement.isEditable ? onTap : null,
+        leading: CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.16),
+          child: Icon(_icon, size: 18, color: color),
+        ),
+        title: Text(
+          movement.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          [
+            DateFormat.MMMd('pt_BR').format(movement.date),
+            wallet?.name ?? 'Carteira removida',
+            ...notes,
+          ].join(' · '),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Text(
+          movement.isCheck ? formatMoney(movement.amount) : _signedAmount,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: amountColor,
+          ),
         ),
       ),
     );
   }
 
+  String get _signedAmount {
+    final sign = movement.amount > 0
+        ? '+'
+        : movement.amount < 0
+        ? '−'
+        : '';
+    return '$sign${formatMoney(movement.amount.abs())}';
+  }
+
   IconData get _icon {
-    if (movement.isAdjustment) return Icons.tune;
+    if (movement.isCheck) return Icons.tune;
     if (movement.isPredicted) return Icons.schedule;
     if (movement.isIncome) return Icons.arrow_downward;
     if (movement.outflow != null) return Icons.shopping_bag_outlined;

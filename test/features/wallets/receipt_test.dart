@@ -1,28 +1,28 @@
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/wallets/models/receipt.dart';
-import 'package:anchor/features/wallets/models/receipt_kind.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('editar um ajuste de saldo continua sendo ajuste', () {
-    final adjustment = Receipt(
+  test('confirmar um recebimento do calendário mantém o mês dele', () {
+    final predicted = Receipt(
       id: 4,
       walletId: 1,
+      payoutId: 2,
       month: const Month(2026, 9),
-      amount: 250,
-      receivedAt: DateTime(2026, 9, 2),
-      kind: ReceiptKind.adjustment,
+      amount: 3200,
+      receivedAt: DateTime(2026, 9, 8),
+      status: ReceiptStatus.predicted,
     );
 
-    final edited = adjustment.copyWith(
-      amount: 300,
-      receivedAt: DateTime(2026, 9, 3),
+    final confirmed = predicted.copyWith(
+      amount: 3150,
+      receivedAt: DateTime(2026, 10, 1),
       status: ReceiptStatus.confirmed,
     );
 
-    expect(edited.kind, ReceiptKind.adjustment);
-    expect(edited.isAdjustment, isTrue);
-    expect(edited.amount, 300);
+    expect(confirmed.isConfirmed, isTrue);
+    expect(confirmed.month, const Month(2026, 9));
+    expect(confirmed.toMap().containsKey('kind'), isFalse);
   });
 }

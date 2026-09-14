@@ -1,6 +1,7 @@
 import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:anchor/core/widgets/money_field.dart';
@@ -8,10 +9,11 @@ import 'package:anchor/features/dashboard/views/widgets/balance_card.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
+import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
-import 'package:anchor/features/wallets/views/widgets/balance_adjustment_sheet.dart';
+import 'package:anchor/features/wallets/views/widgets/balance_check_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:anchor/features/wallets/views/widgets/outflow_sheet.dart';
@@ -36,7 +38,10 @@ void main() {
 
   tearDown(() => database.close());
 
-  Future<void> seedSalary({PayoutSchedule? schedule}) async {
+  Future<void> seedSalary({
+    PayoutSchedule? schedule,
+    double amount = 3000,
+  }) async {
     final repository = WalletRepository(database, DataChanges());
     final today = DateTime.now();
 
@@ -52,7 +57,7 @@ void main() {
       Payout(
         walletId: walletId,
         label: 'Mensal',
-        amount: 3000,
+        amount: amount,
         day: 1,
         schedule: schedule ?? PayoutSchedule.dayOfMonth,
         createdAt: DateTime(today.year, today.month),
@@ -96,7 +101,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('o ajuste de saldo muda a capa sem virar entrada do mês', (
+  Finder moneyInput() => find.descendant(
+    of: find.byType(MoneyField),
+    matching: find.byType(TextField),
+  );
+
+  testWidgets('o saldo informado muda a capa sem virar entrada do mês', (
     tester,
   ) async {
     await seedSalary();
@@ -104,15 +114,9 @@ void main() {
 
     await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.descendant(
-        of: find.byType(MoneyField),
-        matching: find.byType(TextField),
-      ),
-      '5200',
-    );
+    await tester.enterText(moneyInput(), '5200');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ajustar saldo'));
+    await tester.tap(find.text('Salvar saldo'));
     await tester.pumpAndSettle();
 
     await goToDashboard(tester);
@@ -127,6 +131,20 @@ void main() {
       find.descendant(of: card, matching: find.textContaining('3.000,00')),
       findsWidgets,
     );
+  });
+
+  testWidgets('a entrada prevista não conta no saldo até ser confirmada', (
+    tester,
+  ) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    final card = find.byType(WalletCard);
+    expect(
+      find.descendant(of: card, matching: find.text(formatMoney(0))),
+      findsNWidgets(3),
+    );
+    expect(find.textContaining('a confirmar'), findsWidgets);
   });
 
   testWidgets('confirma a entrada prevista com o valor real', (tester) async {
@@ -157,33 +175,87 @@ void main() {
     expect(find.textContaining('a confirmar'), findsNothing);
   });
 
-  testWidgets('ajusta o saldo da carteira na mão', (tester) async {
-    await seedSalary();
+  testWidgets('informa o saldo e confirma o salário que já caiu', (
+    tester,
+  ) async {
+    await seedSalary(amount: 3200);
     await pumpApp(tester);
 
     await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
 
-    expect(find.byType(BalanceAdjustmentSheet), findsOneWidget);
+    expect(find.byType(BalanceCheckSheet), findsOneWidget);
     expect(find.text('Saldo de Salário'), findsOneWidget);
+    expect(find.textContaining('O app calcula'), findsOneWidget);
 
-    await tester.enterText(
-      find.descendant(
-        of: find.byType(MoneyField),
-        matching: find.byType(TextField),
-      ),
-      '5200',
+    final arrived = find.byType(CheckboxListTile);
+    expect(arrived, findsOneWidget);
+    expect(
+      find.descendant(of: arrived, matching: find.textContaining('já caiu')),
+      findsOneWidget,
     );
+    expect(tester.widget<CheckboxListTile>(arrived).value, isTrue);
+
+    await tester.enterText(moneyInput(), '850');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar saldo'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('a mais'), findsOneWidget);
+    final walletCard = find.byType(WalletCard);
+    expect(
+      find.descendant(of: walletCard, matching: find.text(formatMoney(850))),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: walletCard, matching: find.text(formatMoney(3200))),
+      findsOneWidget,
+    );
+    expect(find.textContaining('a confirmar'), findsNothing);
+    expect(find.text('Saldo informado'), findsOneWidget);
+    expect(find.textContaining('antes do saldo informado'), findsOneWidget);
 
-    await tester.tap(find.text('Ajustar saldo'));
+    final receipt = (await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchReceipts()).single;
+    expect(receipt.status, ReceiptStatus.confirmed);
+
+    await tester.tap(find.text('Gasto'));
+    await tester.pumpAndSettle();
+    await tester.enterText(moneyInput(), '47,90');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar gasto'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('5.200,00'), findsWidgets);
-    expect(find.text('Ajuste de saldo'), findsOneWidget);
-    expect(find.text('Recebido'), findsWidgets);
+    expect(
+      find.descendant(of: walletCard, matching: find.text(formatMoney(802.10))),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('remove o saldo informado pela movimentação', (tester) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Saldo').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(moneyInput(), '-120');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar saldo'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saldo informado'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BalanceCheckSheet), findsOneWidget);
+
+    await tester.tap(find.text('Remover'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saldo informado'), findsNothing);
+    expect(
+      await WalletRepository(database, DataChanges()).fetchBalanceChecks(),
+      isEmpty,
+    );
   });
 
   testWidgets('lança um gasto avulso pelo cartão da carteira', (tester) async {
@@ -213,7 +285,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mercado'), findsOneWidget);
-    expect(find.textContaining('2.952,10'), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.textContaining('47,90'),
+      ),
+      findsNWidgets(2),
+    );
   });
 
   testWidgets('o gasto lançado num mês passado fica naquele mês', (

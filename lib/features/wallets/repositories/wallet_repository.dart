@@ -3,10 +3,10 @@ import 'package:sqflite/sqflite.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/state/data_changes.dart';
 import '../../../core/utils/month.dart';
+import '../models/balance_check.dart';
 import '../models/outflow.dart';
 import '../models/payout.dart';
 import '../models/receipt.dart';
-import '../models/receipt_kind.dart';
 import '../models/receipt_status.dart';
 import '../models/wallet.dart';
 
@@ -142,24 +142,49 @@ class WalletRepository {
     _changes.publish();
   }
 
-  Future<void> adjustBalance({
-    required Wallet wallet,
-    required double currentBalance,
-    required double targetBalance,
-  }) async {
-    final difference = targetBalance - currentBalance;
-    if (difference.abs() < 0.005) return;
-
-    final now = DateTime.now();
-    await saveReceipt(
-      Receipt(
-        walletId: wallet.id!,
-        month: Month.fromDate(now),
-        amount: difference,
-        receivedAt: now,
-        kind: ReceiptKind.adjustment,
-      ),
+  Future<List<BalanceCheck>> fetchBalanceChecks() async {
+    final db = await _database.database;
+    final rows = await db.query(
+      AppDatabase.balanceChecksTable,
+      orderBy: 'checked_at ASC, id ASC',
     );
+    return rows.map(BalanceCheck.fromMap).toList();
+  }
+
+  /// Saying what a wallet holds often comes with "and the salary did land":
+  /// both are written together, so the balance never flickers in between.
+  Future<void> saveBalanceCheck(
+    BalanceCheck check, {
+    List<Receipt> confirm = const <Receipt>[],
+  }) async {
+    final db = await _database.database;
+    await db.transaction((txn) async {
+      for (final receipt in confirm) {
+        await _upsert(
+          txn,
+          AppDatabase.receiptsTable,
+          receipt.copyWith(status: ReceiptStatus.confirmed).toMap(),
+          receipt.id,
+        );
+      }
+      await _upsert(
+        txn,
+        AppDatabase.balanceChecksTable,
+        check.toMap(),
+        check.id,
+      );
+    });
+    _changes.publish();
+  }
+
+  Future<void> deleteBalanceCheck(int id) async {
+    final db = await _database.database;
+    await db.delete(
+      AppDatabase.balanceChecksTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changes.publish();
   }
 
   Future<void> discardReceipt(Receipt receipt) async {

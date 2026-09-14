@@ -8,10 +8,11 @@ import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
+import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/receipt.dart';
-import 'package:anchor/features/wallets/models/receipt_kind.dart';
+import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -204,40 +205,168 @@ void main() {
     });
   });
 
-  group('ajuste de saldo', () {
-    final withAdjustment = [
-      ...receipts,
-      Receipt(
-        walletId: 1,
-        month: august,
-        amount: 2000,
-        receivedAt: DateTime(2026, 8, 2),
-        kind: ReceiptKind.adjustment,
-      ),
-    ];
-
-    MonthSummary buildAdjusted() => MonthSummary.build(
-      month: august,
-      expenses: expenses,
-      payments: payments,
-      receipts: withAdjustment,
+  group('saldo informado', () {
+    const september = Month(2026, 9);
+    final salaryPayout = Receipt(
+      walletId: 1,
+      payoutId: 1,
+      month: september,
+      amount: 3200,
+      receivedAt: DateTime(2026, 9, 8),
+      status: ReceiptStatus.predicted,
+    );
+    final rent = Expense(
+      id: 30,
+      name: 'Aluguel',
+      type: ExpenseType.recurring,
+      amount: 1100,
+      dueDay: 10,
+      startMonth: september,
+      walletId: 1,
+      createdAt: DateTime(2026, 9, 1),
+    );
+    final informed = BalanceCheck(
+      id: 1,
+      walletId: 1,
+      amount: 850,
+      checkedAt: DateTime(2026, 9, 13, 18),
     );
 
-    test('não conta como entrada do mês', () {
-      expect(buildAdjusted().totalReceived, 3600);
+    WalletSummary salaryOf({
+      List<Receipt> receipts = const <Receipt>[],
+      List<ExpensePayment> payments = const <ExpensePayment>[],
+      List<Outflow> outflows = const <Outflow>[],
+      List<BalanceCheck> checks = const <BalanceCheck>[],
+    }) => WalletSummary.buildAll(
+      month: september,
+      wallets: [salary],
+      receipts: receipts,
+      payments: payments,
+      occurrences: const [],
+      checks: checks,
+      outflows: outflows,
+    ).single;
+
+    test('a entrada prevista não entra no saldo nem no que entrou', () {
+      final summary = MonthSummary.build(
+        month: september,
+        expenses: const [],
+        payments: const [],
+        receipts: [salaryPayout],
+      );
+      final wallet = salaryOf(receipts: [salaryPayout]);
+
+      expect(summary.totalReceived, 0);
+      expect(summary.unconfirmedReceipts, [salaryPayout]);
+      expect(wallet.balance, 0);
+      expect(wallet.receivedInMonth, 0);
+      expect(wallet.unconfirmedInMonth, 1);
+      expect(wallet.pendingConfirmationInMonth, 3200);
     });
 
-    test('entra no saldo da carteira', () {
+    test('o saldo passa a ser o valor informado', () {
+      final wallet = salaryOf(receipts: receipts, checks: [informed]);
+
+      expect(wallet.balance, 850);
+      expect(wallet.latestCheck, informed);
+    });
+
+    test('o que tem data anterior ao saldo informado não conta de novo', () {
+      final rentPaid = ExpensePayment(
+        expenseId: rent.id!,
+        walletId: 1,
+        month: september,
+        amount: 1100,
+        paidAt: DateTime(2026, 9, 10, 12),
+      );
+      final wallet = salaryOf(
+        receipts: [salaryPayout.copyWith(status: ReceiptStatus.confirmed)],
+        payments: [rentPaid],
+        checks: [informed],
+      );
+
+      expect(wallet.balance, 850);
+      expect(wallet.countsInBalance(rentPaid.paidAt), isFalse);
+    });
+
+    test('o que vem depois do saldo informado mexe nele', () {
+      final wallet = salaryOf(
+        payments: [
+          ExpensePayment(
+            expenseId: rent.id!,
+            walletId: 1,
+            month: september,
+            amount: 1100,
+            paidAt: DateTime(2026, 9, 13, 19),
+          ),
+        ],
+        outflows: [
+          Outflow(
+            walletId: 1,
+            description: 'Mercado',
+            amount: 47.9,
+            spentAt: DateTime(2026, 9, 14, 12),
+          ),
+        ],
+        receipts: [
+          Receipt(
+            walletId: 1,
+            month: september,
+            amount: 200,
+            receivedAt: DateTime(2026, 9, 20, 12),
+          ),
+        ],
+        checks: [informed],
+      );
+
+      expect(wallet.balance, -97.9);
+    });
+
+    test('aceita um saldo negativo', () {
+      final overdrawn = BalanceCheck(
+        walletId: 1,
+        amount: -320.45,
+        checkedAt: DateTime(2026, 9, 13, 18),
+      );
+
+      expect(salaryOf(checks: [overdrawn]).balance, -320.45);
+    });
+
+    test('com dois saldos informados, vale o mais recente', () {
+      final older = BalanceCheck(
+        id: 2,
+        walletId: 1,
+        amount: 5000,
+        checkedAt: DateTime(2026, 9, 2, 23, 59),
+      );
+      final outflowBetween = Outflow(
+        walletId: 1,
+        description: 'Farmácia',
+        amount: 60,
+        spentAt: DateTime(2026, 9, 5, 12),
+      );
+
+      final wallet = salaryOf(
+        outflows: [outflowBetween],
+        checks: [informed, older],
+      );
+
+      expect(wallet.latestCheck, informed);
+      expect(wallet.balance, 850);
+    });
+
+    test('o saldo de outra carteira não interfere', () {
       final summaries = WalletSummary.buildAll(
         month: august,
         wallets: [salary, voucher],
-        receipts: withAdjustment,
+        receipts: receipts,
         payments: payments,
-        occurrences: buildAdjusted().occurrences,
+        occurrences: buildSummary().occurrences,
+        checks: [informed],
       );
 
-      expect(summaries.first.balance, 7500);
-      expect(summaries.first.receivedInMonth, 3000);
+      expect(summaries.first.balance, 850);
+      expect(summaries.last.balance, 600);
     });
   });
 
@@ -289,6 +418,7 @@ void main() {
         wallets: [salary, voucher],
         receipts: receipts,
         payments: payments,
+        checks: const [],
         occurrences: buildWithOutflows().occurrences,
         outflows: outflows,
       ).last;
@@ -308,6 +438,7 @@ void main() {
         wallets: [salary, voucher],
         receipts: receipts,
         payments: payments,
+        checks: const [],
         occurrences: buildSummary().occurrences,
       );
     });
@@ -570,6 +701,7 @@ void main() {
         wallets: [salary],
         receipts: credit,
         payments: splitPayments,
+        checks: const [],
         occurrences: summary.occurrences,
       ).single;
 
@@ -609,6 +741,7 @@ void main() {
         wallets: [salary],
         receipts: partReceipts,
         payments: wholePayment,
+        checks: const [],
         occurrences: summary.occurrences,
       ).single;
 

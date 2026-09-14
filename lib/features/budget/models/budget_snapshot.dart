@@ -2,6 +2,7 @@ import '../../../core/utils/money.dart';
 import '../../cards/models/credit_card.dart';
 import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_payment.dart';
+import '../../wallets/models/balance_check.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
 import 'month_summary.dart';
@@ -16,6 +17,7 @@ class BudgetSnapshot {
     required this.receipts,
     required this.payments,
     this.cards = const <CreditCard>[],
+    this.checks = const <BalanceCheck>[],
   });
 
   factory BudgetSnapshot.empty(MonthSummary summary) => BudgetSnapshot(
@@ -34,6 +36,7 @@ class BudgetSnapshot {
   final List<Receipt> receipts;
   final List<ExpensePayment> payments;
   final List<CreditCard> cards;
+  final List<BalanceCheck> checks;
 
   bool get hasWallets => wallets.isNotEmpty;
 
@@ -57,6 +60,9 @@ class BudgetSnapshot {
   }
 
   Wallet? walletById(int? id) => summaryFor(id)?.wallet;
+
+  BalanceCheck? latestCheckOf(int walletId) =>
+      summaryFor(walletId)?.latestCheck;
 
   CreditCard? cardById(int? id) {
     if (id == null) return null;

@@ -155,9 +155,8 @@ class MonthSummary {
     return null;
   }
 
-  List<Receipt> get unconfirmedReceipts => receipts
-      .where((receipt) => receipt.isPredicted && !receipt.isAdjustment)
-      .toList();
+  List<Receipt> get unconfirmedReceipts =>
+      receipts.where((receipt) => receipt.isPredicted).toList();
 
   double get totalExpenses => occurrences.totalAmount;
 
@@ -172,7 +171,7 @@ class MonthSummary {
 
   double get totalReceived => roundCents(
     receipts
-        .where((receipt) => !receipt.isAdjustment)
+        .where((receipt) => receipt.isConfirmed)
         .fold(0, (total, receipt) => total + receipt.amount),
   );
 

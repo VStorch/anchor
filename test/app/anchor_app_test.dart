@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_reminder_notifications.dart';
 import '../support/test_database.dart';
+import '../support/wallet_seed.dart';
 
 void main() {
   late AppDatabase database;
@@ -82,6 +83,7 @@ void main() {
         createdAt: DateTime(today.year, today.month),
       ),
     );
+    await confirmDuePayouts(wallets);
     await expenses.saveExpense(
       Expense(
         name: 'Plano de saúde',

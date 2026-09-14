@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
@@ -55,7 +56,7 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
   late double _amount = widget.receipt?.amount ?? 0;
   late DateTime _receivedAt =
       widget.receipt?.receivedAt ??
-      (widget.month ?? Month.current()).suggestedDate;
+      stampFor((widget.month ?? Month.current()).suggestedDate);
 
   Receipt? get _receipt => widget.receipt;
 
@@ -150,6 +151,6 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
 
   Future<void> _pickDate() async {
     final date = await pickMovementDate(context, _receivedAt);
-    if (date != null) setState(() => _receivedAt = date);
+    if (date != null) setState(() => _receivedAt = stampFor(date));
   }
 }

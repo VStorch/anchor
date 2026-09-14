@@ -26,6 +26,7 @@ class BudgetService {
     final monthAmounts = await _expenseRepository.fetchMonthAmounts();
     final outflows = await _walletRepository.fetchOutflows();
     final cards = await _cardRepository.fetchCards();
+    final checks = await _walletRepository.fetchBalanceChecks();
 
     final summary = MonthSummary.build(
       month: month,
@@ -45,6 +46,7 @@ class BudgetService {
         receipts: receipts,
         payments: payments,
         occurrences: summary.occurrences,
+        checks: checks,
         outflows: outflows,
       ),
       expenses: expenses,
@@ -52,6 +54,7 @@ class BudgetService {
       receipts: receipts,
       payments: payments,
       cards: cards,
+      checks: checks,
     );
   }
 }

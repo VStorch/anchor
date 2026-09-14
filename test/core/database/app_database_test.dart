@@ -4,13 +4,13 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/database/database_backup.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/budget/models/wallet_summary.dart';
 import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
-import 'package:anchor/features/wallets/models/receipt_kind.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -164,7 +164,6 @@ void main() {
     expect(wallet.payouts.single.day, 5);
     expect(wallet.payouts.single.schedule, PayoutSchedule.dayOfMonth);
     expect(receipt.status, ReceiptStatus.confirmed);
-    expect(receipt.kind, ReceiptKind.income);
     expect((await expenses.fetchExpenses()).single.name, 'Mercado');
     expect(
       (await expenses.fetchPayments()).map((payment) => payment.amount),
@@ -173,27 +172,111 @@ void main() {
     expect(await expenses.fetchMonthAmounts(), isEmpty);
   });
 
-  test('o banco migrado aceita um ajuste de saldo', () async {
-    final database = AppDatabase(
-      factory: databaseFactoryFfiNoIsolate,
-      filePath: path,
-    );
-    addTearDown(database.close);
+  group('ajustes de saldo antigos', () {
+    Future<void> seedAdjustmentsAtVersion7() async {
+      final v7 = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: path,
+        schemaVersion: 7,
+      );
+      final db = await v7.database;
 
-    final repository = WalletRepository(database, DataChanges());
-    final wallet = (await repository.fetchWallets()).single;
+      await db.insert('receipts', <String, Object?>{
+        'wallet_id': 1,
+        'payout_id': 1,
+        'month_key': '2026-09',
+        'amount': 3200.0,
+        'received_at': DateTime(2026, 9, 8).toIso8601String(),
+        'status': 'predicted',
+      });
+      await db.insert('receipts', <String, Object?>{
+        'wallet_id': 1,
+        'month_key': '2026-09',
+        'amount': 500.0,
+        'received_at': DateTime(2026, 9, 1).toIso8601String(),
+        'status': 'skipped',
+      });
+      await db.insert('outflows', <String, Object?>{
+        'wallet_id': 1,
+        'month_key': '2026-09',
+        'description': 'Mercado',
+        'amount': 100.0,
+        'spent_at': DateTime(2026, 9, 9).toIso8601String(),
+      });
+      await db.insert('receipts', <String, Object?>{
+        'wallet_id': 1,
+        'month_key': '2026-09',
+        'amount': -4600.0,
+        'received_at': DateTime(2026, 9, 13, 10).toIso8601String(),
+        'kind': 'adjustment',
+      });
+      await db.insert('expense_payments', <String, Object?>{
+        'expense_id': 1,
+        'wallet_id': 1,
+        'month_key': '2026-09',
+        'amount': 100.0,
+        'paid_at': DateTime(2026, 9, 14).toIso8601String(),
+      });
+      await db.insert('receipts', <String, Object?>{
+        'wallet_id': 1,
+        'month_key': '2026-09',
+        'amount': 250.0,
+        'received_at': DateTime(2026, 9, 20).toIso8601String(),
+        'kind': 'adjustment',
+      });
 
-    await repository.adjustBalance(
-      wallet: wallet,
-      currentBalance: 3000,
-      targetBalance: 5000,
-    );
+      await v7.close();
+    }
 
-    final adjustment = (await repository.fetchReceipts())
-        .where((receipt) => receipt.isAdjustment)
-        .single;
+    Future<void> expectChecksReplaceAdjustments(AppDatabase database) async {
+      final changes = DataChanges();
+      final wallets = WalletRepository(database, changes);
+      final checks = await wallets.fetchBalanceChecks();
+      final receipts = await wallets.fetchReceipts();
 
-    expect(adjustment.amount, 2000);
+      expect(checks.map((check) => check.amount), [850, 1000]);
+      expect(checks.map((check) => check.checkedAt), [
+        DateTime(2026, 9, 13, 10),
+        DateTime(2026, 9, 20),
+      ]);
+      expect(receipts.map((receipt) => receipt.amount), [3200, 500, 3000]);
+      expect(receipts.first.status, ReceiptStatus.predicted);
+
+      final summary = WalletSummary.buildAll(
+        month: const Month(2026, 9),
+        wallets: await wallets.fetchWallets(),
+        receipts: receipts,
+        payments: await ExpenseRepository(database, changes).fetchPayments(),
+        occurrences: const [],
+        checks: checks,
+        outflows: await wallets.fetchOutflows(),
+      ).single;
+      expect(summary.balance, 1000);
+    }
+
+    test('viram saldos informados com o valor que a pessoa via', () async {
+      await seedAdjustmentsAtVersion7();
+      final database = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: path,
+      );
+      addTearDown(database.close);
+
+      await expectChecksReplaceAdjustments(database);
+    });
+
+    test('uma cópia com ajuste é restaurada com o saldo informado', () async {
+      await seedAdjustmentsAtVersion7();
+      final database = AppDatabase(
+        factory: databaseFactoryFfiNoIsolate,
+        filePath: '${directory.path}/current.db',
+      );
+      addTearDown(database.close);
+
+      await DatabaseBackup(database).restore(File(path).readAsBytesSync());
+
+      await expectChecksReplaceAdjustments(database);
+    });
   });
 
   test('a migração dá carteira ao pagamento que não tinha', () async {

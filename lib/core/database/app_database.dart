@@ -1,18 +1,23 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:sqflite/sqflite.dart'
     show Database, DatabaseFactory, OpenDatabaseOptions;
 
 class AppDatabase {
-  AppDatabase({DatabaseFactory? factory, String? filePath})
-    : _factory = factory ?? sqflite.databaseFactory,
-      _filePath = filePath;
+  AppDatabase({
+    DatabaseFactory? factory,
+    String? filePath,
+    @visibleForTesting int? schemaVersion,
+  }) : _factory = factory ?? sqflite.databaseFactory,
+       _filePath = filePath,
+       _schemaVersion = schemaVersion ?? version;
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 7;
+  static const int version = 8;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -22,9 +27,11 @@ class AppDatabase {
   static const String expenseMonthsTable = 'expense_months';
   static const String outflowsTable = 'outflows';
   static const String cardsTable = 'cards';
+  static const String balanceChecksTable = 'balance_checks';
 
   final DatabaseFactory _factory;
   final String? _filePath;
+  final int _schemaVersion;
 
   Database? _database;
   Completer<void>? _closedFor;
@@ -66,7 +73,7 @@ class AppDatabase {
     return _factory.openDatabase(
       await path,
       options: OpenDatabaseOptions(
-        version: version,
+        version: _schemaVersion,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, _) => _run(db, _schema),
         onUpgrade: (db, from, to) async {
@@ -177,6 +184,15 @@ class AppDatabase {
     )
     ''',
     'CREATE INDEX idx_outflow_wallet_month ON $outflowsTable(wallet_id, month_key)',
+    '''
+    CREATE TABLE $balanceChecksTable (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet_id INTEGER NOT NULL REFERENCES $walletsTable(id) ON DELETE CASCADE,
+      amount REAL NOT NULL,
+      checked_at TEXT NOT NULL
+    )
+    ''',
+    'CREATE INDEX idx_balance_check_wallet ON $balanceChecksTable(wallet_id, checked_at)',
   ];
 
   static const Map<int, List<String>> _migrations = <int, List<String>>{
@@ -243,6 +259,31 @@ class AppDatabase {
         WHERE $walletsTable.id = $payoutsTable.wallet_id
       )
       ''',
+    ],
+    8: <String>[
+      '''
+      CREATE TABLE $balanceChecksTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wallet_id INTEGER NOT NULL REFERENCES $walletsTable(id) ON DELETE CASCADE,
+        amount REAL NOT NULL,
+        checked_at TEXT NOT NULL
+      )
+      ''',
+      'CREATE INDEX idx_balance_check_wallet ON $balanceChecksTable(wallet_id, checked_at)',
+      '''
+      INSERT INTO $balanceChecksTable (wallet_id, amount, checked_at)
+      SELECT a.wallet_id, ROUND(
+          (SELECT COALESCE(SUM(r.amount), 0) FROM $receiptsTable r
+            WHERE r.wallet_id = a.wallet_id AND r.status != 'skipped'
+              AND r.received_at <= a.received_at)
+        - (SELECT COALESCE(SUM(p.amount), 0) FROM $expensePaymentsTable p
+            WHERE p.wallet_id = a.wallet_id AND p.paid_at <= a.received_at)
+        - (SELECT COALESCE(SUM(o.amount), 0) FROM $outflowsTable o
+            WHERE o.wallet_id = a.wallet_id AND o.spent_at <= a.received_at), 2),
+        a.received_at
+      FROM $receiptsTable a WHERE a.kind = 'adjustment' ORDER BY a.received_at, a.id
+      ''',
+      "DELETE FROM $receiptsTable WHERE kind = 'adjustment'",
     ],
   };
 }
