@@ -48,7 +48,13 @@ void main() {
       ),
     );
     await wallets.savePayout(
-      Payout(walletId: salaryId, label: 'Mensal', amount: 3000, day: 1),
+      Payout(
+        walletId: salaryId,
+        label: 'Mensal',
+        amount: 3000,
+        day: 1,
+        createdAt: DateTime(today.year, today.month),
+      ),
     );
     if (!withCard) return;
 

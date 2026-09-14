@@ -12,7 +12,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 6;
+  static const int version = 7;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -103,7 +103,8 @@ class AppDatabase {
       label TEXT NOT NULL,
       amount REAL NOT NULL,
       day_of_month INTEGER NOT NULL,
-      schedule_kind TEXT NOT NULL DEFAULT 'day_of_month'
+      schedule_kind TEXT NOT NULL DEFAULT 'day_of_month',
+      created_at TEXT NOT NULL DEFAULT ''
     )
     ''',
     '''
@@ -232,6 +233,16 @@ class AppDatabase {
       )
       ''',
       'ALTER TABLE $expensesTable ADD COLUMN card_id INTEGER REFERENCES $cardsTable(id) ON DELETE SET NULL',
+    ],
+    7: <String>[
+      "ALTER TABLE $payoutsTable ADD COLUMN created_at TEXT NOT NULL DEFAULT ''",
+      '''
+      UPDATE $payoutsTable
+      SET created_at = (
+        SELECT created_at FROM $walletsTable
+        WHERE $walletsTable.id = $payoutsTable.wallet_id
+      )
+      ''',
     ],
   };
 }

@@ -52,6 +52,7 @@ void main() {
               amount: 3000,
               day: day,
               schedule: schedule,
+              createdAt: DateTime(month.year, month.month),
             ),
           );
           return walletId;

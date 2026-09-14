@@ -390,7 +390,13 @@ Future<void> _seedWalletlessExpense(AppDatabase database) async {
     ),
   );
   await wallets.savePayout(
-    Payout(walletId: salaryId, label: 'Mensal', amount: 3000, day: 1),
+    Payout(
+      walletId: salaryId,
+      label: 'Mensal',
+      amount: 3000,
+      day: 1,
+      createdAt: DateTime(today.year, today.month),
+    ),
   );
 
   await expenses.saveExpense(
@@ -420,7 +426,13 @@ Future<void> _seedMarketExpense(AppDatabase database) async {
     ),
   );
   await wallets.savePayout(
-    Payout(walletId: salaryId, label: 'Mensal', amount: 3000, day: 1),
+    Payout(
+      walletId: salaryId,
+      label: 'Mensal',
+      amount: 3000,
+      day: 1,
+      createdAt: DateTime(today.year, today.month),
+    ),
   );
 
   final voucherId = await wallets.saveWallet(
@@ -432,7 +444,13 @@ Future<void> _seedMarketExpense(AppDatabase database) async {
     ),
   );
   await wallets.savePayout(
-    Payout(walletId: voucherId, label: 'Mensal', amount: 600, day: 1),
+    Payout(
+      walletId: voucherId,
+      label: 'Mensal',
+      amount: 600,
+      day: 1,
+      createdAt: DateTime(today.year, today.month),
+    ),
   );
 
   await expenses.saveExpense(

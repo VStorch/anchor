@@ -55,6 +55,7 @@ void main() {
         amount: 3000,
         day: 1,
         schedule: schedule ?? PayoutSchedule.dayOfMonth,
+        createdAt: DateTime(today.year, today.month),
       ),
     );
   }

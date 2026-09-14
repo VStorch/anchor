@@ -28,7 +28,15 @@ Wallet buildWallet({
     kind: kind,
     colorIndex: 0,
     createdAt: DateTime(2026),
-    payouts: [Payout(walletId: id, label: 'Entrada', amount: monthly, day: 5)],
+    payouts: [
+      Payout(
+        walletId: id,
+        label: 'Entrada',
+        amount: monthly,
+        day: 5,
+        createdAt: DateTime(2026),
+      ),
+    ],
   );
 }
 

@@ -298,4 +298,68 @@ void main() {
 
     expect((await expenses.fetchExpenses()).single.cardId, cardId);
   });
+
+  test('a migração dá ao recebimento a data de criação da carteira', () async {
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final repository = WalletRepository(database, DataChanges());
+    final wallet = (await repository.fetchWallets()).single;
+
+    expect(wallet.payouts.single.createdAt, DateTime(2026, 8));
+    expect(wallet.payouts.single.startMonth, const Month(2026, 8));
+  });
+
+  test('o banco migrado tem o mesmo esquema de uma instalação nova', () async {
+    final migrated = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    final fresh = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: '${directory.path}/fresh.db',
+    );
+    addTearDown(migrated.close);
+    addTearDown(fresh.close);
+
+    expect(
+      await _describeSchema(await migrated.database),
+      await _describeSchema(await fresh.database),
+    );
+  });
+}
+
+Future<Map<String, Object?>> _describeSchema(Database db) async {
+  final tables = await db.rawQuery(
+    "SELECT name FROM sqlite_master WHERE type = 'table' "
+    "AND name NOT LIKE 'sqlite_%' AND name != 'android_metadata' "
+    'ORDER BY name',
+  );
+
+  return <String, Object?>{
+    'user_version': await db.getVersion(),
+    for (final table in tables.map((row) => row['name']! as String))
+      table: <String, Object?>{
+        'columns': await db.rawQuery('PRAGMA table_info($table)'),
+        'foreign_keys': await db.rawQuery('PRAGMA foreign_key_list($table)'),
+        'indexes': await _describeIndexes(db, table),
+      },
+  };
+}
+
+Future<Map<String, Object?>> _describeIndexes(Database db, String table) async {
+  final indexes = await db.rawQuery('PRAGMA index_list($table)');
+
+  return <String, Object?>{
+    for (final index in indexes)
+      index['name']! as String: <String, Object?>{
+        'unique': index['unique'],
+        'origin': index['origin'],
+        'partial': index['partial'],
+        'columns': await db.rawQuery('PRAGMA index_info(${index['name']})'),
+      },
+  };
 }

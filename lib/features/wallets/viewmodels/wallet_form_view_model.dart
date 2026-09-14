@@ -79,7 +79,7 @@ class WalletFormViewModel extends ChangeNotifier {
   }) => _replacePayouts(
     <Payout>[..._payouts]
       ..[index] = _draft(
-        id: _payouts[index].id,
+        existing: _payouts[index],
         label: label,
         amount: amount,
         day: day,
@@ -88,18 +88,19 @@ class WalletFormViewModel extends ChangeNotifier {
   );
 
   Payout _draft({
-    int? id,
+    Payout? existing,
     required String label,
     required double amount,
     required int day,
     required PayoutSchedule schedule,
   }) => Payout(
-    id: id,
+    id: existing?.id,
     walletId: _wallet?.id ?? 0,
     label: label.trim().isEmpty ? 'Recebimento' : label.trim(),
     amount: amount,
     day: day,
     schedule: schedule,
+    createdAt: existing?.createdAt ?? DateTime.now(),
   );
 
   void _replacePayouts(List<Payout> payouts) {

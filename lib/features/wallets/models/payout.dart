@@ -9,6 +9,7 @@ class Payout {
     required this.amount,
     required this.day,
     this.schedule = PayoutSchedule.dayOfMonth,
+    required this.createdAt,
   });
 
   factory Payout.fromMap(Map<String, Object?> map) => Payout(
@@ -18,6 +19,9 @@ class Payout {
     amount: (map['amount'] as num).toDouble(),
     day: map['day_of_month'] as int,
     schedule: PayoutSchedule.fromId(map['schedule_kind'] as String),
+    createdAt:
+        DateTime.tryParse(map['created_at'] as String? ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
   );
 
   static const int maxBusinessDay = 22;
@@ -28,6 +32,9 @@ class Payout {
   final double amount;
   final int day;
   final PayoutSchedule schedule;
+  final DateTime createdAt;
+
+  Month get startMonth => Month.fromDate(createdAt);
 
   DateTime dateIn(Month month) => switch (schedule) {
     PayoutSchedule.dayOfMonth => month.dayOf(day),
@@ -46,6 +53,7 @@ class Payout {
     'amount': amount,
     'day_of_month': day,
     'schedule_kind': schedule.id,
+    'created_at': createdAt.toIso8601String(),
   };
 
   Payout copyWith({
@@ -55,6 +63,7 @@ class Payout {
     double? amount,
     int? day,
     PayoutSchedule? schedule,
+    DateTime? createdAt,
   }) => Payout(
     id: id ?? this.id,
     walletId: walletId ?? this.walletId,
@@ -62,5 +71,6 @@ class Payout {
     amount: amount ?? this.amount,
     day: day ?? this.day,
     schedule: schedule ?? this.schedule,
+    createdAt: createdAt ?? this.createdAt,
   );
 }

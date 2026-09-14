@@ -97,9 +97,10 @@ mutated:
 (`Expense.projectsBackIntoPast`) unless that month already has a payment or a month amount. Without
 it, a recurring rule saved today with a start month in January billed — and flagged overdue — every
 month before the user had the app. `single` is exempt: its month is an explicit choice. The wallet
-side mirrors this, since `registerDuePayouts` starts at `wallet.createdAt`; to fill in a past month
-the user navigates to it, and the receipt and outflow sheets default to a date inside the month on
-screen (`Month.suggestedDate`), not to today.
+side mirrors this, since `registerDuePayouts` starts at the later of the wallet's and the payout's
+`createdAt` month, so a payout added today to an old wallet does not credit the months already gone;
+to fill in a past month the user navigates to it, and the receipt and outflow sheets default to a date
+inside the month on screen (`Month.suggestedDate`), not to today.
 
 `ExpenseOccurrence` is where the two meet: `amount` (month value), `paidAmount`, `remaining`, `isPaid`,
 `isPartlyPaid`. Views read those — never re-derive them.
@@ -156,7 +157,9 @@ comparison operators, `monthsSince`, `dayOf` (clamps day 31 to the real month le
 
 The database is versioned: bump `AppDatabase.version`, add the statements to `_migrations`, and keep
 `_schema` (fresh install) and the migrated result identical. `test/core/database/app_database_test.dart`
-builds a v1 file and opens it to prove the upgrade keeps the data.
+builds a v1 file and opens it to prove the upgrade keeps the data, and compares `PRAGMA table_info`,
+`index_list`/`index_info` and `foreign_key_list` of every table between a fresh install and the migrated
+file — a new column goes at the end of `_schema`'s table, with the same DEFAULT as its `ALTER TABLE`.
 
 A **backup** is the SQLite file itself (`DatabaseBackup`, `core/database/`), not an export format: a
 copy saved by an older version goes through the same `_migrations` when restored, so there is nothing

@@ -63,7 +63,13 @@ void main() {
       ),
     );
     await wallets.savePayout(
-      Payout(walletId: salaryId, label: 'Mensal', amount: 12345.67, day: 1),
+      Payout(
+        walletId: salaryId,
+        label: 'Mensal',
+        amount: 12345.67,
+        day: 1,
+        createdAt: createdAt,
+      ),
     );
 
     final voucherId = await wallets.saveWallet(
@@ -75,7 +81,13 @@ void main() {
       ),
     );
     await wallets.savePayout(
-      Payout(walletId: voucherId, label: 'Mensal', amount: 1234.56, day: 1),
+      Payout(
+        walletId: voucherId,
+        label: 'Mensal',
+        amount: 1234.56,
+        day: 1,
+        createdAt: createdAt,
+      ),
     );
 
     await expenses.saveExpense(

@@ -214,16 +214,18 @@ class WalletRepository {
     var changed = 0;
 
     for (final wallet in wallets) {
-      if (!wallet.hasSchedule) continue;
+      final walletStart = Month.fromDate(wallet.createdAt);
 
-      for (
-        var month = Month.fromDate(wallet.createdAt);
-        month <= currentMonth;
-        month = month.next
-      ) {
-        for (final payout in wallet.payouts) {
-          if (payout.id == null) continue;
+      for (final payout in wallet.payouts) {
+        if (payout.id == null) continue;
 
+        for (
+          var month = payout.startMonth > walletStart
+              ? payout.startMonth
+              : walletStart;
+          month <= currentMonth;
+          month = month.next
+        ) {
           if (month == currentMonth) {
             changed += await _resyncPredicted(db, payout, month);
           }

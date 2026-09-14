@@ -35,7 +35,13 @@ void main() {
     );
     for (final label in ['Adiantamento', 'Salário']) {
       await repository.savePayout(
-        Payout(walletId: walletId, label: label, amount: 1500, day: 1),
+        Payout(
+          walletId: walletId,
+          label: label,
+          amount: 1500,
+          day: 1,
+          createdAt: DateTime(today.year, today.month, 1),
+        ),
       );
     }
     await repository.registerDuePayouts(await repository.fetchWallets());
