@@ -319,4 +319,57 @@ void main() {
 
     expect(find.textContaining('5º dia útil'), findsWidgets);
   });
+
+  group('calendário da entrada e do gasto num mês distante', () {
+    final wallet = Wallet(
+      id: 1,
+      name: 'Salário',
+      kind: WalletKind.salary,
+      colorIndex: 0,
+      createdAt: DateTime(2026),
+    );
+    final farMonth = Month(DateTime.now().year + 8, 3);
+
+    Future<void> openSheet(
+      WidgetTester tester,
+      Future<void> Function(BuildContext context) show,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => show(context),
+                child: const Text('Abrir'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.edit_calendar_outlined));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a entrada abre o calendário no mês da tela', (tester) async {
+      await openSheet(
+        tester,
+        (context) =>
+            ReceiptSheet.show(context, wallet: wallet, month: farMonth),
+      );
+
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+    });
+
+    testWidgets('o gasto abre o calendário no mês da tela', (tester) async {
+      await openSheet(
+        tester,
+        (context) =>
+            OutflowSheet.show(context, wallet: wallet, month: farMonth),
+      );
+
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+    });
+  });
 }

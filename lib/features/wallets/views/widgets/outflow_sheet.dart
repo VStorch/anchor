@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
+import '../../../../core/widgets/movement_date_picker.dart';
 import '../../models/outflow.dart';
 import '../../models/wallet.dart';
 
@@ -153,12 +154,7 @@ class _OutflowSheetState extends State<OutflowSheet> {
   );
 
   Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _spentAt,
-      firstDate: DateTime(DateTime.now().year - 5),
-      lastDate: DateTime(DateTime.now().year + 5),
-    );
+    final date = await pickMovementDate(context, _spentAt);
     if (date != null) setState(() => _spentAt = date);
   }
 }

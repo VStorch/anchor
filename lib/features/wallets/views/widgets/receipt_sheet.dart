@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
+import '../../../../core/widgets/movement_date_picker.dart';
 import '../../models/receipt.dart';
 import '../../models/wallet.dart';
 
@@ -148,12 +149,7 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
   );
 
   Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _receivedAt,
-      firstDate: DateTime(DateTime.now().year - 5),
-      lastDate: DateTime(DateTime.now().year + 5),
-    );
+    final date = await pickMovementDate(context, _receivedAt);
     if (date != null) setState(() => _receivedAt = date);
   }
 }
