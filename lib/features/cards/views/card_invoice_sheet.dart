@@ -248,8 +248,14 @@ class _Footer extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton(
           onPressed: () => _pay(context, viewModel, origin),
-          child: Text(
-            wallet == null ? 'Pagar fatura' : 'Pagar fatura com ${wallet.name}',
+          child: const Text('Marcar fatura como paga'),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          wallet == null ? 'Outro dinheiro' : 'Sai de ${wallet.name}',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         TextButton(

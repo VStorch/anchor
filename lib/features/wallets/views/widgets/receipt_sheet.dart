@@ -123,7 +123,7 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
             if (_isPredicted) ...[
               const SizedBox(height: 4),
               Text(
-                'Valor previsto pelo calendário. Ajuste para o que caiu de verdade.',
+                'Valor previsto pelo calendário. Corrija para o que caiu de verdade.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

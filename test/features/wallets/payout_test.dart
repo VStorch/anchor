@@ -37,4 +37,11 @@ void main() {
     expect(payout.schedule.isBusinessDay, isTrue);
     expect(PayoutSchedule.dayOfMonth.isBusinessDay, isFalse);
   });
+
+  test('a próxima data é a deste mês até ela passar', () {
+    final payout = salary(PayoutSchedule.businessDay);
+
+    expect(payout.nextDate(DateTime(2026, 9, 8, 18)), DateTime(2026, 9, 8));
+    expect(payout.nextDate(DateTime(2026, 9, 9)), DateTime(2026, 10, 7));
+  });
 }

@@ -4,7 +4,10 @@ import 'package:anchor/core/state/month_selection.dart';
 import 'package:anchor/features/budget/services/budget_service.dart';
 import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
+import 'package:anchor/features/wallets/models/receipt.dart';
+import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
@@ -128,6 +131,34 @@ void main() {
         ),
       );
       expect(await balance(), 880);
+    });
+
+    test('confirmar abre a primeira entrada ainda prevista do mês', () async {
+      final month = Month.current();
+      for (final day in [20, 1]) {
+        await wallets.saveReceipt(
+          Receipt(
+            walletId: wallet.id!,
+            month: month,
+            amount: 1000,
+            receivedAt: month.dayOf(day),
+            status: ReceiptStatus.predicted,
+          ),
+        );
+      }
+      await viewModel.refresh();
+
+      final first = viewModel.firstUnconfirmedOf(wallet)!;
+      expect(first.receivedAt.day, 1);
+
+      await viewModel.confirmReceipt(
+        first,
+        amount: 1000,
+        receivedAt: first.receivedAt,
+      );
+      await viewModel.refresh();
+
+      expect(viewModel.firstUnconfirmedOf(wallet)?.receivedAt.day, 20);
     });
   });
 }

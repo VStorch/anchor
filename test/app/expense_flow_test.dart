@@ -1012,7 +1012,7 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   expect(find.text('Mensal'), findsOneWidget);
-  expect(find.textContaining('3.000,00'), findsWidgets);
+  expect(find.textContaining('3.000,00 · dia 1 · '), findsOneWidget);
 
   await tester.tap(find.text('Criar carteira'));
   await tester.pumpAndSettle();
@@ -1058,6 +1058,10 @@ Future<void> _createInstallmentExpense(WidgetTester tester) async {
   }
 
   expect(find.textContaining('Faltam 7 parcelas'), findsOneWidget);
+  expect(
+    find.text('${Month.current().label} será a parcela 6 de 12'),
+    findsOneWidget,
+  );
   expect(find.textContaining('1.750,00'), findsOneWidget);
 
   await tester.tap(find.text('Cadastrar despesa'));

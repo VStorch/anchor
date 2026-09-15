@@ -11,6 +11,7 @@ class WalletCard extends StatelessWidget {
     required this.onRegisterReceipt,
     required this.onRegisterOutflow,
     required this.onCheckBalance,
+    this.onConfirm,
   });
 
   final WalletSummary summary;
@@ -18,6 +19,7 @@ class WalletCard extends StatelessWidget {
   final VoidCallback onRegisterReceipt;
   final VoidCallback onRegisterOutflow;
   final VoidCallback onCheckBalance;
+  final VoidCallback? onConfirm;
 
   @override
   Widget build(BuildContext context) {
@@ -50,27 +52,6 @@ class WalletCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (summary.unconfirmedInMonth > 0)
-                    Flexible(
-                      child: Chip(
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: theme.colorScheme.tertiaryContainer,
-                        side: BorderSide.none,
-                        avatar: Icon(
-                          Icons.schedule,
-                          size: 14,
-                          color: theme.colorScheme.onTertiaryContainer,
-                        ),
-                        label: Text(
-                          '${summary.unconfirmedInMonth} a confirmar',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onTertiaryContainer,
-                          ),
-                        ),
-                      ),
-                    ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -106,6 +87,29 @@ class WalletCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (onConfirm != null && summary.unconfirmedInMonth > 0) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: onConfirm,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        icon: const Icon(Icons.task_alt, size: 18),
+                        label: Text(
+                          summary.unconfirmedInMonth == 1
+                              ? 'Confirmar ${formatMoney(summary.pendingConfirmationInMonth)}'
+                              : 'Confirmar (${summary.unconfirmedInMonth})',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               if (summary.receivedInMonth > 0) ...[
                 const SizedBox(height: 14),
                 ClipRRect(

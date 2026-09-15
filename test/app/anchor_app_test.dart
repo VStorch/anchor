@@ -17,6 +17,7 @@ import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/wallets/views/wallets_page.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -265,10 +266,21 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.text('Confirmar ${formatMoney(3000)}'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(TodayCard),
+        matching: find.text('Confirmar ${formatMoney(3000)}'),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Saldo total'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(WalletsPage),
+        matching: find.text('Você tem hoje'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('lista a despesa do mês na aba Despesas', (tester) async {
@@ -340,7 +352,13 @@ void main() {
     await pumpApp(tester);
 
     await tapTab(tester, Icons.account_balance_wallet_outlined);
-    expect(find.text('Saldo total'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(WalletsPage),
+        matching: find.text('Você tem hoje'),
+      ),
+      findsOneWidget,
+    );
 
     await tapTab(tester, Icons.tune_outlined);
     expect(find.text('Padrão do sistema'), findsOneWidget);

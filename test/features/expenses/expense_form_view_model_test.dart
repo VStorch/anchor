@@ -9,6 +9,7 @@ import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/viewmodels/expense_form_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import '../../support/test_database.dart';
 
@@ -37,6 +38,8 @@ void main() {
     settledOutside: true,
   );
 
+  setUpAll(() => initializeDateFormatting('pt_BR'));
+
   setUp(() {
     database = createInMemoryDatabase();
     repository = ExpenseRepository(database, DataChanges());
@@ -51,6 +54,55 @@ void main() {
         expense: gym,
         payments: payments,
       );
+
+  group('prévia da parcela', () {
+    ExpenseFormViewModel installment({required Month reference}) =>
+        ExpenseFormViewModel(
+            repository: repository,
+            referenceMonth: reference,
+            now: DateTime(2026, 9, 15),
+          )
+          ..setType(ExpenseType.installment)
+          ..setTotalInstallments(10)
+          ..setSettledInstallments(3)
+          ..setStartMonth(const Month(2026, 9));
+
+    test('diz qual parcela o mês na tela recebe', () {
+      final form = installment(reference: const Month(2026, 9));
+      expect(
+        form.installmentPreview,
+        'Setembro de 2026 será a parcela 4 de 10',
+      );
+
+      final later = installment(reference: const Month(2026, 11));
+      expect(
+        later.installmentPreview,
+        'Novembro de 2026 será a parcela 6 de 10',
+      );
+    });
+
+    test('quando começa depois, diz quando vence a próxima', () {
+      final form = installment(reference: august);
+      expect(
+        form.installmentPreview,
+        'A parcela 4 de 10 vence em setembro de 2026',
+      );
+    });
+
+    test('depois da última parcela, diz quando ela vence', () {
+      final form = installment(reference: const Month(2027, 6));
+      expect(
+        form.installmentPreview,
+        'A última parcela vence em março de 2027',
+      );
+    });
+
+    test('só existe para a parcelada', () {
+      final form = installment(reference: august)
+        ..setType(ExpenseType.recurring);
+      expect(form.installmentPreview, isNull);
+    });
+  });
 
   test('o fim antes do início invalida o formulário', () {
     final form = edit(const [])..setStartMonth(const Month(2026, 10));

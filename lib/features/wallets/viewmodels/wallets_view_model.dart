@@ -207,6 +207,23 @@ class WalletsViewModel extends ReactiveViewModel {
       ..sort((a, b) => a.receivedAt.compareTo(b.receivedAt));
   }
 
+  /// The earliest receipt of the month on screen still waiting for the user
+  /// to say it arrived: what the wallet card's "Confirmar" opens.
+  Receipt? firstUnconfirmedOf(Wallet wallet) {
+    final month = _monthSelection.current;
+    final predicted =
+        _snapshot.receipts
+            .where(
+              (receipt) =>
+                  receipt.walletId == wallet.id &&
+                  receipt.isPredicted &&
+                  receipt.month == month,
+            )
+            .toList()
+          ..sort((a, b) => a.receivedAt.compareTo(b.receivedAt));
+    return predicted.firstOrNull;
+  }
+
   /// A check on a past day closes that day, so everything dated on it is
   /// inside the informed amount; a check for today is taken right now.
   static DateTime checkedAtFor(DateTime day, {DateTime? now}) {

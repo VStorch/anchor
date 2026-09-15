@@ -134,8 +134,9 @@ void main() {
       expect(inSheet('Geladeira'), findsOneWidget);
       expect(inSheet('Celular'), findsOneWidget);
       expect(inSheet('Falta R\$'), findsOneWidget);
+      expect(inSheet('Sai de Salário'), findsOneWidget);
 
-      await tester.tap(find.text('Pagar fatura com Salário'));
+      await tester.tap(find.text('Marcar fatura como paga'));
       await tester.pumpAndSettle();
 
       expect(inSheet('Paga · '), findsOneWidget);

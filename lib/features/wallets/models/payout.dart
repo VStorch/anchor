@@ -45,6 +45,14 @@ class Payout {
     ),
   };
 
+  /// This month's date while it has not gone by, else next month's.
+  DateTime nextDate(DateTime today) {
+    final month = Month.fromDate(today);
+    final thisMonth = dateIn(month);
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    return thisMonth.isBefore(startOfToday) ? dateIn(month.next) : thisMonth;
+  }
+
   String get scheduleLabel => switch (schedule) {
     PayoutSchedule.dayOfMonth => 'dia $day',
     PayoutSchedule.businessDay => '$dayº dia útil',

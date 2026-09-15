@@ -22,6 +22,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
     DateTime? now,
   }) : _repository = repository,
        _now = now ?? DateTime.now(),
+       _referenceMonth = referenceMonth,
        _openedInvoiceMonth = invoiceMonth,
        _cards = cards,
        _expense = expense,
@@ -49,6 +50,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   final List<ExpensePayment> _payments;
   final DateTime _now;
   final Month? _openedInvoiceMonth;
+  final Month _referenceMonth;
 
   String _name;
   ExpenseType _type;
@@ -152,6 +154,23 @@ class ExpenseFormViewModel extends ChangeNotifier {
   String? get installmentPlan => isInstallment
       ? 'Faltam $remainingInstallments parcelas até ${lastMonth.label}'
       : null;
+
+  /// Which parcel the month on screen gets, or when the first one to pay is
+  /// due if that is later: "Setembro de 2026 será a parcela 4 de 10".
+  String? get installmentPreview {
+    if (!isInstallment || remainingInstallments <= 0) return null;
+
+    final parcel = _draft.occurrenceIn(_referenceMonth)?.installmentNumber;
+    if (parcel != null) {
+      return '${_referenceMonth.label} será a parcela $parcel de '
+          '$_totalInstallments';
+    }
+    final next = _settledInstallments + 1;
+    return _referenceMonth < startMonth
+        ? 'A parcela $next de $_totalInstallments vence em '
+              '${startMonth.label.toLowerCase()}'
+        : 'A última parcela vence em ${lastMonth.label.toLowerCase()}';
+  }
 
   void setName(String value) {
     _name = value;

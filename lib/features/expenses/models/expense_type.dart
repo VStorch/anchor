@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 enum ExpenseType {
   recurring(
     'recurring',
-    'Recorrente',
-    'Sem prazo para acabar, como assinaturas e plano de saúde',
+    'Todo mês',
+    'Repete todo mês, como assinaturas e plano de saúde',
     Icons.all_inclusive,
   ),
   installment(
@@ -15,8 +15,8 @@ enum ExpenseType {
   ),
   single(
     'single',
-    'Avulsa',
-    'Acontece apenas no mês escolhido',
+    'Só uma vez',
+    'Cobrada apenas no mês escolhido',
     Icons.event_outlined,
   );
 

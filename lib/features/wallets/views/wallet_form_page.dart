@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/money.dart';
-import '../../../core/utils/month.dart';
 import '../../../core/widgets/section_header.dart';
 import '../models/payout.dart';
 import '../models/wallet.dart';
@@ -344,17 +344,15 @@ class _PayoutTile extends StatelessWidget {
           onTap: onTap,
           leading: CircleAvatar(
             backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
-              '${payout.dateIn(Month.current()).day}',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Icon(
+              Icons.event_repeat,
+              color: theme.colorScheme.onPrimaryContainer,
             ),
           ),
           title: Text(payout.label),
           subtitle: Text(
-            '${formatMoney(payout.amount)} · ${payout.scheduleLabel}',
+            '${formatMoney(payout.amount)} · ${payout.scheduleLabel} · '
+            '${_nextDateLabel(DateTime.now())}',
           ),
           trailing: IconButton(
             onPressed: onRemove,
@@ -364,5 +362,14 @@ class _PayoutTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _nextDateLabel(DateTime today) {
+    final next = payout.nextDate(today);
+    final day = DateFormat(
+      'EEE, d/MMM',
+      'pt_BR',
+    ).format(next).replaceAll('.', '');
+    return next.month == today.month ? 'este mês: $day' : 'próximo: $day';
   }
 }

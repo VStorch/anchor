@@ -126,8 +126,15 @@ class WalletsPage extends StatelessWidget {
         onRegisterReceipt: () => _registerReceipt(context, summary.wallet),
         onRegisterOutflow: () => _registerOutflow(context, summary.wallet),
         onCheckBalance: () => _checkBalance(context, summary),
+        onConfirm: _confirmFirst(context, summary.wallet),
       ),
     );
+  }
+
+  VoidCallback? _confirmFirst(BuildContext context, Wallet wallet) {
+    final receipt = context.read<WalletsViewModel>().firstUnconfirmedOf(wallet);
+    if (receipt == null) return null;
+    return () => _editReceipt(context, receipt);
   }
 
   Future<void> _registerReceipt(BuildContext context, Wallet wallet) async {
@@ -322,7 +329,7 @@ class _TotalBalanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Saldo total',
+              'Você tem hoje',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
               ),

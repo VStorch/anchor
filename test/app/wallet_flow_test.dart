@@ -160,9 +160,13 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
-    expect(find.textContaining('a confirmar'), findsWidgets);
+    final confirm = find.descendant(
+      of: find.byType(WalletCard),
+      matching: find.text('Confirmar ${formatMoney(3000)}'),
+    );
+    expect(confirm, findsOneWidget);
 
-    await tester.tap(find.textContaining('a confirmar').last);
+    await tester.tap(confirm);
     await tester.pumpAndSettle();
 
     expect(find.byType(ReceiptSheet), findsOneWidget);
@@ -182,6 +186,7 @@ void main() {
 
     expect(find.textContaining('3.120,45'), findsWidgets);
     expect(find.textContaining('a confirmar'), findsNothing);
+    expect(confirm, findsNothing);
   });
 
   testWidgets('informa o saldo e confirma o salário que já caiu', (

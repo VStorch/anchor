@@ -154,6 +154,15 @@ class _ExpenseFormView extends StatelessWidget {
               value: viewModel.settledInstallments,
               onChanged: viewModel.setSettledInstallments,
             ),
+            if (viewModel.installmentPreview != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                viewModel.installmentPreview!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: 24),
           _SourceDropdown(viewModel: viewModel, wallets: wallets, cards: cards),
@@ -168,11 +177,7 @@ class _ExpenseFormView extends StatelessWidget {
             const SizedBox(height: 12),
             _InvoiceLine(viewModel: viewModel),
           ] else ...[
-            SectionHeader(
-              title: viewModel.isInstallment
-                  ? 'Próxima parcela'
-                  : 'Primeira cobrança',
-            ),
+            SectionHeader(title: _startMonthTitle(viewModel.type)),
             _MonthField(viewModel: viewModel),
           ],
           if (viewModel.type == ExpenseType.recurring) ...[
@@ -245,6 +250,12 @@ Future<void> _save(BuildContext context, ExpenseFormViewModel viewModel) async {
   await viewModel.save();
   if (context.mounted) Navigator.of(context).pop();
 }
+
+String _startMonthTitle(ExpenseType type) => switch (type) {
+  ExpenseType.recurring => 'Começa em',
+  ExpenseType.installment => 'Próxima parcela',
+  ExpenseType.single => 'Vence em',
+};
 
 String _monthName(Month month) =>
     DateFormat.MMMM('pt_BR').format(month.firstDay);
@@ -462,7 +473,7 @@ class _MonthField extends StatelessWidget {
         final month = await MonthPickerSheet.show(
           context,
           initialMonth: viewModel.startMonth,
-          title: 'Mês da primeira cobrança',
+          title: _startMonthTitle(viewModel.type),
         );
         if (month != null) viewModel.setStartMonth(month);
       },

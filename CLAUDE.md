@@ -84,12 +84,14 @@ An **expense** is a rule, not a row per month. `Expense.occurrenceIn(Month)` pro
 
 | `ExpenseType` | pt-BR label | rule |
 |---|---|---|
-| `recurring` | Recorrente | every month from `startMonth` until `endMonth` (null = forever) |
+| `recurring` | Todo mês | every month from `startMonth` until `endMonth` (null = forever) |
 | `installment` | Parcelada | `settledInstallments + monthsSince(startMonth) + 1`, while ≤ `totalInstallments` |
-| `single` | Avulsa | only `startMonth` |
+| `single` | Só uma vez | only `startMonth` |
 
 `settledInstallments` is what makes "12x, 5 already paid" work: `startMonth` is the month of the *next*
-unpaid parcel, so the projection resumes at number 6 and stops after 12.
+unpaid parcel, so the projection resumes at number 6 and stops after 12. The form names that month
+by type ("Começa em", "Próxima parcela", "Vence em") and previews the parcel the month on screen gets
+(`ExpenseFormViewModel.installmentPreview`: "Setembro de 2026 será a parcela 4 de 10").
 
 A month can diverge from the rule in two ways, and both live outside `expenses` so the rule is never
 mutated:
@@ -218,7 +220,8 @@ read or written).
 
 A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts nowhere
 real until confirmed — not in the balance, `receivedInMonth` or `totalReceived`; it only shows as
-expected income, marked "a confirmar"), the user confirms it with the real day and amount (the
+expected income, marked "a confirmar"; each wallet card offers a "Confirmar" button that opens the
+`ReceiptSheet` of `WalletsViewModel.firstUnconfirmedOf`), the user confirms it with the real day and amount (the
 `ReceiptSheet` of a prediction of the current month opens on now; one from a past month keeps its
 calendar day), and `skipped` is how a calendar receipt is dismissed — deleting the row would only make
 `registerDuePayouts` recreate it. A `predicted` receipt from a month before the current one is
