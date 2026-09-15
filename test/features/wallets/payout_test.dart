@@ -38,6 +38,18 @@ void main() {
     expect(PayoutSchedule.dayOfMonth.isBusinessDay, isFalse);
   });
 
+  test('o recebimento sem nome se diz pelo agendamento', () {
+    expect(salary(PayoutSchedule.businessDay).nameOrSchedule, 'Salário');
+    expect(
+      salary(PayoutSchedule.businessDay).copyWith(label: ' ').nameOrSchedule,
+      '5º dia útil',
+    );
+    expect(
+      salary(PayoutSchedule.dayOfMonth).copyWith(label: '').nameOrSchedule,
+      'dia 5',
+    );
+  });
+
   test('a próxima data é a deste mês até ela passar', () {
     final payout = salary(PayoutSchedule.businessDay);
 

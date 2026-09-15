@@ -242,7 +242,13 @@ payout's current amount and date, which is what makes editing the salary fix the
 
 `MonthAgendaPage` reads the receipts first and the payout calendar only for what has no receipt yet,
 so a salary confirmed on the 4th shows on the 4th. Never place a payout by `payout.day` — that is the
-*ordinal* under `PayoutSchedule.businessDay`; ask `payout.dateIn(month)`.
+*ordinal* under `PayoutSchedule.businessDay`; ask `payout.dateIn(month)`. Every title of a receipt —
+agenda, Carteiras movements, the Saldo sheet — comes from `Wallet.titleFor(receipt)`: the wallet name
+alone while the wallet has a single payout, `"Salário · Adiantamento"` (or `"Salário · dia 20"`,
+`Payout.nameOrSchedule`) when there are more, and "Entrada extra" with no payout behind it, deleted
+payouts included. A payout's `label` is an optional name, empty by default (v12 cleared the old
+"Mensal"/"Recebimento"), and the movement subtitle drops the wallet name when
+`Wallet.titleIsWalletName` already says it.
 
 `Month` (`core/utils/month.dart`) is the value object used everywhere instead of `DateTime` — it has
 comparison operators, `monthsSince`, `dayOf` (clamps day 31 to the real month length) and

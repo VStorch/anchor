@@ -96,7 +96,7 @@ class WalletFormViewModel extends ChangeNotifier {
   }) => Payout(
     id: existing?.id,
     walletId: _wallet?.id ?? 0,
-    label: label.trim().isEmpty ? 'Recebimento' : label.trim(),
+    label: label.trim(),
     amount: amount,
     day: day,
     schedule: schedule,

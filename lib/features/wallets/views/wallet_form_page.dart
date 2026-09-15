@@ -360,11 +360,10 @@ class _PayoutTile extends StatelessWidget {
               color: theme.colorScheme.onPrimaryContainer,
             ),
           ),
-          title: Text(payout.label),
-          subtitle: Text(
-            '${formatMoney(payout.amount)} · ${payout.scheduleLabel} · '
-            '${_nextDateLabel(DateTime.now())}',
+          title: Text(
+            '${formatMoney(payout.amount)} · ${payout.scheduleLabel}',
           ),
+          subtitle: Text(_subtitle(DateTime.now())),
           trailing: IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.close),
@@ -375,12 +374,13 @@ class _PayoutTile extends StatelessWidget {
     );
   }
 
-  String _nextDateLabel(DateTime today) {
+  String _subtitle(DateTime today) {
     final next = payout.nextDate(today);
     final day = DateFormat(
       'EEE, d/MMM',
       'pt_BR',
     ).format(next).replaceAll('.', '');
-    return next.month == today.month ? 'este mês: $day' : 'próximo: $day';
+    final name = payout.label.trim();
+    return name.isEmpty ? 'próximo: $day' : '$name · próximo: $day';
   }
 }

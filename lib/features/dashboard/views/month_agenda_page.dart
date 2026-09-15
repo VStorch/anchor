@@ -9,6 +9,7 @@ import '../../../core/utils/month.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../budget/models/budget_snapshot.dart';
+import '../../wallets/models/wallet.dart';
 import '../viewmodels/dashboard_view_model.dart';
 
 class MonthAgendaPage extends StatelessWidget {
@@ -147,7 +148,9 @@ class _AgendaDay {
         if (receipt.counts)
           _AgendaEntry(
             day: receipt.receivedAt.day,
-            title: _incomeTitle(receipt.payoutId, snapshot),
+            title:
+                snapshot.walletById(receipt.walletId)?.titleFor(receipt) ??
+                Wallet.extraIncomeTitle,
             amount: receipt.amount,
             kind: receipt.isPredicted
                 ? _EntryKind.expectedIncome
@@ -158,22 +161,11 @@ class _AgendaDay {
           if (!monthReceipts.any((receipt) => receipt.payoutId == payout.id))
             _AgendaEntry(
               day: payout.dateIn(month).day,
-              title: payout.label,
+              title: wallet.titleOf(payout),
               amount: payout.amount,
               kind: _EntryKind.expectedIncome,
             ),
     ];
-  }
-
-  static String _incomeTitle(int? payoutId, BudgetSnapshot snapshot) {
-    if (payoutId == null) return 'Entrada';
-
-    for (final wallet in snapshot.wallets) {
-      for (final payout in wallet.payouts) {
-        if (payout.id == payoutId) return payout.label;
-      }
-    }
-    return 'Entrada';
   }
 
   final DateTime date;

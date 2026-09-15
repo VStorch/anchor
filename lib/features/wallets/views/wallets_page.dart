@@ -190,7 +190,6 @@ class WalletsPage extends StatelessWidget {
         wallet,
         WalletsViewModel.checkedAtFor(day),
       ),
-      receiptTitle: viewModel.receiptTitle,
       check: check,
       latestCheck: viewModel.latestCheckOf(wallet),
     );
@@ -403,7 +402,8 @@ class _MovementTile extends StatelessWidget {
         subtitle: Text(
           [
             DateFormat.MMMd('pt_BR').format(movement.date),
-            wallet?.name ?? 'Carteira removida',
+            if (!movement.titleIsWalletName)
+              wallet?.name ?? 'Carteira removida',
             ...notes,
           ].join(' · '),
           maxLines: 2,

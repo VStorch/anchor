@@ -30,7 +30,6 @@ class BalanceCheckSheet extends StatefulWidget {
     required this.wallet,
     required this.calculatedBalance,
     required this.dueUnconfirmed,
-    required this.receiptTitle,
     this.check,
     this.latestCheck,
   });
@@ -40,7 +39,6 @@ class BalanceCheckSheet extends StatefulWidget {
     required Wallet wallet,
     required double calculatedBalance,
     required List<Receipt> Function(DateTime day) dueUnconfirmed,
-    required String Function(Receipt receipt) receiptTitle,
     BalanceCheck? check,
     BalanceCheck? latestCheck,
   }) {
@@ -53,7 +51,6 @@ class BalanceCheckSheet extends StatefulWidget {
         wallet: wallet,
         calculatedBalance: calculatedBalance,
         dueUnconfirmed: dueUnconfirmed,
-        receiptTitle: receiptTitle,
         check: check,
         latestCheck: latestCheck,
       ),
@@ -63,7 +60,6 @@ class BalanceCheckSheet extends StatefulWidget {
   final Wallet wallet;
   final double calculatedBalance;
   final List<Receipt> Function(DateTime day) dueUnconfirmed;
-  final String Function(Receipt receipt) receiptTitle;
   final BalanceCheck? check;
   final BalanceCheck? latestCheck;
 
@@ -167,7 +163,7 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
                       : _notArrived.add(receipt.id),
                 ),
                 title: Text(
-                  '${widget.receiptTitle(receipt)} de '
+                  '${widget.wallet.titleFor(receipt)} de '
                   '${DateFormat('dd/MM').format(receipt.receivedAt)} '
                   '(${formatMoney(receipt.amount)}) já caiu',
                 ),

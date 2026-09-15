@@ -29,7 +29,7 @@ class IncomeDraft {
 
   Payout toPayout({int walletId = 0, required DateTime createdAt}) => Payout(
     walletId: walletId,
-    label: 'Mensal',
+    label: '',
     amount: amount,
     day: day!,
     schedule: schedule,

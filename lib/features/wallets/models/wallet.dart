@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_palette.dart';
 import 'payout.dart';
+import 'receipt.dart';
 import 'wallet_kind.dart';
 
 class Wallet {
@@ -43,6 +44,31 @@ class Wallet {
       payouts.fold(0, (total, payout) => total + payout.amount);
 
   bool get hasSchedule => payouts.isNotEmpty;
+
+  Payout? payoutById(int? id) {
+    if (id == null) return null;
+    for (final payout in payouts) {
+      if (payout.id == id) return payout;
+    }
+    return null;
+  }
+
+  /// What a receipt is called on screen. With a single payout there is
+  /// nothing to tell apart, so the wallet name is the whole title; money
+  /// with no payout behind it — or whose payout was deleted — is an extra.
+  String titleFor(Receipt receipt) {
+    final payout = payoutById(receipt.payoutId);
+    return payout == null ? extraIncomeTitle : titleOf(payout);
+  }
+
+  String titleOf(Payout payout) =>
+      payouts.length < 2 ? name : '$name · ${payout.nameOrSchedule}';
+
+  /// The movement subtitle drops the wallet name when the title already is it.
+  bool titleIsWalletName(Receipt receipt) =>
+      payouts.length < 2 && payoutById(receipt.payoutId) != null;
+
+  static const String extraIncomeTitle = 'Entrada extra';
 
   Map<String, Object?> toMap() => <String, Object?>{
     if (id != null) 'id': id,

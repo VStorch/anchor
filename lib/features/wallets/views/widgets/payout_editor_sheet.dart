@@ -99,8 +99,8 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
               controller: _labelController,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                labelText: 'Descrição',
-                hintText: 'Primeira parcela, adiantamento...',
+                labelText: 'Nome (opcional)',
+                hintText: 'Adiantamento, 13º, quinzena…',
               ),
             ),
             const SizedBox(height: 16),

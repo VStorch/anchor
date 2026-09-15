@@ -59,12 +59,17 @@ class WalletsViewModel extends ReactiveViewModel {
         if (receipt.month == month && receipt.counts)
           WalletMovement.fromReceipt(
             receipt,
-            title: receiptTitle(receipt),
+            title:
+                walletById(receipt.walletId)?.titleFor(receipt) ??
+                Wallet.extraIncomeTitle,
             countsInBalance:
                 _snapshot
                     .summaryFor(receipt.walletId)
                     ?.countsReceipt(receipt) ??
                 true,
+            titleIsWalletName:
+                walletById(receipt.walletId)?.titleIsWalletName(receipt) ??
+                false,
           ),
       for (final outflow in _snapshot.summary.outflows)
         WalletMovement.fromOutflow(
@@ -97,13 +102,6 @@ class WalletsViewModel extends ReactiveViewModel {
 
   bool _countsInBalance(int walletId, DateTime at) =>
       _snapshot.summaryFor(walletId)?.countsInBalance(at) ?? true;
-
-  String receiptTitle(Receipt receipt) {
-    for (final payout in walletById(receipt.walletId)?.payouts ?? const []) {
-      if (payout.id == receipt.payoutId) return payout.label;
-    }
-    return 'Entrada';
-  }
 
   String _expenseName(int expenseId) {
     for (final expense in _snapshot.expenses) {

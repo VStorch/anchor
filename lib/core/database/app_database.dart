@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 11;
+  static const int version = 12;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -296,6 +296,10 @@ class AppDatabase {
     11: <String>[
       'ALTER TABLE $receiptsTable ADD COLUMN pending_at_check_id INTEGER '
           'REFERENCES $balanceChecksTable(id) ON DELETE SET NULL',
+    ],
+    12: <String>[
+      "UPDATE $payoutsTable SET label = '' "
+          "WHERE label IN ('Mensal', 'Recebimento')",
     ],
   };
 }

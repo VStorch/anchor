@@ -63,7 +63,7 @@ void main() {
     await repository.savePayout(
       Payout(
         walletId: walletId,
-        label: 'Mensal',
+        label: '',
         amount: amount,
         day: 1,
         schedule: schedule ?? PayoutSchedule.dayOfMonth,
@@ -617,7 +617,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Mensal'));
+    await tester.tap(find.textContaining('3.000,00 · '));
     await tester.pumpAndSettle();
 
     expect(find.byType(PayoutEditorSheet), findsOneWidget);
@@ -660,7 +660,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mensal'));
+    await tester.tap(find.textContaining('3.000,00 · '));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Contar sábado (prazo da CLT)'));

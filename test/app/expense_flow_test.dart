@@ -20,7 +20,6 @@ import 'package:anchor/core/widgets/month_picker_sheet.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
-import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -829,7 +828,7 @@ Future<void> _seedWalletlessExpense(AppDatabase database) async {
   await wallets.savePayout(
     Payout(
       walletId: salaryId,
-      label: 'Mensal',
+      label: '',
       amount: 3000,
       day: 1,
       createdAt: DateTime(today.year, today.month),
@@ -866,7 +865,7 @@ Future<void> _seedMarketExpense(AppDatabase database) async {
   await wallets.savePayout(
     Payout(
       walletId: salaryId,
-      label: 'Mensal',
+      label: '',
       amount: 3000,
       day: 1,
       createdAt: DateTime(today.year, today.month),
@@ -884,7 +883,7 @@ Future<void> _seedMarketExpense(AppDatabase database) async {
   await wallets.savePayout(
     Payout(
       walletId: voucherId,
-      label: 'Mensal',
+      label: '',
       amount: 600,
       day: 1,
       createdAt: DateTime(today.year, today.month),
@@ -998,13 +997,6 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
   await tester.tap(find.byTooltip('Adicionar data'));
   await tester.pumpAndSettle();
 
-  await tester.enterText(
-    find.descendant(
-      of: find.byType(PayoutEditorSheet),
-      matching: find.widgetWithText(TextField, 'Descrição'),
-    ),
-    'Mensal',
-  );
   await _typeMoney(tester, '3000');
   expect(find.text('Em que dia cai?'), findsOneWidget);
   expect(find.text('Escolha o dia'), findsOneWidget);
@@ -1014,8 +1006,8 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
   await tester.tap(find.text('Adicionar ao calendário'));
   await tester.pumpAndSettle();
 
-  expect(find.text('Mensal'), findsOneWidget);
-  expect(find.textContaining('3.000,00 · dia 1 · '), findsOneWidget);
+  expect(find.textContaining('3.000,00 · dia 1'), findsOneWidget);
+  expect(find.textContaining('próximo: '), findsOneWidget);
 
   await tester.tap(find.text('Criar carteira'));
   await tester.pumpAndSettle();

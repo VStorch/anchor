@@ -9,6 +9,7 @@ class WalletMovement {
     required this.walletId,
     required this.amount,
     this.countsInBalance = true,
+    this.titleIsWalletName = false,
     this.receipt,
     this.outflow,
     this.check,
@@ -18,12 +19,14 @@ class WalletMovement {
     Receipt receipt, {
     required String title,
     required bool countsInBalance,
+    bool titleIsWalletName = false,
   }) => WalletMovement(
     date: receipt.receivedAt,
     title: title,
     walletId: receipt.walletId,
     amount: receipt.amount,
     countsInBalance: countsInBalance,
+    titleIsWalletName: titleIsWalletName,
     receipt: receipt,
   );
 
@@ -56,6 +59,9 @@ class WalletMovement {
   final int walletId;
   final double amount;
   final bool countsInBalance;
+
+  /// The title already names the wallet, so the subtitle does not repeat it.
+  final bool titleIsWalletName;
   final Receipt? receipt;
   final Outflow? outflow;
   final BalanceCheck? check;

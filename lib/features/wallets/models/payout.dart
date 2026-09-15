@@ -53,6 +53,10 @@ class Payout {
     return thisMonth.isBefore(startOfToday) ? dateIn(month.next) : thisMonth;
   }
 
+  /// The name the user gave this payout, or how it is scheduled when the
+  /// wallet has more than one and none was named.
+  String get nameOrSchedule => label.trim().isEmpty ? scheduleLabel : label;
+
   String get scheduleLabel => switch (schedule) {
     PayoutSchedule.dayOfMonth => 'dia $day',
     PayoutSchedule.businessDay => '$dayº dia útil',

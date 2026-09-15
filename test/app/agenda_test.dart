@@ -48,7 +48,7 @@ void main() {
           await wallets.savePayout(
             Payout(
               walletId: walletId,
-              label: 'Mensal',
+              label: '',
               amount: 3000,
               day: day,
               schedule: schedule,
@@ -87,7 +87,7 @@ void main() {
 
     final expectedDay = Month.current().businessDay(5).day;
 
-    expect(find.text('Mensal'), findsOneWidget);
+    expect(find.text('Salário'), findsOneWidget);
     expect(find.text('$expectedDay'), findsOneWidget);
 
     if (expectedDay != 5) {
@@ -131,7 +131,7 @@ void main() {
     expect(find.textContaining('2.980,00'), findsOneWidget);
     expect(find.text('1'), findsNothing);
 
-    expect(find.text('Entrada'), findsOneWidget);
+    expect(find.text('Entrada extra'), findsOneWidget);
     expect(find.text('7'), findsOneWidget);
   });
 }

@@ -560,6 +560,36 @@ void main() {
     expect(july.summaryFor(1)!.receivedInMonth, 3000);
   });
 
+  test('a migração tira o nome "Mensal" do recebimento', () async {
+    final v11 = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+      schemaVersion: 11,
+    );
+    await (await v11.database).insert('payouts', <String, Object?>{
+      'wallet_id': 1,
+      'label': 'Adiantamento',
+      'amount': 800.0,
+      'day_of_month': 20,
+      'created_at': DateTime(2026, 8).toIso8601String(),
+    });
+    await v11.close();
+
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final wallet = (await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchWallets()).single;
+
+    expect(wallet.payouts.map((payout) => payout.label), ['', 'Adiantamento']);
+    expect(wallet.titleOf(wallet.payouts.first), 'Salário · dia 5');
+  });
+
   test('o banco migrado tem o mesmo esquema de uma instalação nova', () async {
     final migrated = AppDatabase(
       factory: databaseFactoryFfiNoIsolate,

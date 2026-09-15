@@ -120,6 +120,15 @@ void main() {
         salaryWallet.payouts.single.dateIn(september),
         DateTime(2026, 9, 8),
       );
+      expect(salaryWallet.payouts.single.label, isEmpty);
+      expect(
+        salaryWallet.titleFor(
+          snapshot.receipts.firstWhere(
+            (receipt) => receipt.walletId == salaryWallet.id,
+          ),
+        ),
+        'Salário',
+      );
 
       final card = snapshot.cards.single;
       expect(card.name, 'Nubank');
