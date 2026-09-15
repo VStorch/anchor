@@ -200,7 +200,15 @@ while payments and outflows keep `countsInBalance(at)`. Checks migrated from v8 
 their predictions stay inside the amount. A check for today is taken at `now`; one for a past day at the end of that
 day (`WalletsViewModel.checkedAtFor`). Movements picked by day go through `stampFor`
 (`core/utils/moment.dart`): today keeps the current time, another day becomes noon — so the order
-against a check is deterministic. Checks never count in `receivedInMonth` or
+against a check is deterministic. On the very day of the wallet's latest check (when it does not close
+the day) the outflow, receipt and pay sheets ask "Foi antes ou depois de você informar o saldo
+(13h)?" (`CheckSideSelector`, default "Depois") and save through `stampAround` — a second before or
+after the check (`CheckSide`); the pay sheet asks it for the wallet picked, and only once the "já
+tinha saído?" question is out of the way. Editing a movement without touching its day or side keeps
+the stored instant. A past day holds one check per wallet: informing it again asks "Já existe um
+saldo informado em 12/09 (R$ X). Substituir?" and edits that check (`WalletsViewModel.checkOnDay`,
+which `saveBalanceCheck` also applies), while today may hold several. Editing a check that is not
+the latest warns that it does not change today's balance. Checks never count in `receivedInMonth` or
 `MonthSummary.totalReceived`. Schema v8 turned the old difference-based adjustments into checks
 with the balance the user saw at the time; `receipts.kind` is vestigial (still in `_schema`, never
 read or written).

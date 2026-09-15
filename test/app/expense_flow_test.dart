@@ -510,6 +510,64 @@ void main() {
       await expectWalletBalance(tester, 850);
     });
 
+    testWidgets('pagar no dia do saldo informado pergunta de que lado', (
+      tester,
+    ) async {
+      await openWithCheck(tester);
+
+      await tester.tap(find.text('Academia'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Outro valor ou data'));
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(PaySheet);
+      await tester.tap(
+        find.descendant(
+          of: sheet,
+          matching: find.byIcon(Icons.edit_calendar_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.byIcon(Icons.edit_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.byType(TextField),
+        ),
+        DateFormat('dd/MM/yyyy').format(DateTime.now()),
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.textContaining('O valor já tinha saído?'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.textContaining('Foi antes ou depois de você informar'),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Antes'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lançar'));
+      await tester.pumpAndSettle();
+
+      expect(_inSheet('Quitada'), findsOneWidget);
+      await expectWalletBalance(tester, 850);
+    });
+
     testWidgets('paga com uma data passada escolhida no calendário', (
       tester,
     ) async {

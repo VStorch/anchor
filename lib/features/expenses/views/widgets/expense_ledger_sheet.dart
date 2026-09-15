@@ -229,6 +229,9 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
       origin: payment.origin,
       paidAt: payment.paidAt,
       amount: payment.amount,
+      latestCheckAtOf: (walletId) =>
+          viewModel.snapshot.latestCheckOf(walletId)?.checkedAt,
+      isEdit: true,
     );
     final occurrence = viewModel.occurrenceOf(widget.expenseId);
     if (edit == null || occurrence == null) return;
@@ -258,6 +261,8 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
       payable: occurrence,
       checkFor: (origin) =>
           viewModel.checkCoveringDue(occurrence, origin.walletId),
+      latestCheckAtOf: (walletId) =>
+          viewModel.snapshot.latestCheckOf(walletId)?.checkedAt,
     );
     if (edit == null) return;
 

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart' show DateUtils;
+
 import '../../../core/state/data_changes.dart';
 import '../../../core/state/month_selection.dart';
 import '../../../core/utils/moment.dart';
@@ -210,6 +212,19 @@ class WalletsViewModel extends ReactiveViewModel {
     return isSameDay(day, current) ? current : endOfDay(day);
   }
 
+  /// A past day holds one check per wallet; today may hold several.
+  BalanceCheck? checkOnDay(Wallet wallet, DateTime day) {
+    if (!day.isBefore(DateUtils.dateOnly(DateTime.now()))) return null;
+    return _snapshot.checkOnDay(wallet.id!, day);
+  }
+
+  bool isLatestCheck(BalanceCheck check) =>
+      _snapshot.latestCheckOf(check.walletId)?.id == check.id;
+
+  BalanceCheck? latestCheckOf(Wallet wallet) =>
+      _snapshot.latestCheckOf(wallet.id!);
+
+  /// Informing a past day that already has a check replaces that check.
   Future<void> saveBalanceCheck(
     Wallet wallet, {
     required double amount,
@@ -217,11 +232,12 @@ class WalletsViewModel extends ReactiveViewModel {
     BalanceCheck? editing,
     List<Receipt> confirm = const <Receipt>[],
     List<Receipt> leftPending = const <Receipt>[],
-  }) {
+  }) async {
+    editing ??= checkOnDay(wallet, day);
     final checkedAt = editing != null && isSameDay(editing.checkedAt, day)
         ? editing.checkedAt
         : checkedAtFor(day);
-    return _walletRepository.saveBalanceCheck(
+    await _walletRepository.saveBalanceCheck(
       editing?.copyWith(amount: amount, checkedAt: checkedAt) ??
           BalanceCheck(
             walletId: wallet.id!,

@@ -136,6 +136,7 @@ class WalletsPage extends StatelessWidget {
       context,
       wallet: wallet,
       month: viewModel.month,
+      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
     );
     if (edit == null || edit.isDiscarded) return;
 
@@ -152,6 +153,7 @@ class WalletsPage extends StatelessWidget {
       context,
       wallet: wallet,
       month: viewModel.month,
+      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
     );
     if (edit == null || edit.isDiscarded) return;
 
@@ -180,22 +182,55 @@ class WalletsPage extends StatelessWidget {
       ),
       receiptTitle: viewModel.receiptTitle,
       check: check,
+      latestCheck: viewModel.latestCheckOf(wallet),
     );
-    if (edit == null) return;
+    if (edit == null || !context.mounted) return;
 
     if (edit.isRemoved) {
       await viewModel.deleteBalanceCheck(check!);
       return;
     }
 
+    final sameDay = check == null
+        ? viewModel.checkOnDay(wallet, edit.day)
+        : null;
+    if (sameDay != null && !await _confirmReplace(context, sameDay)) return;
+
     await viewModel.saveBalanceCheck(
       wallet,
       amount: edit.amount,
       day: edit.day,
-      editing: check,
+      editing: check ?? sameDay,
       confirm: edit.confirm,
       leftPending: edit.leftPending,
     );
+  }
+
+  Future<bool> _confirmReplace(
+    BuildContext context,
+    BalanceCheck existing,
+  ) async {
+    final replace = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(
+          'Já existe um saldo informado em '
+          '${DateFormat('dd/MM').format(existing.checkedAt)} '
+          '(${formatMoney(existing.amount)}). Substituir?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Substituir'),
+          ),
+        ],
+      ),
+    );
+    return replace ?? false;
   }
 
   Future<void> _openMovement(
@@ -226,6 +261,7 @@ class WalletsPage extends StatelessWidget {
       context,
       wallet: wallet,
       outflow: outflow,
+      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
     );
     if (edit == null) return;
 
@@ -252,6 +288,7 @@ class WalletsPage extends StatelessWidget {
       context,
       wallet: wallet,
       receipt: receipt,
+      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
     );
     if (edit == null) return;
 

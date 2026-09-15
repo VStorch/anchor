@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/month.dart';
+import '../../../../core/widgets/check_side_selector.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../models/outflow.dart';
@@ -28,6 +29,7 @@ class OutflowSheet extends StatefulWidget {
     required this.wallet,
     this.outflow,
     this.month,
+    this.latestCheckAt,
   });
 
   static Future<OutflowEdit?> show(
@@ -35,20 +37,26 @@ class OutflowSheet extends StatefulWidget {
     required Wallet wallet,
     Outflow? outflow,
     Month? month,
+    DateTime? latestCheckAt,
   }) {
     return showModalBottomSheet<OutflowEdit>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) =>
-          OutflowSheet(wallet: wallet, outflow: outflow, month: month),
+      builder: (_) => OutflowSheet(
+        wallet: wallet,
+        outflow: outflow,
+        month: month,
+        latestCheckAt: latestCheckAt,
+      ),
     );
   }
 
   final Wallet wallet;
   final Outflow? outflow;
   final Month? month;
+  final DateTime? latestCheckAt;
 
   @override
   State<OutflowSheet> createState() => _OutflowSheetState();
@@ -60,6 +68,19 @@ class _OutflowSheetState extends State<OutflowSheet> {
   late DateTime _spentAt =
       widget.outflow?.spentAt ??
       stampFor((widget.month ?? Month.current()).suggestedDate);
+  late CheckSide _side = _initialSide;
+  bool _isMomentTouched = false;
+
+  CheckSide get _initialSide {
+    final checkedAt = widget.latestCheckAt;
+    final outflow = widget.outflow;
+    if (outflow == null || checkedAt == null) return CheckSide.after;
+    return sideOf(outflow.spentAt, checkedAt);
+  }
+
+  DateTime get _moment => widget.outflow != null && !_isMomentTouched
+      ? _spentAt
+      : stampAround(_spentAt, checkedAt: widget.latestCheckAt, side: _side);
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +135,17 @@ class _OutflowSheetState extends State<OutflowSheet> {
               trailing: const Icon(Icons.edit_calendar_outlined),
               onTap: _pickDate,
             ),
+            if (needsCheckSide(_spentAt, widget.latestCheckAt)) ...[
+              const SizedBox(height: 16),
+              CheckSideSelector(
+                checkedAt: widget.latestCheckAt!,
+                value: _side,
+                onChanged: (side) => setState(() {
+                  _side = side;
+                  _isMomentTouched = true;
+                }),
+              ),
+            ],
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _amount > 0 ? _save : null,
@@ -143,19 +175,20 @@ class _OutflowSheetState extends State<OutflowSheet> {
     OutflowEdit(
       description: _description,
       amount: _amount,
-      spentAt: _spentAt,
+      spentAt: _moment,
       isDiscarded: true,
     ),
   );
 
-  OutflowEdit _edit() => OutflowEdit(
-    description: _description,
-    amount: _amount,
-    spentAt: _spentAt,
-  );
+  OutflowEdit _edit() =>
+      OutflowEdit(description: _description, amount: _amount, spentAt: _moment);
 
   Future<void> _pickDate() async {
     final date = await pickMovementDate(context, _spentAt);
-    if (date != null) setState(() => _spentAt = stampFor(date));
+    if (date == null) return;
+    setState(() {
+      _spentAt = stampFor(date);
+      _isMomentTouched = true;
+    });
   }
 }

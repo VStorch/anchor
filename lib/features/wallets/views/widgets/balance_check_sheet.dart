@@ -32,6 +32,7 @@ class BalanceCheckSheet extends StatefulWidget {
     required this.dueUnconfirmed,
     required this.receiptTitle,
     this.check,
+    this.latestCheck,
   });
 
   static Future<BalanceCheckEdit?> show(
@@ -41,6 +42,7 @@ class BalanceCheckSheet extends StatefulWidget {
     required List<Receipt> Function(DateTime day) dueUnconfirmed,
     required String Function(Receipt receipt) receiptTitle,
     BalanceCheck? check,
+    BalanceCheck? latestCheck,
   }) {
     return showModalBottomSheet<BalanceCheckEdit>(
       context: context,
@@ -53,6 +55,7 @@ class BalanceCheckSheet extends StatefulWidget {
         dueUnconfirmed: dueUnconfirmed,
         receiptTitle: receiptTitle,
         check: check,
+        latestCheck: latestCheck,
       ),
     );
   }
@@ -62,6 +65,7 @@ class BalanceCheckSheet extends StatefulWidget {
   final List<Receipt> Function(DateTime day) dueUnconfirmed;
   final String Function(Receipt receipt) receiptTitle;
   final BalanceCheck? check;
+  final BalanceCheck? latestCheck;
 
   @override
   State<BalanceCheckSheet> createState() => _BalanceCheckSheetState();
@@ -73,6 +77,13 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
   final Set<int?> _notArrived = <int?>{};
 
   List<Receipt> get _due => widget.dueUnconfirmed(_day);
+
+  BalanceCheck? get _supersededBy {
+    final check = widget.check;
+    final latest = widget.latestCheck;
+    if (check == null || latest == null || latest.id == check.id) return null;
+    return latest;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +116,17 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
+            if (_supersededBy case final latest?) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Esse não é o saldo mais recente '
+                '(${DateFormat('dd/MM').format(latest.checkedAt)}): mudar o '
+                'valor não altera o saldo de hoje.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             MoneyField(
               initialValue: _amount,

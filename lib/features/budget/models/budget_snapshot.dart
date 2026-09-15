@@ -1,3 +1,4 @@
+import '../../../core/utils/moment.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../cards/models/credit_card.dart';
@@ -87,6 +88,16 @@ class BudgetSnapshot {
 
   BalanceCheck? latestCheckOf(int walletId) =>
       summaryFor(walletId)?.latestCheck;
+
+  BalanceCheck? checkOnDay(int walletId, DateTime day) {
+    BalanceCheck? found;
+    for (final check in checks) {
+      if (check.walletId == walletId && isSameDay(check.checkedAt, day)) {
+        found = check;
+      }
+    }
+    return found;
+  }
 
   CreditCard? cardById(int? id) {
     if (id == null) return null;

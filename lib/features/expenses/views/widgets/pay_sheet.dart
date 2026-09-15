@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/utils/moment.dart';
+import '../../../../core/widgets/check_side_selector.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../../wallets/models/balance_check.dart';
@@ -27,7 +28,9 @@ class PayEdit {
 ///
 /// With a [payable] and [checkFor], a wallet whose balance was informed after
 /// the bill fell due asks whether the money had already left before the sheet
-/// can save, unless the day was picked by hand.
+/// can save, unless the day was picked by hand. On the day of the chosen
+/// wallet's latest check ([latestCheckAtOf]) it asks which side of the check
+/// the payment falls; an [isEdit] left untouched keeps its instant.
 class PaySheet extends StatefulWidget {
   const PaySheet({
     super.key,
@@ -38,6 +41,8 @@ class PaySheet extends StatefulWidget {
     this.amount,
     this.payable,
     this.checkFor,
+    this.latestCheckAtOf,
+    this.isEdit = false,
   });
 
   static Future<PayEdit?> show(
@@ -49,6 +54,8 @@ class PaySheet extends StatefulWidget {
     double? amount,
     Payable? payable,
     BalanceCheck? Function(PaymentOrigin origin)? checkFor,
+    DateTime? Function(int walletId)? latestCheckAtOf,
+    bool isEdit = false,
   }) {
     return showModalBottomSheet<PayEdit>(
       context: context,
@@ -63,6 +70,8 @@ class PaySheet extends StatefulWidget {
         amount: amount,
         payable: payable,
         checkFor: checkFor,
+        latestCheckAtOf: latestCheckAtOf,
+        isEdit: isEdit,
       ),
     );
   }
@@ -74,6 +83,8 @@ class PaySheet extends StatefulWidget {
   final double? amount;
   final Payable? payable;
   final BalanceCheck? Function(PaymentOrigin origin)? checkFor;
+  final DateTime? Function(int walletId)? latestCheckAtOf;
+  final bool isEdit;
 
   @override
   State<PaySheet> createState() => _PaySheetState();
@@ -84,7 +95,27 @@ class _PaySheetState extends State<PaySheet> {
   late double _amount = widget.amount ?? 0;
   late DateTime _paidAt = widget.paidAt;
   bool _dayPicked = false;
+  bool _sidePicked = false;
   bool? _alreadyOut;
+  late CheckSide _side = _initialSide;
+
+  CheckSide get _initialSide {
+    final checkedAt = _latestCheckAt;
+    if (!widget.isEdit || checkedAt == null) return CheckSide.after;
+    return sideOf(widget.paidAt, checkedAt);
+  }
+
+  DateTime? get _latestCheckAt =>
+      _isOutside ? null : widget.latestCheckAtOf?.call(_origin.walletId!);
+
+  bool get _asksSide =>
+      _pendingCheck == null && needsCheckSide(_paidAt, _latestCheckAt);
+
+  DateTime get _moment {
+    if (_pendingCheck != null) return _paidAt;
+    if (widget.isEdit && !_dayPicked && !_sidePicked) return _paidAt;
+    return stampAround(_paidAt, checkedAt: _latestCheckAt, side: _side);
+  }
 
   bool get _asksAmount => widget.amount != null;
 
@@ -198,6 +229,17 @@ class _PaySheetState extends State<PaySheet> {
                 ],
               ),
             ],
+            if (_asksSide) ...[
+              const SizedBox(height: 16),
+              CheckSideSelector(
+                checkedAt: _latestCheckAt!,
+                value: _side,
+                onChanged: (side) => setState(() {
+                  _side = side;
+                  _sidePicked = true;
+                }),
+              ),
+            ],
             const SizedBox(height: 20),
             Row(
               children: [
@@ -231,7 +273,7 @@ class _PaySheetState extends State<PaySheet> {
     PayEdit(
       origin: _isOutside ? (walletId: null, outside: true) : _origin,
       amount: _amount,
-      paidAt: _paidAt,
+      paidAt: _moment,
     ),
   );
 

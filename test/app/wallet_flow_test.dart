@@ -1,6 +1,7 @@
 import 'package:anchor/app/anchor_app.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/utils/moment.dart';
 import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
@@ -8,6 +9,7 @@ import 'package:anchor/core/widgets/money_field.dart';
 import 'package:anchor/features/dashboard/views/widgets/month_so_far_card.dart';
 import 'package:anchor/features/dashboard/views/widgets/today_card.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
+import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
@@ -22,6 +24,7 @@ import 'package:anchor/features/wallets/views/widgets/receipt_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_reminder_notifications.dart';
@@ -266,6 +269,155 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('antes do saldo informado'), findsNothing);
+  });
+
+  group('gasto no dia do saldo informado', () {
+    Future<void> seedCheckYesterdayAt13() async {
+      await seedSalary();
+      final repository = WalletRepository(database, DataChanges());
+      final today = DateTime.now();
+      await repository.saveBalanceCheck(
+        BalanceCheck(
+          walletId: 1,
+          amount: 500,
+          checkedAt: DateTime(today.year, today.month, today.day - 1, 13),
+        ),
+      );
+    }
+
+    Future<void> launchYesterday(WidgetTester tester, String side) async {
+      final today = DateTime.now();
+      final yesterday = DateTime(today.year, today.month, today.day - 1);
+      await tester.tap(find.text('Gasto'));
+      await tester.pumpAndSettle();
+      await tester.enterText(moneyInput(), '80');
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(OutflowSheet),
+          matching: find.byIcon(Icons.edit_calendar_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.byIcon(Icons.edit_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(DatePickerDialog),
+          matching: find.byType(TextField),
+        ),
+        DateFormat('dd/MM/yyyy').format(yesterday),
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Foi antes ou depois de você informar o saldo (13h)?'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text(side));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Registrar gasto'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('lançado hoje como depois do saldo, sai da carteira', (
+      tester,
+    ) async {
+      await seedCheckYesterdayAt13();
+      await pumpApp(tester);
+
+      await launchYesterday(tester, 'Depois');
+
+      expect(
+        find.descendant(
+          of: find.byType(WalletCard),
+          matching: find.text(formatMoney(420)),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('lançado hoje como antes do saldo, já estava descontado', (
+      tester,
+    ) async {
+      await seedCheckYesterdayAt13();
+      await pumpApp(tester);
+
+      await launchYesterday(tester, 'Antes');
+
+      expect(
+        find.descendant(
+          of: find.byType(WalletCard),
+          matching: find.text(formatMoney(500)),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets('informar de novo um dia passado pergunta se substitui', (
+    tester,
+  ) async {
+    await seedSalary();
+    final today = DateTime.now();
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
+    await WalletRepository(database, DataChanges()).saveBalanceCheck(
+      BalanceCheck(walletId: 1, amount: 500, checkedAt: endOfDay(yesterday)),
+    );
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Saldo').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(moneyInput(), '700');
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BalanceCheckSheet),
+        matching: find.byIcon(Icons.edit_calendar_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(DatePickerDialog),
+        matching: find.byIcon(Icons.edit_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(DatePickerDialog),
+        matching: find.byType(TextField),
+      ),
+      DateFormat('dd/MM/yyyy').format(yesterday),
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar saldo'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Já existe um saldo informado em '
+        '${DateFormat('dd/MM').format(yesterday)} (${formatMoney(500)}). '
+        'Substituir?',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Substituir'));
+    await tester.pumpAndSettle();
+
+    final checks = await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchBalanceChecks();
+    expect(checks.single.amount, 700);
   });
 
   testWidgets('remove o saldo informado pela movimentação', (tester) async {

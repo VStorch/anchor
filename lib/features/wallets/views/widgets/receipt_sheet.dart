@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/month.dart';
+import '../../../../core/widgets/check_side_selector.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../models/receipt.dart';
@@ -26,6 +27,7 @@ class ReceiptSheet extends StatefulWidget {
     required this.wallet,
     this.receipt,
     this.month,
+    this.latestCheckAt,
   });
 
   static Future<ReceiptEdit?> show(
@@ -33,20 +35,26 @@ class ReceiptSheet extends StatefulWidget {
     required Wallet wallet,
     Receipt? receipt,
     Month? month,
+    DateTime? latestCheckAt,
   }) {
     return showModalBottomSheet<ReceiptEdit>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) =>
-          ReceiptSheet(wallet: wallet, receipt: receipt, month: month),
+      builder: (_) => ReceiptSheet(
+        wallet: wallet,
+        receipt: receipt,
+        month: month,
+        latestCheckAt: latestCheckAt,
+      ),
     );
   }
 
   final Wallet wallet;
   final Receipt? receipt;
   final Month? month;
+  final DateTime? latestCheckAt;
 
   @override
   State<ReceiptSheet> createState() => _ReceiptSheetState();
@@ -55,6 +63,23 @@ class ReceiptSheet extends StatefulWidget {
 class _ReceiptSheetState extends State<ReceiptSheet> {
   late double _amount = widget.receipt?.amount ?? 0;
   late DateTime _receivedAt = _initialDate;
+  late CheckSide _side = _initialSide;
+  bool _isMomentTouched = false;
+
+  bool get _keepsStoredMoment =>
+      _receipt != null && !_isPredicted && !_isMomentTouched;
+
+  CheckSide get _initialSide {
+    final checkedAt = widget.latestCheckAt;
+    if (_receipt == null || _isPredicted || checkedAt == null) {
+      return CheckSide.after;
+    }
+    return sideOf(_receivedAt, checkedAt);
+  }
+
+  DateTime get _moment => _keepsStoredMoment
+      ? _receivedAt
+      : stampAround(_receivedAt, checkedAt: widget.latestCheckAt, side: _side);
 
   /// Confirming a prediction of this month happens when the money shows up,
   /// so it opens on now; one from a month already over keeps its day.
@@ -125,6 +150,17 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
               trailing: const Icon(Icons.edit_calendar_outlined),
               onTap: _pickDate,
             ),
+            if (needsCheckSide(_receivedAt, widget.latestCheckAt)) ...[
+              const SizedBox(height: 16),
+              CheckSideSelector(
+                checkedAt: widget.latestCheckAt!,
+                value: _side,
+                onChanged: (side) => setState(() {
+                  _side = side;
+                  _isMomentTouched = true;
+                }),
+              ),
+            ],
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _amount > 0 ? _save : null,
@@ -154,14 +190,18 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
 
   void _save() => Navigator.of(
     context,
-  ).pop(ReceiptEdit(amount: _amount, receivedAt: _receivedAt));
+  ).pop(ReceiptEdit(amount: _amount, receivedAt: _moment));
 
-  void _discard() => Navigator.of(context).pop(
-    ReceiptEdit(amount: _amount, receivedAt: _receivedAt, isDiscarded: true),
-  );
+  void _discard() => Navigator.of(
+    context,
+  ).pop(ReceiptEdit(amount: _amount, receivedAt: _moment, isDiscarded: true));
 
   Future<void> _pickDate() async {
     final date = await pickMovementDate(context, _receivedAt);
-    if (date != null) setState(() => _receivedAt = stampFor(date));
+    if (date == null) return;
+    setState(() {
+      _receivedAt = stampFor(date);
+      _isMomentTouched = true;
+    });
   }
 }
