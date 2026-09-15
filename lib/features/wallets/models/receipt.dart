@@ -10,6 +10,7 @@ class Receipt {
     required this.amount,
     required this.receivedAt,
     this.status = ReceiptStatus.confirmed,
+    this.pendingAtCheckId,
   });
 
   factory Receipt.fromMap(Map<String, Object?> map) => Receipt(
@@ -20,6 +21,7 @@ class Receipt {
     amount: (map['amount'] as num).toDouble(),
     receivedAt: DateTime.parse(map['received_at'] as String),
     status: ReceiptStatus.fromId(map['status'] as String),
+    pendingAtCheckId: map['pending_at_check_id'] as int?,
   );
 
   final int? id;
@@ -29,6 +31,10 @@ class Receipt {
   final double amount;
   final DateTime receivedAt;
   final ReceiptStatus status;
+
+  /// The balance check this receipt was left out of as "not arrived yet":
+  /// once confirmed it counts after that check, whatever day it is dated.
+  final int? pendingAtCheckId;
 
   bool get isManual => payoutId == null;
 
@@ -46,6 +52,7 @@ class Receipt {
     'amount': amount,
     'received_at': receivedAt.toIso8601String(),
     'status': status.id,
+    'pending_at_check_id': pendingAtCheckId,
   };
 
   Receipt copyWith({
@@ -60,5 +67,6 @@ class Receipt {
     amount: amount ?? this.amount,
     receivedAt: receivedAt ?? this.receivedAt,
     status: status ?? this.status,
+    pendingAtCheckId: pendingAtCheckId,
   );
 }

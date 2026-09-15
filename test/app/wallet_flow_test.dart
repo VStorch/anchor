@@ -238,6 +238,36 @@ void main() {
     );
   });
 
+  testWidgets('o salário desmarcado no saldo entra quando é confirmado', (
+    tester,
+  ) async {
+    await seedSalary(amount: 3200);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Saldo').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.enterText(moneyInput(), '850');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar saldo'));
+    await tester.pumpAndSettle();
+
+    final walletCard = find.byType(WalletCard);
+    expect(find.textContaining('a confirmar'), findsWidgets);
+
+    await tester.tap(find.textContaining('a confirmar').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar recebimento'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(of: walletCard, matching: find.text(formatMoney(4050))),
+      findsOneWidget,
+    );
+    expect(find.textContaining('antes do saldo informado'), findsNothing);
+  });
+
   testWidgets('remove o saldo informado pela movimentação', (tester) async {
     await seedSalary();
     await pumpApp(tester);

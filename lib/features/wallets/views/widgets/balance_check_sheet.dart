@@ -13,12 +13,14 @@ class BalanceCheckEdit {
     required this.amount,
     required this.day,
     this.confirm = const <Receipt>[],
+    this.leftPending = const <Receipt>[],
     this.isRemoved = false,
   });
 
   final double amount;
   final DateTime day;
   final List<Receipt> confirm;
+  final List<Receipt> leftPending;
   final bool isRemoved;
 }
 
@@ -172,6 +174,9 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
       day: _day,
       confirm: _due
           .where((receipt) => !_notArrived.contains(receipt.id))
+          .toList(),
+      leftPending: _due
+          .where((receipt) => _notArrived.contains(receipt.id))
           .toList(),
     ),
   );

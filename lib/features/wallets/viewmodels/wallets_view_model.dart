@@ -57,10 +57,11 @@ class WalletsViewModel extends ReactiveViewModel {
           WalletMovement.fromReceipt(
             receipt,
             title: receiptTitle(receipt),
-            countsInBalance: _countsInBalance(
-              receipt.walletId,
-              receipt.receivedAt,
-            ),
+            countsInBalance:
+                _snapshot
+                    .summaryFor(receipt.walletId)
+                    ?.countsReceipt(receipt) ??
+                true,
           ),
       for (final outflow in _snapshot.summary.outflows)
         WalletMovement.fromOutflow(
@@ -215,6 +216,7 @@ class WalletsViewModel extends ReactiveViewModel {
     required DateTime day,
     BalanceCheck? editing,
     List<Receipt> confirm = const <Receipt>[],
+    List<Receipt> leftPending = const <Receipt>[],
   }) {
     final checkedAt = editing != null && isSameDay(editing.checkedAt, day)
         ? editing.checkedAt
@@ -227,6 +229,7 @@ class WalletsViewModel extends ReactiveViewModel {
             checkedAt: checkedAt,
           ),
       confirm: confirm,
+      leftPending: leftPending,
     );
   }
 

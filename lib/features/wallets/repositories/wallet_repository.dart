@@ -167,26 +167,35 @@ class WalletRepository {
 
   /// Saying what a wallet holds often comes with "and the salary did land":
   /// both are written together, so the balance never flickers in between.
+  /// A predicted receipt listed but left unticked is marked with the check,
+  /// so confirming it later counts after the check whatever its date.
   Future<void> saveBalanceCheck(
     BalanceCheck check, {
     List<Receipt> confirm = const <Receipt>[],
+    List<Receipt> leftPending = const <Receipt>[],
   }) async {
     final db = await _database.database;
     await db.transaction((txn) async {
-      for (final receipt in confirm) {
-        await _upsert(
-          txn,
-          AppDatabase.receiptsTable,
-          receipt.copyWith(status: ReceiptStatus.confirmed).toMap(),
-          receipt.id,
-        );
-      }
-      await _upsert(
+      final checkId = await _upsert(
         txn,
         AppDatabase.balanceChecksTable,
         check.toMap(),
         check.id,
       );
+      for (final receipt in confirm) {
+        await _upsert(txn, AppDatabase.receiptsTable, <String, Object?>{
+          ...receipt.copyWith(status: ReceiptStatus.confirmed).toMap(),
+          'pending_at_check_id': null,
+        }, receipt.id);
+      }
+      for (final receipt in leftPending) {
+        await txn.update(
+          AppDatabase.receiptsTable,
+          <String, Object?>{'pending_at_check_id': checkId},
+          where: 'id = ?',
+          whereArgs: [receipt.id],
+        );
+      }
     });
     _changes.publish();
   }
@@ -245,12 +254,20 @@ class WalletRepository {
     _changes.publish();
   }
 
+  /// Credits the payouts whose day has come as predicted receipts. A
+  /// prediction from a month that is over is assumed received: it is
+  /// confirmed first, and "Não veio" still dismisses it.
   Future<int> registerDuePayouts(List<Wallet> wallets, {DateTime? now}) async {
     final db = await _database.database;
     final clock = now ?? DateTime.now();
     final today = DateTime(clock.year, clock.month, clock.day);
     final currentMonth = Month.fromDate(clock);
-    var changed = 0;
+    var changed = await db.update(
+      AppDatabase.receiptsTable,
+      <String, Object?>{'status': ReceiptStatus.confirmed.id},
+      where: 'status = ? AND month_key < ?',
+      whereArgs: [ReceiptStatus.predicted.id, currentMonth.key],
+    );
 
     for (final wallet in wallets) {
       final walletStart = Month.fromDate(wallet.createdAt);

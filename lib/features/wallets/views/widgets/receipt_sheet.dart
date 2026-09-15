@@ -54,9 +54,20 @@ class ReceiptSheet extends StatefulWidget {
 
 class _ReceiptSheetState extends State<ReceiptSheet> {
   late double _amount = widget.receipt?.amount ?? 0;
-  late DateTime _receivedAt =
-      widget.receipt?.receivedAt ??
-      stampFor((widget.month ?? Month.current()).suggestedDate);
+  late DateTime _receivedAt = _initialDate;
+
+  /// Confirming a prediction of this month happens when the money shows up,
+  /// so it opens on now; one from a month already over keeps its day.
+  DateTime get _initialDate {
+    final receipt = widget.receipt;
+    if (receipt == null) {
+      return stampFor((widget.month ?? Month.current()).suggestedDate);
+    }
+    final now = DateTime.now();
+    return receipt.isPredicted && receipt.month == Month.fromDate(now)
+        ? now
+        : receipt.receivedAt;
+  }
 
   Receipt? get _receipt => widget.receipt;
 

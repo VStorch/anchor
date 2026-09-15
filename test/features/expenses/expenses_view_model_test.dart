@@ -269,6 +269,7 @@ void main() {
         150,
         paidAt: DateTime.now(),
       );
+      await viewModel.refresh();
 
       expect((await expenses.fetchPayments()).single.paidAt, chosen);
       expect((await expenses.fetchPayments()).single.amount, 150);

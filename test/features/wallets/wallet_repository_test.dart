@@ -392,6 +392,65 @@ void main() {
       expect(await repository.fetchBalanceChecks(), isEmpty);
     });
 
+    test('marca o previsto deixado desmarcado e apagar o saldo desfaz a '
+        'marca', () async {
+      final wallet = await seedPredictedSalary();
+      final predicted = (await repository.fetchReceipts()).single;
+      await repository.saveBalanceCheck(
+        BalanceCheck(
+          walletId: wallet.id!,
+          amount: 850,
+          checkedAt: DateTime.now(),
+        ),
+        leftPending: [predicted],
+      );
+      final check = (await repository.fetchBalanceChecks()).single;
+
+      final pending = (await repository.fetchReceipts()).single;
+      expect(pending.pendingAtCheckId, check.id);
+      expect(pending.isPredicted, isTrue);
+
+      await repository.saveReceipt(
+        pending.copyWith(status: ReceiptStatus.confirmed),
+      );
+      expect(
+        (await repository.fetchReceipts()).single.pendingAtCheckId,
+        check.id,
+      );
+
+      await repository.deleteBalanceCheck(check.id!);
+      expect(
+        (await repository.fetchReceipts()).single.pendingAtCheckId,
+        isNull,
+      );
+    });
+
+    test('confirmar no saldo tira a marca de um saldo anterior', () async {
+      final wallet = await seedPredictedSalary();
+      final predicted = (await repository.fetchReceipts()).single;
+      await repository.saveBalanceCheck(
+        BalanceCheck(
+          walletId: wallet.id!,
+          amount: 850,
+          checkedAt: DateTime.now(),
+        ),
+        leftPending: [predicted],
+      );
+
+      await repository.saveBalanceCheck(
+        BalanceCheck(
+          walletId: wallet.id!,
+          amount: 4050,
+          checkedAt: DateTime.now(),
+        ),
+        confirm: [(await repository.fetchReceipts()).single],
+      );
+
+      final receipt = (await repository.fetchReceipts()).single;
+      expect(receipt.isConfirmed, isTrue);
+      expect(receipt.pendingAtCheckId, isNull);
+    });
+
     test('apagar a carteira leva junto o saldo informado', () async {
       final wallet = await seedPredictedSalary();
       await repository.saveBalanceCheck(
@@ -698,6 +757,65 @@ void main() {
       twoMonthsAgo: 3000,
       month.previous: 3000,
       month: 3500,
+    });
+  });
+
+  group('previstos de um mês que terminou', () {
+    final now = DateTime(2026, 9, 14, 10);
+
+    Receipt predictedIn(int walletId, Month month) => Receipt(
+      walletId: walletId,
+      month: month,
+      amount: 3000,
+      receivedAt: month.dayOf(5),
+      status: ReceiptStatus.predicted,
+    );
+
+    test('o do mês anterior vira confirmado e o do mês corrente continua '
+        'previsto, avisando uma vez só', () async {
+      final changes = DataChanges();
+      repository = WalletRepository(database, changes);
+      final walletId = await createSalary(createdAt: DateTime(2026, 8));
+      await repository.saveReceipt(predictedIn(walletId, const Month(2026, 8)));
+      await repository.saveReceipt(predictedIn(walletId, const Month(2026, 9)));
+
+      var published = 0;
+      changes.addListener(() => published++);
+      final wallets = await repository.fetchWallets();
+      final first = await repository.registerDuePayouts(wallets, now: now);
+      final second = await repository.registerDuePayouts(wallets, now: now);
+
+      final statusByMonth = {
+        for (final receipt in await repository.fetchReceipts())
+          receipt.month: receipt.status,
+      };
+      expect(statusByMonth, {
+        const Month(2026, 8): ReceiptStatus.confirmed,
+        const Month(2026, 9): ReceiptStatus.predicted,
+      });
+      expect(first, 1);
+      expect(second, 0);
+      expect(published, 1);
+    });
+
+    test('o dispensado continua dispensado', () async {
+      final walletId = await createSalary(createdAt: DateTime(2026, 8));
+      await repository.saveReceipt(
+        predictedIn(
+          walletId,
+          const Month(2026, 8),
+        ).copyWith(status: ReceiptStatus.skipped),
+      );
+
+      await repository.registerDuePayouts(
+        await repository.fetchWallets(),
+        now: now,
+      );
+
+      expect(
+        (await repository.fetchReceipts()).single.status,
+        ReceiptStatus.skipped,
+      );
     });
   });
 

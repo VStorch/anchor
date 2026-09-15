@@ -194,6 +194,7 @@ class WalletsPage extends StatelessWidget {
       day: edit.day,
       editing: check,
       confirm: edit.confirm,
+      leftPending: edit.leftPending,
     );
   }
 

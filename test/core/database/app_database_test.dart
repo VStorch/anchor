@@ -5,6 +5,7 @@ import 'package:anchor/core/database/database_backup.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/models/wallet_summary.dart';
+import 'package:anchor/features/budget/services/budget_service.dart';
 import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
@@ -479,6 +480,85 @@ void main() {
       );
     },
   );
+
+  test('a migração dá ao recebimento a marca de saldo vazia', () async {
+    final v10 = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+      schemaVersion: 10,
+    );
+    await (await v10.database).insert('balance_checks', <String, Object?>{
+      'wallet_id': 1,
+      'amount': 850.0,
+      'checked_at': DateTime(2026, 9, 14, 13).toIso8601String(),
+    });
+    await v10.close();
+
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+
+    final repository = WalletRepository(database, DataChanges());
+    final receipt = (await repository.fetchReceipts()).single;
+    expect(receipt.pendingAtCheckId, isNull);
+
+    final check = (await repository.fetchBalanceChecks()).single;
+    await repository.saveBalanceCheck(check, leftPending: [receipt]);
+    expect(
+      (await repository.fetchReceipts()).single.pendingAtCheckId,
+      check.id,
+    );
+  });
+
+  test('os salários previstos antigos voltam ao saldo e ao Entrou depois da '
+      'atualização', () async {
+    final v7 = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+      schemaVersion: 7,
+    );
+    final v7Db = await v7.database;
+    for (final month in ['2026-06', '2026-07']) {
+      await v7Db.insert('receipts', <String, Object?>{
+        'wallet_id': 1,
+        'payout_id': 1,
+        'month_key': month,
+        'amount': 3000.0,
+        'received_at': DateTime.parse('$month-05').toIso8601String(),
+        'status': 'predicted',
+      });
+    }
+    final v7Balance =
+        (await v7Db.rawQuery(
+              "SELECT (SELECT SUM(amount) FROM receipts WHERE wallet_id = 1 "
+              "AND status != 'skipped') - (SELECT SUM(amount) FROM "
+              'expense_payments WHERE wallet_id = 1) AS balance',
+            )).single['balance']!
+            as double;
+    await v7.close();
+
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+    final changes = DataChanges();
+    final service = BudgetService(
+      ExpenseRepository(database, changes),
+      WalletRepository(database, changes),
+      CardRepository(database, changes),
+    );
+
+    final july = await service.loadSnapshot(
+      const Month(2026, 7),
+      now: DateTime(2026, 9, 14, 10),
+    );
+
+    expect(july.summaryFor(1)!.balance, v7Balance);
+    expect(july.summaryFor(1)!.receivedInMonth, 3000);
+  });
 
   test('o banco migrado tem o mesmo esquema de uma instalação nova', () async {
     final migrated = AppDatabase(

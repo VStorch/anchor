@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 10;
+  static const int version = 11;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -123,7 +123,8 @@ class AppDatabase {
       amount REAL NOT NULL,
       received_at TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'confirmed',
-      kind TEXT NOT NULL DEFAULT 'income'
+      kind TEXT NOT NULL DEFAULT 'income',
+      pending_at_check_id INTEGER REFERENCES $balanceChecksTable(id) ON DELETE SET NULL
     )
     ''',
     'CREATE UNIQUE INDEX idx_receipt_payout_month ON $receiptsTable(payout_id, month_key)',
@@ -292,5 +293,9 @@ class AppDatabase {
       'UPDATE $expensePaymentsTable SET settled_outside = 1 WHERE wallet_id IS NULL',
     ],
     10: <String>['ALTER TABLE $expensesTable ADD COLUMN purchased_at TEXT'],
+    11: <String>[
+      'ALTER TABLE $receiptsTable ADD COLUMN pending_at_check_id INTEGER '
+          'REFERENCES $balanceChecksTable(id) ON DELETE SET NULL',
+    ],
   };
 }

@@ -9,6 +9,8 @@ import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
+import 'package:anchor/features/wallets/models/receipt.dart';
+import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
@@ -175,6 +177,140 @@ void main() {
       expect(snapshot.summaryFor(id)!.balance, 0);
       expect(snapshot.awaitingConfirmation, 3000);
       expect(snapshot.forecast!.toReceive, 6000);
+    });
+  });
+
+  group('salário que cai depois do saldo informado', () {
+    final checkedAt = DateTime(2026, 9, 14, 13);
+    final later = DateTime(2026, 9, 14, 18);
+
+    Future<(int, Receipt)> seedSalaryOnThe8th() async {
+      final id = await walletWith(
+        name: 'Salário',
+        kind: WalletKind.salary,
+        payout: Payout(
+          walletId: 0,
+          label: 'Mensal',
+          amount: 3000,
+          day: 8,
+          createdAt: DateTime(2026, 9),
+        ),
+      );
+      await wallets.registerDuePayouts(
+        await wallets.fetchWallets(),
+        now: checkedAt,
+      );
+      return (id, (await wallets.fetchReceipts()).single);
+    }
+
+    Future<double> balanceOf(int walletId) async => (await service.loadSnapshot(
+      september,
+      now: later,
+    )).summaryFor(walletId)!.balance;
+
+    test('desmarcado no saldo e confirmado com a data do calendário, '
+        'entra no saldo', () async {
+      final (id, salary) = await seedSalaryOnThe8th();
+      await wallets.saveBalanceCheck(
+        BalanceCheck(walletId: id, amount: 100, checkedAt: checkedAt),
+        leftPending: [salary],
+      );
+
+      final pending = (await wallets.fetchReceipts()).single;
+      await wallets.saveReceipt(
+        pending.copyWith(status: ReceiptStatus.confirmed),
+      );
+
+      expect(await balanceOf(id), 3100);
+    });
+
+    test('desmarcado no saldo e confirmado com a data de hoje, entra no '
+        'saldo', () async {
+      final (id, salary) = await seedSalaryOnThe8th();
+      await wallets.saveBalanceCheck(
+        BalanceCheck(walletId: id, amount: 100, checkedAt: checkedAt),
+        leftPending: [salary],
+      );
+
+      final pending = (await wallets.fetchReceipts()).single;
+      await wallets.saveReceipt(
+        pending.copyWith(status: ReceiptStatus.confirmed, receivedAt: later),
+      );
+
+      expect(await balanceOf(id), 3100);
+    });
+
+    test('marcado como já caiu no saldo, não soma de novo', () async {
+      final (id, salary) = await seedSalaryOnThe8th();
+      await wallets.saveBalanceCheck(
+        BalanceCheck(walletId: id, amount: 100, checkedAt: checkedAt),
+        confirm: [salary],
+      );
+
+      expect(await balanceOf(id), 100);
+    });
+
+    test('o saldo informado sem a lista (como o da versão 8) já continha o '
+        'previsto de antes dele', () async {
+      final (id, salary) = await seedSalaryOnThe8th();
+      await wallets.saveBalanceCheck(
+        BalanceCheck(walletId: id, amount: 100, checkedAt: checkedAt),
+      );
+      await wallets.saveReceipt(
+        salary.copyWith(status: ReceiptStatus.confirmed),
+      );
+
+      expect(await balanceOf(id), 100);
+    });
+
+    test(
+      'um saldo informado depois não herda a pendência do anterior',
+      () async {
+        final (id, salary) = await seedSalaryOnThe8th();
+        await wallets.saveBalanceCheck(
+          BalanceCheck(walletId: id, amount: 100, checkedAt: checkedAt),
+          leftPending: [salary],
+        );
+        await wallets.saveBalanceCheck(
+          BalanceCheck(walletId: id, amount: 3100, checkedAt: later),
+          confirm: [(await wallets.fetchReceipts()).single],
+        );
+
+        expect(await balanceOf(id), 3100);
+      },
+    );
+  });
+
+  group('previstos de meses que já terminaram', () {
+    test('valem como recebidos no saldo e no Entrou', () async {
+      final id = await wallets.saveWallet(
+        Wallet(
+          name: 'Salário',
+          kind: WalletKind.salary,
+          colorIndex: 0,
+          createdAt: DateTime(2026, 7),
+        ),
+      );
+      await wallets.savePayout(
+        Payout(
+          walletId: id,
+          label: 'Mensal',
+          amount: 3000,
+          day: 5,
+          createdAt: DateTime(2026, 7),
+        ),
+      );
+      await wallets.registerDuePayouts(
+        await wallets.fetchWallets(),
+        now: DateTime(2026, 8, 20),
+      );
+
+      final august = await service.loadSnapshot(const Month(2026, 8), now: now);
+
+      expect(august.summaryFor(id)!.balance, 6000);
+      expect(august.summaryFor(id)!.receivedInMonth, 3000);
+      expect(august.summary.totalReceived, 3000);
+      expect(august.awaitingConfirmation, 3000);
     });
   });
 }

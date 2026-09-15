@@ -33,6 +33,8 @@ class WalletSummary {
         checks.where((check) => check.walletId == wallet.id),
       );
       bool counts(DateTime at) => _countsAfter(latestCheck, at);
+      bool countsReceipt(Receipt receipt) =>
+          _countsReceiptAfter(latestCheck, receipt);
 
       final walletReceipts = receipts.where(
         (receipt) => receipt.walletId == wallet.id && receipt.counts,
@@ -65,7 +67,7 @@ class WalletSummary {
       final balance =
           (latestCheck?.amount ?? 0) +
           confirmedReceipts
-              .where((receipt) => counts(receipt.receivedAt))
+              .where(countsReceipt)
               .fold<double>(0, (total, receipt) => total + receipt.amount) -
           walletPayments
               .where((payment) => counts(payment.paidAt))
@@ -106,6 +108,11 @@ class WalletSummary {
   static bool _countsAfter(BalanceCheck? check, DateTime at) =>
       check == null || at.isAfter(check.checkedAt);
 
+  static bool _countsReceiptAfter(BalanceCheck? check, Receipt receipt) =>
+      _countsAfter(check, receipt.receivedAt) ||
+      (receipt.pendingAtCheckId != null &&
+          receipt.pendingAtCheckId == check?.id);
+
   final Wallet wallet;
   final double receivedInMonth;
   final double spentInMonth;
@@ -117,6 +124,11 @@ class WalletSummary {
 
   /// Whatever is dated up to the latest check is already inside its amount.
   bool countsInBalance(DateTime at) => _countsAfter(latestCheck, at);
+
+  /// A receipt left unticked as "not arrived yet" when the latest check was
+  /// informed counts after it, even dated before it.
+  bool countsReceipt(Receipt receipt) =>
+      _countsReceiptAfter(latestCheck, receipt);
 
   double get pendingInMonth => roundCents(committedInMonth - spentInMonth);
 

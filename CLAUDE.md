@@ -192,7 +192,12 @@ holds X": it stores the *absolute* amount and the instant (`checked_at`), and wh
 that instant is already inside the amount, so a movement is never discounted twice and a negative
 balance is just a value. The Saldo sheet (`BalanceCheckSheet`) also lists this month's predicted
 receipts due by then ("já caiu"), and `WalletRepository.saveBalanceCheck` confirms the ticked ones
-in the same transaction. A check for today is taken at `now`; one for a past day at the end of that
+in the same transaction and marks the unticked ones with the check (`receipts.pending_at_check_id`,
+schema v11, `ON DELETE SET NULL`): a receipt left unticked had not arrived when the amount was
+informed, so once confirmed it counts after that check whatever its date. The rule is
+`WalletSummary.countsReceipt` — no check, dated after the latest one, or marked with the latest one —
+while payments and outflows keep `countsInBalance(at)`. Checks migrated from v8 have no marks, so
+their predictions stay inside the amount. A check for today is taken at `now`; one for a past day at the end of that
 day (`WalletsViewModel.checkedAtFor`). Movements picked by day go through `stampFor`
 (`core/utils/moment.dart`): today keeps the current time, another day becomes noon — so the order
 against a check is deterministic. Checks never count in `receivedInMonth` or
@@ -202,12 +207,17 @@ read or written).
 
 A receipt carries a `ReceiptStatus`: `registerDuePayouts` creates it as `predicted` (it counts nowhere
 real until confirmed — not in the balance, `receivedInMonth` or `totalReceived`; it only shows as
-expected income, marked "a confirmar"), the user confirms it with the real day and amount, and
-`skipped` is how a calendar receipt is dismissed — deleting the row would only make
-`registerDuePayouts` recreate it. Deleting the payout itself keeps the money it already brought in:
-`deletePayout` removes only the rows still `predicted` and lets `ON DELETE SET NULL` turn the
-confirmed ones into manual receipts. Deleting them outright rewrote the balance of every past month. Rows still `predicted` are re-synced to the payout's current amount
-and date, which is what makes editing the salary fix the current month.
+expected income, marked "a confirmar"), the user confirms it with the real day and amount (the
+`ReceiptSheet` of a prediction of the current month opens on now; one from a past month keeps its
+calendar day), and `skipped` is how a calendar receipt is dismissed — deleting the row would only make
+`registerDuePayouts` recreate it. A `predicted` receipt from a month before the current one is
+confirmed by `registerDuePayouts` itself, in one idempotent UPDATE before it credits anything: once
+its month is over it is assumed received ("Não recebi" still dismisses it), which is also what brings
+back the numbers of a database that went through v8 with salaries never confirmed. Deleting the
+payout itself keeps the money it already brought in: `deletePayout` removes only the rows still
+`predicted` and lets `ON DELETE SET NULL` turn the confirmed ones into manual receipts. Deleting them
+outright rewrote the balance of every past month. Rows still `predicted` are re-synced to the
+payout's current amount and date, which is what makes editing the salary fix the current month.
 
 `MonthAgendaPage` reads the receipts first and the payout calendar only for what has no receipt yet,
 so a salary confirmed on the 4th shows on the 4th. Never place a payout by `payout.day` — that is the
