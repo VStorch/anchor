@@ -9,7 +9,7 @@ class DayOfMonthPicker extends StatelessWidget {
     this.dayCount = 31,
   });
 
-  final int selectedDay;
+  final int? selectedDay;
   final ValueChanged<int> onDaySelected;
   final Set<int> highlightedDays;
   final int dayCount;

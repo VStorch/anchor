@@ -206,7 +206,9 @@ class _ExpenseFormView extends StatelessWidget {
                 ? () => _save(context, viewModel)
                 : null,
             child: Text(
-              viewModel.leavesOpenedInvoice
+              viewModel.needsDueDay
+                  ? 'Escolha o dia do vencimento'
+                  : viewModel.leavesOpenedInvoice
                   ? 'Adicionar à fatura de ${_monthName(viewModel.invoiceMonth!)}'
                   : viewModel.isEditing
                   ? 'Salvar alterações'

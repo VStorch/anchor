@@ -104,6 +104,47 @@ void main() {
     });
   });
 
+  test('a despesa nova só salva depois de escolher o dia', () async {
+    final form =
+        ExpenseFormViewModel(
+            repository: repository,
+            referenceMonth: august,
+            now: DateTime(2026, 8, 3),
+          )
+          ..setName('Internet')
+          ..setAmount(99.9);
+
+    expect(form.dueDay, isNull);
+    expect(form.needsDueDay, isTrue);
+    expect(form.isValid, isFalse);
+    await form.save();
+    expect(await repository.fetchExpenses(), isEmpty);
+
+    form.setDueDay(15);
+    expect(form.isValid, isTrue);
+    await form.save();
+    expect((await repository.fetchExpenses()).single.dueDay, 15);
+  });
+
+  test('a compra no cartão não pede o dia do vencimento', () {
+    final form = ExpenseFormViewModel(
+      repository: repository,
+      referenceMonth: august,
+      cards: [
+        CreditCard(
+          id: 7,
+          name: 'Nubank',
+          closingDay: 3,
+          dueDay: 10,
+          createdAt: DateTime(2026),
+        ),
+      ],
+      now: DateTime(2026, 8, 3),
+    )..setSource((walletId: null, cardId: 7));
+
+    expect(form.needsDueDay, isFalse);
+  });
+
   test('o fim antes do início invalida o formulário', () {
     final form = edit(const [])..setStartMonth(const Month(2026, 10));
 
@@ -246,7 +287,8 @@ void main() {
               now: today,
             )
             ..setName('Luz')
-            ..setAmount(150);
+            ..setAmount(150)
+            ..setDueDay(10);
 
       await form.save();
 

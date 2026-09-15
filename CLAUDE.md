@@ -297,6 +297,10 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
 
 ## Conventions
 
+- A new expense, card or payout starts with no day picked: `DayOfMonthPicker` takes a null
+  `selectedDay`, and the save button stays disabled reading "Escolha o dia…" until one is chosen,
+  so a default never slips into the data unnoticed. Widget tests that save one tap the day first.
+
 - Clean Code: few comments, names that explain themselves.
 - Theme lives in `app/theme/`; the palette is green tones (`AppPalette`) and the app must work in
   light, dark and system mode (`SettingsViewModel` persists the choice).

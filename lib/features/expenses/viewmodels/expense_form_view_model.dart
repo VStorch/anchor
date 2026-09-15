@@ -32,7 +32,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
            expense?.type ??
            (card == null ? ExpenseType.recurring : ExpenseType.single),
        _amount = expense?.amount ?? 0,
-       _dueDay = expense?.dueDay ?? 5,
+       _dueDay = expense?.dueDay,
        _startMonth = expense?.startMonth ?? referenceMonth,
        _endMonth = expense?.type == ExpenseType.recurring
            ? expense?.endMonth
@@ -55,7 +55,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   String _name;
   ExpenseType _type;
   double _amount;
-  int _dueDay;
+  int? _dueDay;
   Month _startMonth;
   Month? _endMonth;
   int _totalInstallments;
@@ -73,7 +73,11 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   double get amount => _amount;
 
-  int get dueDay => _dueDay;
+  int? get dueDay => _dueDay;
+
+  /// A new bill has no due day until the user picks one; a card purchase
+  /// takes the card's.
+  bool get needsDueDay => card == null && _dueDay == null;
 
   /// A card purchase with a date starts on the invoice that date falls in,
   /// moved on by the parcels already paid.
@@ -137,6 +141,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
       _name.trim().isNotEmpty &&
       _amount > 0 &&
       !endsBeforeStart &&
+      !needsDueDay &&
       (!isInstallment || remainingInstallments > 0);
 
   /// Paid months the edited rule would stop projecting, leaving out those the
@@ -255,7 +260,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
       name: _name.trim(),
       type: _type,
       amount: _amount,
-      dueDay: card?.dueDay ?? _dueDay,
+      dueDay: card?.dueDay ?? _dueDay ?? 1,
       startMonth: startMonth,
       endMonth: _type == ExpenseType.recurring ? _endMonth : null,
       totalInstallments: isInstallment ? _totalInstallments : null,

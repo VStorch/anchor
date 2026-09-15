@@ -126,7 +126,8 @@ class _CardFormView extends StatelessWidget {
                   }
                 : null,
             child: Text(
-              viewModel.isEditing ? 'Salvar alterações' : 'Criar cartão',
+              viewModel.missingDay ??
+                  (viewModel.isEditing ? 'Salvar alterações' : 'Criar cartão'),
             ),
           ),
         ],

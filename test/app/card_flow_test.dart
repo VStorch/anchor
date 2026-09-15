@@ -15,6 +15,7 @@ import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -335,6 +336,17 @@ void main() {
       'Inter',
     );
     await tester.pumpAndSettle();
+    expect(find.text('Escolha o dia do fechamento'), findsOneWidget);
+    for (final (index, day) in [(0, '3'), (1, '10')]) {
+      final cell = find.descendant(
+        of: find.byType(DayOfMonthPicker).at(index),
+        matching: find.text(day),
+      );
+      await tester.ensureVisible(cell);
+      await tester.pumpAndSettle();
+      await tester.tap(cell);
+      await tester.pumpAndSettle();
+    }
     await tester.scrollUntilVisible(
       find.text('Criar cartão'),
       200,
@@ -344,5 +356,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Inter'), findsOneWidget);
+    final card = (await CardRepository(
+      database,
+      DataChanges(),
+    ).fetchCards()).firstWhere((card) => card.name == 'Inter');
+    expect((card.closingDay, card.dueDay), (3, 10));
   });
 }

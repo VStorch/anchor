@@ -1005,6 +1005,8 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
     'Mensal',
   );
   await _typeMoney(tester, '3000');
+  expect(find.text('Em que dia cai?'), findsOneWidget);
+  expect(find.text('Escolha o dia'), findsOneWidget);
   await tester.tap(_dayCell(1));
   await tester.pumpAndSettle();
 
@@ -1056,6 +1058,20 @@ Future<void> _createInstallmentExpense(WidgetTester tester) async {
     );
     await tester.pumpAndSettle();
   }
+
+  final save = find.text('Escolha o dia do vencimento');
+  await tester.ensureVisible(save);
+  expect(
+    tester
+        .widget<FilledButton>(
+          find.ancestor(of: save, matching: find.byType(FilledButton)),
+        )
+        .onPressed,
+    isNull,
+  );
+  await tester.ensureVisible(_dayCell(20));
+  await tester.tap(_dayCell(20));
+  await tester.pumpAndSettle();
 
   expect(find.textContaining('Faltam 7 parcelas'), findsOneWidget);
   expect(

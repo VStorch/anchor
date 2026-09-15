@@ -58,7 +58,7 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
     text: widget.payout?.label ?? '',
   );
   late double _amount = widget.payout?.amount ?? 0;
-  late int _day = widget.payout?.day ?? 5;
+  late int? _day = widget.payout?.day;
   late PayoutSchedule _schedule =
       widget.payout?.schedule ?? PayoutSchedule.dayOfMonth;
 
@@ -135,7 +135,9 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
               ),
             const SizedBox(height: 20),
             Text(
-              _schedule.isBusinessDay
+              _day == null
+                  ? 'Em que dia cai?'
+                  : _schedule.isBusinessDay
                   ? 'Cai no $_dayº dia útil'
                   : 'Cai no dia $_day',
               style: theme.textTheme.titleSmall?.copyWith(
@@ -151,9 +153,13 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: _amount > 0 ? _submit : null,
+              onPressed: _amount > 0 && _day != null ? _submit : null,
               child: Text(
-                _isEditing ? 'Salvar recebimento' : 'Adicionar ao calendário',
+                _day == null
+                    ? 'Escolha o dia'
+                    : _isEditing
+                    ? 'Salvar recebimento'
+                    : 'Adicionar ao calendário',
               ),
             ),
           ],
@@ -165,7 +171,7 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
   void _changeSchedule(PayoutSchedule schedule) {
     setState(() {
       _schedule = schedule;
-      if (_day > _dayCount) _day = _dayCount;
+      if ((_day ?? 0) > _dayCount) _day = _dayCount;
     });
   }
 
@@ -173,7 +179,7 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
     PayoutDraft(
       label: _labelController.text,
       amount: _amount,
-      day: _day,
+      day: _day!,
       schedule: _schedule,
     ),
   );

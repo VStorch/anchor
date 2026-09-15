@@ -11,26 +11,34 @@ class CardFormViewModel extends ChangeNotifier {
   }) : _repository = repository,
        _card = card,
        _name = card?.name ?? '',
-       _closingDay = card?.closingDay ?? 3,
-       _dueDay = card?.dueDay ?? 10,
+       _closingDay = card?.closingDay,
+       _dueDay = card?.dueDay,
        _walletId = card == null ? likelyWalletId : card.walletId;
 
   final CardRepository _repository;
   final CreditCard? _card;
 
   String _name;
-  int _closingDay;
-  int _dueDay;
+  int? _closingDay;
+  int? _dueDay;
   int? _walletId;
   bool _isSaving = false;
 
   bool get isEditing => _card != null;
   String get name => _name;
-  int get closingDay => _closingDay;
-  int get dueDay => _dueDay;
+  int? get closingDay => _closingDay;
+  int? get dueDay => _dueDay;
   int? get walletId => _walletId;
   bool get isSaving => _isSaving;
-  bool get isValid => _name.trim().isNotEmpty;
+  bool get isValid =>
+      _name.trim().isNotEmpty && _closingDay != null && _dueDay != null;
+
+  /// What the save button asks for while a day is still missing.
+  String? get missingDay => _closingDay == null
+      ? 'Escolha o dia do fechamento'
+      : _dueDay == null
+      ? 'Escolha o dia do vencimento'
+      : null;
 
   void setName(String value) {
     _name = value;
@@ -61,8 +69,8 @@ class CardFormViewModel extends ChangeNotifier {
       CreditCard(
         id: _card?.id,
         name: _name.trim(),
-        closingDay: _closingDay,
-        dueDay: _dueDay,
+        closingDay: _closingDay!,
+        dueDay: _dueDay!,
         walletId: _walletId,
         createdAt: _card?.createdAt ?? DateTime.now(),
       ),
