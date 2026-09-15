@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/moment.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
+import '../../../wallets/models/balance_check.dart';
 import '../../../wallets/models/wallet.dart';
 import '../../models/expense_payment.dart';
 import '../../models/payable.dart';
@@ -23,6 +24,10 @@ class PayEdit {
 
 /// Where the money came from, how much and when. Without [amount] the sheet
 /// only asks for the origin and the day (an invoice pays what is left).
+///
+/// With a [payable] and [checkFor], a wallet whose balance was informed after
+/// the bill fell due asks whether the money had already left before the sheet
+/// can save, unless the day was picked by hand.
 class PaySheet extends StatefulWidget {
   const PaySheet({
     super.key,
@@ -31,6 +36,8 @@ class PaySheet extends StatefulWidget {
     required this.origin,
     required this.paidAt,
     this.amount,
+    this.payable,
+    this.checkFor,
   });
 
   static Future<PayEdit?> show(
@@ -40,6 +47,8 @@ class PaySheet extends StatefulWidget {
     required PaymentOrigin origin,
     required DateTime paidAt,
     double? amount,
+    Payable? payable,
+    BalanceCheck? Function(PaymentOrigin origin)? checkFor,
   }) {
     return showModalBottomSheet<PayEdit>(
       context: context,
@@ -52,6 +61,8 @@ class PaySheet extends StatefulWidget {
         origin: origin,
         paidAt: paidAt,
         amount: amount,
+        payable: payable,
+        checkFor: checkFor,
       ),
     );
   }
@@ -61,6 +72,8 @@ class PaySheet extends StatefulWidget {
   final PaymentOrigin origin;
   final DateTime paidAt;
   final double? amount;
+  final Payable? payable;
+  final BalanceCheck? Function(PaymentOrigin origin)? checkFor;
 
   @override
   State<PaySheet> createState() => _PaySheetState();
@@ -70,10 +83,21 @@ class _PaySheetState extends State<PaySheet> {
   late PaymentOrigin _origin = widget.origin;
   late double _amount = widget.amount ?? 0;
   late DateTime _paidAt = widget.paidAt;
+  bool _dayPicked = false;
+  bool? _alreadyOut;
 
   bool get _asksAmount => widget.amount != null;
 
   bool get _isOutside => _origin.outside || _origin.walletId == null;
+
+  BalanceCheck? get _pendingCheck {
+    if (_dayPicked || _isOutside || widget.payable == null) return null;
+    return widget.checkFor?.call(_origin);
+  }
+
+  bool get _canSave =>
+      (!_asksAmount || _amount > 0) &&
+      (_pendingCheck == null || _alreadyOut != null);
 
   @override
   Widget build(BuildContext context) {
@@ -106,15 +130,14 @@ class _PaySheetState extends State<PaySheet> {
                   ChoiceChip(
                     label: Text(wallet.name),
                     selected: !_isOutside && _origin.walletId == wallet.id,
-                    onSelected: (_) => setState(
-                      () => _origin = (walletId: wallet.id, outside: false),
-                    ),
+                    onSelected: (_) =>
+                        _changeOrigin((walletId: wallet.id, outside: false)),
                   ),
                 ChoiceChip(
                   label: const Text('Outro dinheiro'),
                   selected: _isOutside,
                   onSelected: (_) =>
-                      setState(() => _origin = (walletId: null, outside: true)),
+                      _changeOrigin((walletId: null, outside: true)),
                 ),
               ],
             ),
@@ -149,6 +172,32 @@ class _PaySheetState extends State<PaySheet> {
               trailing: const Icon(Icons.edit_calendar_outlined),
               onTap: _pickDate,
             ),
+            if (_pendingCheck case final check?) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Essa conta venceu antes de você informar o saldo de '
+                '${_walletName()} (${DateFormat('dd/MM').format(check.checkedAt)}). '
+                'O valor já tinha saído?',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Sim, já estava descontado'),
+                    selected: _alreadyOut == true,
+                    onSelected: (_) => _answer(check, alreadyOut: true),
+                  ),
+                  ChoiceChip(
+                    label: const Text('Não, paguei agora'),
+                    selected: _alreadyOut == false,
+                    onSelected: (_) => _answer(check, alreadyOut: false),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
             Row(
               children: [
@@ -159,7 +208,7 @@ class _PaySheetState extends State<PaySheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: !_asksAmount || _amount > 0 ? _save : null,
+                    onPressed: _canSave ? _save : null,
                     child: const Text('Lançar'),
                   ),
                 ),
@@ -186,9 +235,26 @@ class _PaySheetState extends State<PaySheet> {
     ),
   );
 
+  void _changeOrigin(PaymentOrigin origin) => setState(() {
+    _origin = origin;
+    _alreadyOut = null;
+    if (!_dayPicked) _paidAt = widget.paidAt;
+  });
+
+  void _answer(BalanceCheck check, {required bool alreadyOut}) => setState(() {
+    _alreadyOut = alreadyOut;
+    _paidAt = alreadyOut
+        ? widget.payable!.paidBefore(check.checkedAt)
+        : DateTime.now();
+  });
+
   Future<void> _pickDate() async {
     final date = await pickMovementDate(context, _paidAt);
-    if (date != null) setState(() => _paidAt = stampFor(date));
+    if (date == null) return;
+    setState(() {
+      _paidAt = stampFor(date);
+      _dayPicked = true;
+    });
   }
 }
 

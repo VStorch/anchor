@@ -17,6 +17,13 @@ void main() {
       expect(Month.current().suggestedDate.day, today.day);
     });
 
+    test('num mês futuro sugere hoje, nunca uma data que não chegou', () {
+      final suggested = Month.current().addMonths(3).suggestedDate;
+
+      expect(Month.fromDate(suggested), Month.current());
+      expect(suggested.isAfter(DateTime.now()), isFalse);
+    });
+
     test('avança e volta atravessando o ano', () {
       expect(const Month(2026, 12).next, const Month(2027, 1));
       expect(const Month(2026, 1).previous, const Month(2025, 12));

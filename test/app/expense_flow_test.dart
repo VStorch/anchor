@@ -439,6 +439,77 @@ void main() {
       },
     );
 
+    testWidgets('a folha de pagamento pergunta antes de lançar', (
+      tester,
+    ) async {
+      await openWithCheck(tester);
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Aluguel'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Outro valor ou data'));
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(PaySheet);
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.textContaining('O valor já tinha saído?'),
+        ),
+        findsOneWidget,
+      );
+      final launch = find.widgetWithText(FilledButton, 'Lançar');
+      expect(tester.widget<FilledButton>(launch).onPressed, isNull);
+
+      await tester.tap(find.text('Sim, já estava descontado'));
+      await tester.pumpAndSettle();
+      await tester.tap(launch);
+      await tester.pumpAndSettle();
+
+      expect(_inSheet('Quitada'), findsOneWidget);
+      await expectWalletBalance(tester, 850);
+    });
+
+    testWidgets('a célula Pago da tabela pergunta no primeiro pagamento', (
+      tester,
+    ) async {
+      await openWithCheck(tester);
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tabela'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(of: find.byType(MonthTable), matching: find.text('—')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(MonthTable),
+          matching: find.byType(TextField),
+        ),
+        '1100',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('O valor já tinha saído?'), findsOneWidget);
+      await tester.tap(find.text('Sim, já estava descontado'));
+      await tester.pumpAndSettle();
+
+      final payment = (await ExpenseRepository(
+        database,
+        DataChanges(),
+      ).fetchPayments()).single;
+      expect(payment.amount, 1100);
+      expect(
+        payment.paidAt,
+        DateTime(previousMonth.year, previousMonth.month, 10, 12),
+      );
+      await expectWalletBalance(tester, 850);
+    });
+
     testWidgets('paga com uma data passada escolhida no calendário', (
       tester,
     ) async {

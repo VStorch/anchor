@@ -1,7 +1,9 @@
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/models/expense_occurrence.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
+import 'package:anchor/features/expenses/models/payable.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const Month september = Month(2026, 9);
@@ -102,6 +104,47 @@ void main() {
 
       expect(occurrence.remaining, 0);
       expect(occurrence.isPaid, isTrue);
+    });
+  });
+
+  group('fora da regra', () {
+    ExpenseOccurrence offRule({double? monthAmount}) =>
+        ExpenseOccurrence.offRule(
+          expense: market,
+          month: september,
+          monthAmount: monthAmount,
+          payments: [payment(amount: 50, walletId: 2)],
+        );
+
+    test('não deve nada: o valor é o que foi pago', () {
+      final occurrence = offRule(monthAmount: 100);
+
+      expect(occurrence.amount, 50);
+      expect(occurrence.remaining, 0);
+      expect(occurrence.isPaid, isTrue);
+      expect(occurrence.isOverdue, isFalse);
+    });
+  });
+
+  group('data sugerida do pagamento', () {
+    final now = DateTime(2026, 9, 14, 18, 30);
+
+    test('no mês corrente é agora', () {
+      expect(market.occurrenceIn(september)!.suggestedPaidAt(now), now);
+    });
+
+    test('num mês futuro também é agora, nunca o vencimento', () {
+      final october = market.occurrenceIn(const Month(2026, 10))!;
+
+      expect(october.suggestedPaidAt(now), now);
+    });
+
+    test('num mês passado é o dia do vencimento', () {
+      final august = market
+          .copyWith(startMonth: const Month(2026, 8))
+          .occurrenceIn(const Month(2026, 8))!;
+
+      expect(august.suggestedPaidAt(now), DateTime(2026, 8, 10, 12));
     });
   });
 }

@@ -85,6 +85,10 @@ class Expense {
     };
   }
 
+  /// "Encerrar neste mês" only makes sense where the rule still bills.
+  bool canEndIn(Month month) =>
+      type == ExpenseType.recurring && occurrenceIn(month) != null;
+
   /// Paid months this rule no longer projects: they stay in the history as
   /// off-rule occurrences instead of vanishing with their payments.
   Set<Month> monthsOffRule(Iterable<Month> paidMonths) => {

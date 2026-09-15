@@ -8,7 +8,6 @@ import '../../../wallets/models/wallet.dart';
 import '../../models/expense.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/expense_payment.dart';
-import '../../models/expense_type.dart';
 import '../../models/payable.dart';
 import '../../viewmodels/expenses_view_model.dart';
 import '../expense_form_page.dart';
@@ -89,8 +88,10 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            _monthAmount(context, viewModel, occurrence),
-            const SizedBox(height: 20),
+            if (!occurrence.offRule) ...[
+              _monthAmount(context, viewModel, occurrence),
+              const SizedBox(height: 20),
+            ],
             Text(
               'Pagamentos',
               style: theme.textTheme.titleSmall?.copyWith(
@@ -254,6 +255,9 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
       origin: viewModel.defaultOriginFor(occurrence),
       paidAt: occurrence.suggestedPaidAt(DateTime.now()),
       amount: occurrence.remaining,
+      payable: occurrence,
+      checkFor: (origin) =>
+          viewModel.checkCoveringDue(occurrence, origin.walletId),
     );
     if (edit == null) return;
 
@@ -295,7 +299,8 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Quitada · ${formatMoney(occurrence.paidAmount)} pagos',
+            '${occurrence.offRule ? 'Fora da regra atual' : 'Quitada'} · '
+            '${formatMoney(occurrence.paidAmount)} pagos',
             style: theme.textTheme.titleSmall?.copyWith(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.w700,
@@ -379,7 +384,7 @@ class _ExpenseMenu extends StatelessWidget {
           value: _ExpenseMenuAction.edit,
           child: Text('Editar despesa'),
         ),
-        if (occurrence.expense.type == ExpenseType.recurring)
+        if (occurrence.expense.canEndIn(occurrence.month))
           const PopupMenuItem(
             value: _ExpenseMenuAction.endHere,
             child: Text('Encerrar neste mês'),
@@ -452,7 +457,7 @@ Future<_DeleteChoice?> _confirmDelete(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        if (paymentCount > 0 && expense.type == ExpenseType.recurring)
+        if (paymentCount > 0 && expense.canEndIn(viewModel.month))
           TextButton(
             onPressed: () => Navigator.pop(context, _DeleteChoice.endHere),
             child: const Text('Encerrar neste mês'),

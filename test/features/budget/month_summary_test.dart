@@ -864,7 +864,7 @@ void main() {
       expect(summary.occurrences, isEmpty);
     });
 
-    test('o valor do mês registrado vale sobre a soma paga', () {
+    test('o valor do mês registrado fica guardado, mas não cria dívida', () {
       final summary = MonthSummary.build(
         month: august,
         expenses: [ended],
@@ -876,8 +876,11 @@ void main() {
       );
 
       final occurrence = summary.occurrenceOf(7)!;
-      expect(occurrence.amount, 150);
-      expect(occurrence.remaining, 70);
+      expect(occurrence.monthAmount, 150);
+      expect(occurrence.amount, 80);
+      expect(occurrence.remaining, 0);
+      expect(summary.totalPending, 0);
+      expect(summary.overduePayables, isEmpty);
     });
   });
 

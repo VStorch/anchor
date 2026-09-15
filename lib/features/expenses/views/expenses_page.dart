@@ -12,6 +12,7 @@ import '../../cards/views/payable_sheet.dart';
 import 'widgets/expense_ledger_sheet.dart';
 import 'widgets/expense_tile.dart';
 import 'widgets/month_table.dart';
+import 'widgets/pay_sheet.dart';
 
 class ExpensesPage extends StatelessWidget {
   const ExpensesPage({super.key});
@@ -84,7 +85,19 @@ class ExpensesPage extends StatelessWidget {
       onOpen: (occurrence) =>
           ExpenseLedgerSheet.show(context, occurrence: occurrence),
       onAmountChanged: viewModel.setMonthAmount,
-      onPaidChanged: viewModel.setPaidAmount,
+      onPaidChanged: (occurrence, amount) async {
+        DateTime? paidAt;
+        if (occurrence.payments.isEmpty && amount > 0) {
+          paidAt = await choosePaidAt(
+            context,
+            viewModel: viewModel,
+            payable: occurrence,
+            walletId: viewModel.defaultOriginFor(occurrence).walletId,
+          );
+          if (paidAt == null) return;
+        }
+        await viewModel.setPaidAmount(occurrence, amount, paidAt: paidAt);
+      },
     );
   }
 

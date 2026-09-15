@@ -36,8 +36,10 @@ class ExpenseOccurrence implements Payable {
   @override
   String get name => expense.name;
 
+  /// Off the rule, the month owes nothing beyond what was paid: a month
+  /// amount stored before the rule changed is kept but ignored.
   @override
-  double get amount => monthAmount ?? (offRule ? paidAmount : expense.amount);
+  double get amount => offRule ? paidAmount : monthAmount ?? expense.amount;
 
   bool get hasCustomAmount => monthAmount != null;
 
@@ -54,7 +56,8 @@ class ExpenseOccurrence implements Payable {
       payments.any((payment) => payment.settledOutside);
 
   @override
-  double get remaining => isPaid ? 0 : roundCents(max(0, amount - paidAmount));
+  double get remaining =>
+      offRule || isPaid ? 0 : roundCents(max(0, amount - paidAmount));
 
   @override
   bool get isPaid => coversAmount(paidAmount, amount);
@@ -77,7 +80,7 @@ class ExpenseOccurrence implements Payable {
   DateTime get dueDate => month.dayOf(expense.dueDay);
 
   @override
-  bool get isOverdue => !isPaid && dueDate.isBefore(_today);
+  bool get isOverdue => !offRule && !isPaid && dueDate.isBefore(_today);
 
   String? get installmentLabel =>
       expense.type == ExpenseType.installment && installmentNumber != null

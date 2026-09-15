@@ -1,6 +1,5 @@
 import '../../../core/state/data_changes.dart';
 import '../../../core/state/month_selection.dart';
-import '../../../core/utils/moment.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/viewmodels/reactive_view_model.dart';
@@ -132,10 +131,12 @@ class ExpensesViewModel extends ReactiveViewModel {
     );
   }
 
+  /// [paidAt] dates the first payment only; an existing one keeps its day.
   Future<void> setPaidAmount(
     ExpenseOccurrence occurrence,
-    double amount,
-  ) async {
+    double amount, {
+    DateTime? paidAt,
+  }) async {
     if (amount < 0 || sameAmount(amount, occurrence.paidAmount)) return;
     if (amount == 0) return clearPayments(occurrence);
 
@@ -147,7 +148,7 @@ class ExpensesViewModel extends ReactiveViewModel {
         occurrence,
         origin: defaultOriginFor(occurrence),
         amount: amount,
-        paidAt: occurrence.suggestedPaidAt(DateTime.now()),
+        paidAt: paidAt ?? occurrence.suggestedPaidAt(DateTime.now()),
       );
     }
 
@@ -197,11 +198,7 @@ class ExpensesViewModel extends ReactiveViewModel {
     Payable payable,
     BalanceCheck check, {
     DateTime? now,
-  }) {
-    final dueStamp = stampFor(payable.dueDate, now: now);
-    final justBefore = check.checkedAt.subtract(const Duration(seconds: 1));
-    return dueStamp.isBefore(justBefore) ? dueStamp : justBefore;
-  }
+  }) => payable.paidBefore(check.checkedAt, now: now);
 
   Future<void> payInvoice(
     CardInvoice invoice, {
@@ -236,7 +233,7 @@ class ExpensesViewModel extends ReactiveViewModel {
     ExpenseOccurrence occurrence,
     double amount,
   ) async {
-    if (amount < 0) return;
+    if (amount < 0 || occurrence.offRule) return;
     if (amount == 0) return resetMonthAmount(occurrence);
     if (sameAmount(amount, occurrence.amount)) return;
     await _expenseRepository.saveMonthAmount(
@@ -259,8 +256,10 @@ class ExpensesViewModel extends ReactiveViewModel {
   Future<void> deleteExpense(Expense expense) =>
       _expenseRepository.deleteExpense(expense.id!);
 
-  Future<void> endRecurringExpense(Expense expense, Month lastMonth) =>
-      _expenseRepository.saveExpense(expense.copyWith(endMonth: lastMonth));
+  Future<void> endRecurringExpense(Expense expense, Month lastMonth) async {
+    if (!expense.canEndIn(lastMonth)) return;
+    await _expenseRepository.saveExpense(expense.copyWith(endMonth: lastMonth));
+  }
 
   @override
   void dispose() {

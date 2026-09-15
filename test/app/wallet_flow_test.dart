@@ -460,14 +460,20 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('a entrada abre o calendário no mês da tela', (tester) async {
+    testWidgets('a entrada num mês futuro abre o calendário em hoje', (
+      tester,
+    ) async {
       await openSheet(
         tester,
         (context) =>
             ReceiptSheet.show(context, wallet: wallet, month: farMonth),
       );
 
-      expect(find.byType(DatePickerDialog), findsOneWidget);
+      final picker = tester.widget<DatePickerDialog>(
+        find.byType(DatePickerDialog),
+      );
+      expect(picker.lastDate, DateUtils.dateOnly(DateTime.now()));
+      expect(picker.initialDate, DateUtils.dateOnly(DateTime.now()));
     });
 
     testWidgets('o gasto abre o calendário no mês da tela', (tester) async {

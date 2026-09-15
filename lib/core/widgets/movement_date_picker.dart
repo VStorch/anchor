@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// The picker's range is built around the date it opens on, so a month far
-/// from today on screen can never fall outside `firstDate`..`lastDate`.
-Future<DateTime?> pickMovementDate(BuildContext context, DateTime initial) =>
-    showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(initial.year - 5),
-      lastDate: DateTime(initial.year + 5, 12, 31),
-    );
+/// A movement already happened, so the picker stops at today; the range is
+/// built around the date it opens on, so a month far back on screen never
+/// falls outside it.
+Future<DateTime?> pickMovementDate(BuildContext context, DateTime initial) {
+  final today = DateUtils.dateOnly(DateTime.now());
+  final day = DateUtils.dateOnly(initial);
+  final start = day.isAfter(today) ? today : day;
+
+  return showDatePicker(
+    context: context,
+    initialDate: start,
+    firstDate: DateTime(start.year - 5),
+    lastDate: today,
+  );
+}

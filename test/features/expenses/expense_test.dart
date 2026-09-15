@@ -160,4 +160,21 @@ void main() {
       expect(recurring.monthsOffRule(paidMonths), isEmpty);
     });
   });
+
+  group('encerrar neste mês', () {
+    test('só a recorrente que cobra o mês pode ser encerrada nele', () {
+      final monthly = buildExpense(
+        type: ExpenseType.recurring,
+        endMonth: const Month(2026, 10),
+      );
+
+      expect(monthly.canEndIn(const Month(2026, 9)), isTrue);
+      expect(monthly.canEndIn(const Month(2026, 7)), isFalse);
+      expect(monthly.canEndIn(const Month(2026, 11)), isFalse);
+      expect(
+        buildExpense(type: ExpenseType.single).canEndIn(const Month(2026, 8)),
+        isFalse,
+      );
+    });
+  });
 }

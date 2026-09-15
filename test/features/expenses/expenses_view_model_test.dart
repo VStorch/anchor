@@ -10,6 +10,8 @@ import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_month.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
+import 'package:anchor/features/expenses/models/payable.dart';
+import 'package:anchor/features/reminders/models/due_reminder.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/viewmodels/expenses_view_model.dart';
 import 'package:anchor/features/wallets/models/balance_check.dart';
@@ -29,6 +31,7 @@ void main() {
   late WalletRepository wallets;
   late CardRepository cards;
   late ExpensesViewModel viewModel;
+  late MonthSelection selection;
   late int walletId;
 
   final month = Month.current();
@@ -47,10 +50,11 @@ void main() {
         createdAt: DateTime.now(),
       ),
     );
+    selection = MonthSelection();
     viewModel = ExpensesViewModel(
       budgetService: BudgetService(expenses, wallets, cards),
       expenseRepository: expenses,
-      monthSelection: MonthSelection(),
+      monthSelection: selection,
       changes: changes,
     );
   });
@@ -187,6 +191,155 @@ void main() {
 
     expect((await expenses.fetchPayments()).single.amount, 80);
     expect((await expenses.fetchMonthAmounts()).single.amount, 150);
+  });
+
+  Future<Expense> saveRecurring({
+    required Month start,
+    Month? end,
+    int dueDay = 10,
+    DateTime? createdAt,
+  }) async {
+    await expenses.saveExpense(
+      Expense(
+        name: 'Conta',
+        type: ExpenseType.recurring,
+        amount: 100,
+        dueDay: dueDay,
+        startMonth: start,
+        endMonth: end,
+        walletId: walletId,
+        createdAt: createdAt ?? start.firstDay,
+      ),
+    );
+    return (await expenses.fetchExpenses()).last;
+  }
+
+  Future<void> payOn(Expense expense, Month paidMonth, double amount) =>
+      expenses.savePayment(
+        ExpensePayment(
+          expenseId: expense.id!,
+          walletId: walletId,
+          month: paidMonth,
+          amount: amount,
+          paidAt: DateTime.now(),
+        ),
+      );
+
+  test('a conta do mês que vem paga hoje não desconta duas vezes depois do '
+      'saldo informado', () async {
+    final expense = await saveRecurring(start: month);
+    selection.goToNext();
+    await viewModel.initialize();
+    final next = viewModel.occurrenceOf(expense.id!)!;
+
+    final paidAt = next.suggestedPaidAt(DateTime.now());
+    await viewModel.settle(
+      next,
+      origin: viewModel.defaultOriginFor(next),
+      paidAt: paidAt,
+    );
+    await wallets.saveBalanceCheck(
+      BalanceCheck(
+        walletId: walletId,
+        amount: -100,
+        checkedAt: DateTime.now().add(const Duration(seconds: 1)),
+      ),
+    );
+    await viewModel.refresh();
+
+    expect(paidAt.isAfter(DateTime.now()), isFalse);
+    expect(viewModel.snapshot.summaryFor(walletId)!.balance, -100);
+  });
+
+  test(
+    'o valor pago da tabela usa a data escolhida no primeiro pagamento',
+    () async {
+      final light = await saveBill('Luz', 180);
+      await viewModel.initialize();
+      final chosen = DateTime(month.year, month.month, 1, 12);
+
+      await viewModel.setPaidAmount(
+        viewModel.occurrenceOf(light)!,
+        100,
+        paidAt: chosen,
+      );
+      await viewModel.refresh();
+      await viewModel.setPaidAmount(
+        viewModel.occurrenceOf(light)!,
+        150,
+        paidAt: DateTime.now(),
+      );
+
+      expect((await expenses.fetchPayments()).single.paidAt, chosen);
+      expect((await expenses.fetchPayments()).single.amount, 150);
+    },
+  );
+
+  group('ocorrência fora da regra', () {
+    test('o parcial adiantado não deve nada, nem lembra, nem aceita valor do '
+        'mês', () async {
+      final expense = await saveRecurring(
+        start: month,
+        dueDay: 28,
+        createdAt: DateTime.now(),
+      );
+      await payOn(expense, month.next, 50);
+      await viewModel.initialize();
+      await viewModel.endRecurringExpense(expense, month);
+
+      selection.goToNext();
+      await viewModel.refresh();
+      final off = viewModel.occurrenceOf(expense.id!)!;
+      expect(off.offRule, isTrue);
+      expect(off.remaining, 0);
+      expect(off.isOverdue, isFalse);
+
+      await viewModel.setMonthAmount(off, 100);
+      await viewModel.refresh();
+
+      expect(await expenses.fetchMonthAmounts(), isEmpty);
+      expect(viewModel.summary.totalPending, 0);
+      expect(
+        DueReminder.plan(viewModel.summary.payables, now: DateTime.now()),
+        isEmpty,
+      );
+    });
+
+    test(
+      'com o início movido para depois, não encerra antes do início',
+      () async {
+        final expense = await saveRecurring(
+          start: month,
+          createdAt: DateTime.now(),
+        );
+        await payOn(expense, month, 100);
+        await expenses.saveExpense(
+          expense.copyWith(startMonth: month.addMonths(2)),
+        );
+        await viewModel.initialize();
+        final off = viewModel.occurrenceOf(expense.id!)!;
+        expect(off.offRule, isTrue);
+        expect(off.expense.canEndIn(viewModel.month), isFalse);
+
+        await viewModel.endRecurringExpense(off.expense, viewModel.month);
+
+        expect((await expenses.fetchExpenses()).single.endMonth, isNull);
+      },
+    );
+
+    test('depois do fim, encerrar não reabre os meses sem pagamento', () async {
+      final start = month.addMonths(-2);
+      final expense = await saveRecurring(start: start, end: start);
+      await payOn(expense, month, 100);
+      await viewModel.initialize();
+      final off = viewModel.occurrenceOf(expense.id!)!;
+      expect(off.offRule, isTrue);
+      expect(off.expense.canEndIn(month), isFalse);
+
+      await viewModel.endRecurringExpense(off.expense, month);
+
+      expect((await expenses.fetchExpenses()).single.endMonth, start);
+    });
   });
 
   group('saldo informado depois do vencimento', () {

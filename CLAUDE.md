@@ -107,12 +107,15 @@ mutated:
   null-wallet rows as outside, and `WalletRepository.deleteWallet` turns the wallet's payments into
   outside ones in the same transaction, so the bills it paid stay paid.
 
-  `paid_at` is chosen, not stamped: "Marcar como paga" uses `Payable.suggestedPaidAt` (now in the
-  current month, the due day in another), and `PaySheet` ("Outro valor ou data") picks wallet or
-  "Outro dinheiro", amount and day through `stampFor`. When the wallet's latest balance check was
-  informed after the bill fell due and nothing was paid on it (`checkCoveringDue`), the one tap asks
-  whether the money had already left; "Sim" dates it just inside the check (`paidBeforeCheck`), so
-  the informed balance does not move.
+  `paid_at` is chosen, not stamped, and never in the future: "Marcar como paga" uses
+  `Payable.suggestedPaidAt` (the due day for a past month, now for the current or a later one — the
+  `month_key` stays the occurrence's), and `PaySheet` ("Outro valor ou data") picks wallet or "Outro
+  dinheiro", amount and day through `stampFor`. Every movement date picker (`pickMovementDate`:
+  payments, receipts, outflows, card purchases) stops at today. When the wallet's latest balance check
+  was informed after the bill fell due and nothing was paid on it (`checkCoveringDue`), the one tap,
+  the first amount typed in the table's "Pago" cell and the `PaySheet` (until a day is picked by
+  hand) all ask whether the money had already left; "Sim" dates it just inside the check
+  (`Payable.paidBefore`), so the informed balance does not move.
 - **`expense_months`** holds the amount this particular month really cost (light bill, groceries). A
   missing row means "use the rule's amount"; deleting the row is the "back to the rule" action.
 
@@ -123,16 +126,22 @@ month before the user had the app. `single` is exempt: its month is an explicit 
 side mirrors this, since `registerDuePayouts` starts at the later of the wallet's and the payout's
 `createdAt` month, so a payout added today to an old wallet does not credit the months already gone;
 to fill in a past month the user navigates to it, and the receipt and outflow sheets default to a date
-inside the month on screen (`Month.suggestedDate`), not to today.
+inside the month on screen (`Month.suggestedDate`), not to today — except a future month, which gets
+today.
 
 Changing a rule never rewrites history. When `occurrenceIn(month)` is null but the month has payments
 for the expense (the rule was ended, its start moved, its parcels cut or its type changed),
-`MonthSummary.build` adds an `ExpenseOccurrence.offRule` — `amount` is the month amount or else what
-was paid, and `projectsBackIntoPast` does not apply — so the list, `totalExpenses` and `Saiu` keep
-matching the payments. The tile and ledger label it "Fora da regra atual"; removing its payments is
+`MonthSummary.build` adds an `ExpenseOccurrence.offRule` — it owes nothing: `amount` is what was paid
+(a month amount stored earlier is kept but ignored, and `setMonthAmount` refuses it), `remaining` is 0
+and it is never overdue, and `projectsBackIntoPast` does not apply — so the list, `totalExpenses` and
+`Saiu` keep matching the payments. The tile and ledger label it "Fora da regra atual" (the ledger
+footer reads "Fora da regra atual · R$ X pagos" and hides the month amount); removing its payments is
 what makes it go away. The expense form only warns (`ExpenseFormViewModel.monthsLeftOffRule`, paid
 months the edit newly leaves out) and refuses an end month before the start; deleting an expense with
-payments says how many the CASCADE takes and offers "Encerrar neste mês" for a recurring one.
+payments says how many the CASCADE takes. "Encerrar neste mês", in the ledger menu and that dialog,
+needs `Expense.canEndIn(month)` — a recurring rule that still bills the month — and
+`endRecurringExpense` refuses it otherwise, so it never writes an end before the start nor reopens
+months after an old end.
 
 `ExpenseOccurrence` is where the two meet: `amount` (month value), `paidAmount`, `remaining`, `isPaid`,
 `isPartlyPaid`. Views read those — never re-derive them.

@@ -191,6 +191,9 @@ class _Footer extends StatelessWidget {
       wallets: viewModel.snapshot.wallets,
       origin: origin,
       paidAt: invoice.suggestedPaidAt(DateTime.now()),
+      payable: invoice,
+      checkFor: (origin) =>
+          viewModel.checkCoveringDue(invoice, origin.walletId),
     );
     if (edit == null) return;
 

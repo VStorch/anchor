@@ -17,8 +17,15 @@ abstract interface class Payable {
 }
 
 extension PayableDates on Payable {
-  /// Paying the month on screen happens now; settling another month is
-  /// dated on its due day, where the money belonged.
+  /// A payment is never dated ahead: settling a past month is dated on its
+  /// due day, where the money belonged; the current or a later month is now.
   DateTime suggestedPaidAt(DateTime now) =>
-      month == Month.fromDate(now) ? now : stampFor(dueDate, now: now);
+      month < Month.fromDate(now) ? stampFor(dueDate, now: now) : now;
+
+  /// Dated inside a balance informed at [checkedAt], so paying moves nothing.
+  DateTime paidBefore(DateTime checkedAt, {DateTime? now}) {
+    final dueStamp = stampFor(dueDate, now: now);
+    final justBefore = checkedAt.subtract(const Duration(seconds: 1));
+    return dueStamp.isBefore(justBefore) ? dueStamp : justBefore;
+  }
 }
