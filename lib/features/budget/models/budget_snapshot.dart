@@ -49,6 +49,9 @@ class BudgetSnapshot {
 
   bool get hasWallets => wallets.isNotEmpty;
 
+  /// Nothing registered yet: a first run, not a user who emptied a month.
+  bool get isBlank => wallets.isEmpty && expenses.isEmpty && cards.isEmpty;
+
   List<ExpensePayment> paymentsOf(int expenseId) =>
       payments.where((payment) => payment.expenseId == expenseId).toList();
 

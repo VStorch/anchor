@@ -22,21 +22,21 @@ class ExpenseRepository {
     return rows.map(Expense.fromMap).toList();
   }
 
-  Future<void> saveExpense(Expense expense) async {
+  Future<int> saveExpense(Expense expense) async {
     final db = await _database.database;
     final values = expense.toMap();
 
-    if (expense.id == null) {
-      await db.insert(AppDatabase.expensesTable, values);
-    } else {
+    final id = expense.id ?? await db.insert(AppDatabase.expensesTable, values);
+    if (expense.id != null) {
       await db.update(
         AppDatabase.expensesTable,
         values,
         where: 'id = ?',
-        whereArgs: [expense.id],
+        whereArgs: [id],
       );
     }
     _changes.publish();
+    return id;
   }
 
   Future<void> deleteExpense(int id) async {

@@ -14,10 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../support/fake_reminder_notifications.dart';
+import '../support/preferences.dart';
 import '../support/test_database.dart';
 
 class _FakeBackupFiles implements BackupFiles {
@@ -42,7 +42,7 @@ void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    mockPreferences();
     directory = Directory.systemTemp.createTempSync('anchor_backup_app');
     database = createFileDatabase('${directory.path}/anchor.db');
     files = _FakeBackupFiles();

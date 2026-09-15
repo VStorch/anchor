@@ -26,6 +26,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_reminder_notifications.dart';
+import '../support/preferences.dart';
 import '../support/test_database.dart';
 import '../support/wallet_seed.dart';
 
@@ -35,7 +36,7 @@ void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    mockPreferences();
     database = createInMemoryDatabase();
   });
 

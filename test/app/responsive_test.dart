@@ -24,6 +24,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_reminder_notifications.dart';
+import '../support/onboarding_driver.dart';
+import '../support/preferences.dart';
 import '../support/test_database.dart';
 
 class _Screen {
@@ -48,7 +50,7 @@ void main() {
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+    mockPreferences();
     database = createInMemoryDatabase();
   });
 
@@ -260,9 +262,7 @@ void main() {
       tester.view.physicalSize = const Size(411, 914);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'theme_mode': theme,
-      });
+      mockPreferences(<String, Object>{'theme_mode': theme});
       final semantics = tester.ensureSemantics();
 
       await seed();
@@ -311,6 +311,73 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       semantics.dispose();
     });
+  }
+
+  Future<void> pumpFirstRun(
+    WidgetTester tester, {
+    required Size size,
+    String theme = 'light',
+  }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'theme_mode': theme,
+    });
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+        clock: () => DateTime(2026, 9, 15, 10),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'a configuração inicial não estoura em tela estreita com fonte ampliada',
+    (tester) async {
+      await pumpFirstRun(tester, size: const Size(320, 640));
+
+      await fillOnboarding(tester);
+      await tapVisible(tester, find.text('Ativar lembretes'));
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+    },
+  );
+
+  for (final theme in ['light', 'dark']) {
+    // Tall enough that no tap target sits half scrolled out of view, where
+    // the guideline would measure only the visible sliver.
+    testWidgets(
+      'a configuração inicial tem alvos de toque e contraste suficientes ($theme)',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpFirstRun(tester, size: const Size(320, 2400), theme: theme);
+
+        await fillOnboarding(
+          tester,
+          onFilled: (_) async {
+            await expectLater(
+              tester,
+              meetsGuideline(androidTapTargetGuideline),
+            );
+            await expectLater(
+              tester,
+              meetsGuideline(labeledTapTargetGuideline),
+            );
+            await expectLater(tester, meetsGuideline(textContrastGuideline));
+          },
+        );
+        semantics.dispose();
+      },
+    );
   }
 
   testWidgets('o botão de adicionar não cobre o último item das listas', (

@@ -6,12 +6,14 @@ import '../core/database/app_database.dart';
 import '../core/database/database_backup.dart';
 import '../core/state/data_changes.dart';
 import '../core/state/month_selection.dart';
+import '../core/utils/clock.dart';
 import '../core/widgets/dismiss_focus.dart';
 import '../features/budget/services/budget_service.dart';
 import '../features/cards/repositories/card_repository.dart';
 import '../features/dashboard/viewmodels/dashboard_view_model.dart';
 import '../features/expenses/repositories/expense_repository.dart';
 import '../features/expenses/viewmodels/expenses_view_model.dart';
+import '../features/onboarding/services/onboarding_service.dart';
 import '../features/reminders/services/reminder_notifications.dart';
 import '../features/reminders/viewmodels/reminders_view_model.dart';
 import '../features/settings/services/backup_files.dart';
@@ -20,6 +22,7 @@ import '../features/settings/viewmodels/settings_view_model.dart';
 import '../features/wallets/repositories/wallet_repository.dart';
 import '../features/wallets/viewmodels/wallets_view_model.dart';
 import 'app_shell.dart';
+import 'first_run_gate.dart';
 import 'theme/app_theme.dart';
 
 class AnchorApp extends StatelessWidget {
@@ -29,14 +32,17 @@ class AnchorApp extends StatelessWidget {
     AppDatabase? database,
     BackupFiles backupFiles = const DeviceBackupFiles(),
     ReminderNotifications? reminderNotifications,
+    Clock clock = DateTime.now,
   }) : _database = database,
        _backupFiles = backupFiles,
-       _reminderNotifications = reminderNotifications;
+       _reminderNotifications = reminderNotifications,
+       _clock = clock;
 
   final SettingsViewModel settings;
   final AppDatabase? _database;
   final BackupFiles _backupFiles;
   final ReminderNotifications? _reminderNotifications;
+  final Clock _clock;
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +50,9 @@ class AnchorApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: settings),
         ChangeNotifierProvider(create: (_) => AppShellController()),
+        Provider<Clock>.value(value: _clock),
         ChangeNotifierProvider(create: (_) => DataChanges()),
-        ChangeNotifierProvider(create: (_) => MonthSelection()),
+        ChangeNotifierProvider(create: (_) => MonthSelection(clock: _clock)),
         Provider<AppDatabase>.value(value: _database ?? AppDatabase.instance),
         ProxyProvider2<AppDatabase, DataChanges, ExpenseRepository>(
           update: (_, database, changes, __) =>
@@ -66,7 +73,16 @@ class AnchorApp extends StatelessWidget {
           BudgetService
         >(
           update: (_, expenses, wallets, cards, __) =>
-              BudgetService(expenses, wallets, cards),
+              BudgetService(expenses, wallets, cards, clock: _clock),
+        ),
+        Provider(
+          create: (context) => OnboardingService(
+            wallets: context.read<WalletRepository>(),
+            expenses: context.read<ExpenseRepository>(),
+            cards: context.read<CardRepository>(),
+            budget: context.read<BudgetService>(),
+            changes: context.read<DataChanges>(),
+          ),
         ),
         ChangeNotifierProvider(
           create: (context) => DashboardViewModel(
@@ -105,6 +121,7 @@ class AnchorApp extends StatelessWidget {
             notifications:
                 _reminderNotifications ?? LocalReminderNotifications(),
             changes: context.read<DataChanges>(),
+            clock: _clock,
           )..initialize(),
         ),
       ],
@@ -123,7 +140,7 @@ class AnchorApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           builder: (context, child) => DismissFocus(child: child!),
-          home: const AppShell(),
+          home: const FirstRunGate(),
         ),
       ),
     );

@@ -57,7 +57,11 @@ real one in the same block.**
 
 "Today" is injectable: `MonthSummary.build(today:)` keeps it in `summary.today`, and
 `BudgetService.loadSnapshot(month, now:)` passes the same instant to `registerDuePayouts(now:)`, the
-summaries and the forecast, so a service test pins the date instead of reading the clock.
+summaries and the forecast, so a service test pins the date instead of reading the clock. The whole
+app can be pinned too: `AnchorApp(clock:)` (a `Clock`, `core/utils/clock.dart`, also provided) feeds
+`BudgetService(clock:)`, `MonthSelection(clock:)`, `RemindersViewModel` and the onboarding. Widgets
+that pick dates (`pickMovementDate`, `Month.suggestedDate`, `ExpenseOccurrence.isOverdue`, the "Hoje"
+button) still read the device clock.
 
 - **`features/budget/`** is not a screen. It is the aggregation layer every other feature reads:
   `BudgetService.loadSnapshot(month)` reads all four repositories and returns a `BudgetSnapshot`
@@ -67,7 +71,10 @@ summaries and the forecast, so a service test pins the date instead of reading t
 - **`core/state/`** holds the two notifiers shared by all view models: `DataChanges` (repositories call
   `publish()` after every write) and `MonthSelection` (the month the whole app is showing).
   `ReactiveViewModel` subscribes to `DataChanges` and re-runs `loadData()`, which is why a write in one
-  tab refreshes the others with no manual plumbing.
+  tab refreshes the others with no manual plumbing. `DataChanges.hold(action)` keeps every `publish()`
+  inside it pending (reentrant) and notifies once when the outermost hold ends, even if it throws — a
+  composed action that goes through several repositories reloads the app, and reschedules the
+  reminders, once. It groups the notifications, not the writes: it is no transaction.
 
 **Never save a parent row with `ConflictAlgorithm.replace`.** SQLite implements it as delete + insert,
 so the `ON DELETE CASCADE` fires and editing a wallet wipes its payouts and receipts (an expense, its
@@ -268,6 +275,38 @@ to remind, never on its own again; a refusal turns the switch in Ajustes off. Sc
 (`inexactAllowWhileIdle`), which needs no exact-alarm permission. The plugin requires core library
 desugaring in `android/app/build.gradle.kts` and the two receivers in `AndroidManifest.xml`.
 
+**Onboarding** (`features/onboarding/`) is the first run. `MaterialApp.home` is `FirstRunGate`
+(`app/first_run_gate.dart`): with `SettingsViewModel.onboardingDone` (prefs `onboarding_done`) it is
+the `AppShell`; otherwise it asks `OnboardingService.needsOnboarding(now)` once, which is
+`BudgetSnapshot.isBlank` (no wallets, expenses or cards) — someone who already has data, like a user
+updating from a version without onboarding, gets the flag saved and never sees it. `OnboardingPage`
+walks `OnboardingStep`: welcome, "Quanto você recebe?" (salary plus an optional VR/VA, amount, "Dia
+fixo"/"Nº dia útil" with the CLT Saturday switch, day, and "Em setembro cai ter, 8/set"), "Quanto tem
+hoje?" (one amount per source; when the source's date this month has come,
+`IncomeDraft.isDueBy`, "O salário de 8/set já está nesse valor?" [Sim]/[Ainda não caiu], no default),
+"Contas de todo mês" (suggestion chips + "Outra", each with amount and a required due day; one already
+past due asks "Já pagou a de setembro?", default Sim), "Compras parceladas" ("Qual parcela vence este
+mês? [4] de [10]" → `settledInstallments = 3`), "Cartão de crédito" (optional, with the paying source)
+and "Lembretes". Every step but the first and last has "Pular", and "Pular configuração" is always on
+top; it saves nothing (it asks first when something was typed) and the dashboard's empty state stays
+for whoever skipped. The disabled primary button reads what is missing (`OnboardingViewModel.blocker`).
+The drafts (`models/onboarding_draft.dart`) are mutable and edited through `viewModel.edit(() => …)`;
+a skipped step is left out of `viewModel.draft`, and skipping the income skips the balance step.
+Days are picked through `DayButton`'s sheet, so the page keeps 48dp targets at 320dp.
+
+Nothing is written until the end. On "Ativar lembretes" the view model sets the `ReminderLead` and
+calls `RemindersViewModel.setEnabled(true)` — the only time Android's permission dialog shows with
+context; "Agora não" turns reminders off, so the first bill does not trigger the dialog later. Then
+`OnboardingService.apply(draft, now:)` runs inside `DataChanges.hold` with one `now`: wallets with
+their payout (`createdAt = now`); `registerDuePayouts(now:)` creates this month's predicted receipts,
+and each source with an amount gets `saveBalanceCheck` at `now`, confirming its receipt ("Sim", dated
+on the payout day, inside the check) or marking it `pending_at_check_id` ("Ainda não caiu"); with no
+amount the receipt stays predicted. Then the card, the bills (`recurring`, `startMonth` = current
+month) and the installments, all charged to the first source (the salary), and a payment for each
+"already paid" one dated by `Payable.paidBefore(check)` — the due day at noon, inside the balance, so
+the amount typed is the amount shown. `markOnboardingDone` swaps the gate to the Resumo. Bills are not
+asked which wallet pays them; a partial failure leaves partial, editable data.
+
 ## Testing
 
 `test/support/test_database.dart` gives repositories a real in-memory SQLite via
@@ -276,7 +315,14 @@ below does not cross isolates) and it opens `libsqlite3.so.0` explicitly, becaus
 `libsqlite3.so` symlink.
 
 `test/app/` boots the whole app with `AnchorApp(database: …)` against that database, and must pass
-`reminderNotifications: FakeReminderNotifications()` — the real plugin has no platform side in tests. When adding
+`reminderNotifications: FakeReminderNotifications()` — the real plugin has no platform side in tests.
+Its `setUp` calls `mockPreferences()` (`test/support/preferences.dart`), which sets `onboarding_done`
+so an empty database opens on the tabs instead of the first run; extra prefs go in its map
+(`mockPreferences({'theme_mode': theme})`). `test/app/onboarding_flow_test.dart` starts without it and
+pins `AnchorApp(clock:)` to 15/09/2026; `test/support/onboarding_driver.dart` fills the whole setup
+and is reused by `responsive_test.dart`, which walks it at 320dp and 1.5x for overflow and, on a
+320×2400 view (no target half scrolled out, which the guideline would measure as a sliver), checks
+tap targets, labels and contrast in light and dark. When adding
 widget tests: scope `find.byType(TextField)` to the sheet/page you mean (a sheet does not hide the form
 behind it), scope tab taps to `NavigationBar` (feature icons collide with destination icons), and use the
 concrete generic (`DropdownButtonFormField<ExpenseType>`).

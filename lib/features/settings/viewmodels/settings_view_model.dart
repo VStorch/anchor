@@ -3,10 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsViewModel extends ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
+  static const String _onboardingDoneKey = 'onboarding_done';
 
   ThemeMode _themeMode = ThemeMode.system;
+  bool _onboardingDone = false;
 
   ThemeMode get themeMode => _themeMode;
+
+  bool get onboardingDone => _onboardingDone;
 
   String get themeModeLabel => switch (_themeMode) {
     ThemeMode.system => 'Padrão do sistema',
@@ -21,7 +25,17 @@ class SettingsViewModel extends ChangeNotifier {
       (mode) => mode.name == stored,
       orElse: () => ThemeMode.system,
     );
+    _onboardingDone = preferences.getBool(_onboardingDoneKey) ?? false;
     notifyListeners();
+  }
+
+  Future<void> markOnboardingDone() async {
+    if (_onboardingDone) return;
+    _onboardingDone = true;
+    notifyListeners();
+
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_onboardingDoneKey, true);
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

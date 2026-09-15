@@ -11,15 +11,17 @@ class BudgetService {
   BudgetService(
     this._expenseRepository,
     this._walletRepository,
-    this._cardRepository,
-  );
+    this._cardRepository, {
+    DateTime Function() clock = DateTime.now,
+  }) : _clock = clock;
 
   final ExpenseRepository _expenseRepository;
   final WalletRepository _walletRepository;
   final CardRepository _cardRepository;
+  final DateTime Function() _clock;
 
   Future<BudgetSnapshot> loadSnapshot(Month month, {DateTime? now}) async {
-    final today = now ?? DateTime.now();
+    final today = now ?? _clock();
     final wallets = await _walletRepository.fetchWallets();
     await _walletRepository.registerDuePayouts(wallets, now: today);
     final receipts = await _walletRepository.fetchReceipts();
