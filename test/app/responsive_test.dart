@@ -9,11 +9,14 @@ import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/views/expense_form_page.dart';
+import 'package:anchor/features/expenses/views/expenses_page.dart';
+import 'package:anchor/features/expenses/views/widgets/expense_tile.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/wallets/views/wallet_form_page.dart';
 import 'package:anchor/features/wallets/views/wallets_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -249,4 +252,130 @@ void main() {
       await tester.pumpAndSettle();
     });
   }
+
+  for (final theme in ['light', 'dark']) {
+    testWidgets('as abas têm alvos de toque e contraste suficientes ($theme)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(411, 914);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'theme_mode': theme,
+      });
+      final semantics = tester.ensureSemantics();
+
+      await seed();
+      final settings = SettingsViewModel();
+      await settings.initialize();
+      await tester.pumpWidget(
+        AnchorApp(
+          reminderNotifications: FakeReminderNotifications(),
+          settings: settings,
+          database: database,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final icon in const <IconData?>[
+        null,
+        Icons.receipt_long_outlined,
+        Icons.account_balance_wallet_outlined,
+        Icons.tune_outlined,
+      ]) {
+        if (icon != null) {
+          await tester.tap(
+            find.descendant(
+              of: find.byType(NavigationBar),
+              matching: find.byIcon(icon),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      }
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.account_balance_wallet_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salário da empresa'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WalletFormPage), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      semantics.dispose();
+    });
+  }
+
+  testWidgets('o botão de adicionar não cobre o último item das listas', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await seed();
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final (icon, page, item, heroTag) in [
+      (Icons.receipt_long_outlined, ExpensesPage, ExpenseTile, 'new-expense'),
+      (
+        Icons.account_balance_wallet_outlined,
+        WalletsPage,
+        ListTile,
+        'new-wallet',
+      ),
+    ]) {
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(icon),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final list = find
+          .descendant(
+            of: find.byType(page),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Scrollable &&
+                  widget.axisDirection == AxisDirection.down,
+            ),
+          )
+          .first;
+      await tester.fling(list, const Offset(0, -3000), 3000);
+      await tester.pumpAndSettle();
+
+      final items = find.descendant(
+        of: find.byType(page),
+        matching: find.byType(item),
+      );
+      final lastBottom = tester
+          .widgetList(items)
+          .map((tile) => tester.getRect(find.byWidget(tile)).bottom)
+          .reduce((a, b) => a > b ? a : b);
+      final fab = find.byWidgetPredicate(
+        (widget) => widget is FloatingActionButton && widget.heroTag == heroTag,
+      );
+      expect(lastBottom, lessThanOrEqualTo(tester.getRect(fab).top));
+    }
+  });
 }

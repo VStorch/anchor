@@ -1,4 +1,6 @@
 import 'package:anchor/app/anchor_app.dart';
+import 'package:anchor/app/theme/money_colors.dart';
+import 'package:anchor/app/theme/money_icons.dart';
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/moment.dart';
@@ -154,6 +156,19 @@ void main() {
       findsNWidgets(3),
     );
     expect(find.textContaining('a confirmar'), findsWidgets);
+
+    final predicted = tester.widget<Text>(find.text('+${formatMoney(3000)}'));
+    expect(predicted.style?.color, MoneyColors.light.predicted);
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('+${formatMoney(3000)}'),
+          matching: find.byType(ListTile),
+        ),
+        matching: find.byIcon(MoneyIcons.income),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('confirma a entrada prevista com o valor real', (tester) async {

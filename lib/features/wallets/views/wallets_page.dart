@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/money_colors.dart';
+import '../../../app/theme/money_icons.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/fab_clearance.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
@@ -69,7 +72,7 @@ class WalletsPage extends StatelessWidget {
     final benefits = viewModel.summariesOf(WalletKind.benefit);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
       children: [
         MonthSwitcher(
           month: viewModel.month,
@@ -370,13 +373,14 @@ class _MovementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = wallet?.color ?? theme.colorScheme.primary;
-    final amountColor =
-        movement.isPredicted || movement.isCheck || !movement.countsInBalance
-        ? theme.colorScheme.onSurfaceVariant
+    final colors = MoneyColors.of(context);
+    final color = movement.isCheck
+        ? colors.neutral
+        : movement.isPredicted
+        ? colors.predicted
         : movement.isIncome
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurface;
+        ? colors.income
+        : colors.spending;
     final notes = [
       if (movement.isPredicted) 'a confirmar',
       if (!movement.countsInBalance) 'antes do saldo informado',
@@ -388,7 +392,7 @@ class _MovementTile extends StatelessWidget {
         contentPadding: EdgeInsets.zero,
         onTap: movement.isEditable ? onTap : null,
         leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.16),
+          backgroundColor: color.withValues(alpha: 0.14),
           child: Icon(_icon, size: 18, color: color),
         ),
         title: Text(
@@ -409,7 +413,7 @@ class _MovementTile extends StatelessWidget {
           movement.isCheck ? formatMoney(movement.amount) : _signedAmount,
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
-            color: amountColor,
+            color: color,
           ),
         ),
       ),
@@ -426,11 +430,8 @@ class _MovementTile extends StatelessWidget {
   }
 
   IconData get _icon {
-    if (movement.isCheck) return Icons.tune;
-    if (movement.isPredicted) return Icons.schedule;
-    if (movement.isIncome) return Icons.arrow_downward;
-    if (movement.outflow != null) return Icons.shopping_bag_outlined;
-    return Icons.arrow_upward;
+    if (movement.isCheck) return MoneyIcons.check;
+    return movement.isIncome ? MoneyIcons.income : MoneyIcons.spending;
   }
 }
 

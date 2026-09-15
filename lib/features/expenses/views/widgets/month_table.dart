@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/fab_clearance.dart';
 import '../../../../core/utils/money.dart';
 import '../../models/expense_occurrence.dart';
 
@@ -41,7 +42,7 @@ class _MonthTableState extends State<MonthTable> {
         child: SizedBox(
           width: max(constraints.maxWidth, MonthTable._minWidth),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+            padding: EdgeInsets.fromLTRB(12, 4, 12, fabClearance(context)),
             child: Table(
               columnWidths: const <int, TableColumnWidth>{
                 0: FlexColumnWidth(),

@@ -215,11 +215,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Tabela'));
+    await tester.tap(find.byTooltip('Ver como tabela'));
     await tester.pumpAndSettle();
 
     expect(find.byType(MonthTable), findsOneWidget);
     expect(find.text('Total'), findsOneWidget);
+    expect(find.byTooltip('Ver como lista'), findsOneWidget);
 
     final screenWidth =
         tester.view.physicalSize.width / tester.view.devicePixelRatio;
@@ -280,7 +281,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Tabela'));
+    await tester.tap(find.byTooltip('Ver como tabela'));
     await tester.pumpAndSettle();
 
     Finder amountCell() => find
@@ -342,7 +343,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Tabela'));
+    await tester.tap(find.byTooltip('Ver como tabela'));
     await tester.pumpAndSettle();
 
     await tester.tap(
@@ -477,7 +478,7 @@ void main() {
       await openWithCheck(tester);
       await tester.tap(find.byIcon(Icons.chevron_left));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tabela'));
+      await tester.tap(find.byTooltip('Ver como tabela'));
       await tester.pumpAndSettle();
 
       await tester.tap(

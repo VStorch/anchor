@@ -5,6 +5,7 @@ import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/check_side_selector.dart';
 import '../../../../core/widgets/money_field.dart';
+import '../../../../core/widgets/movement_sheet_title.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../models/outflow.dart';
 import '../../models/wallet.dart';
@@ -98,11 +99,9 @@ class _OutflowSheetState extends State<OutflowSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            MovementSheetTitle(
               'Gasto em ${widget.wallet.name}',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              isIncome: false,
             ),
             const SizedBox(height: 20),
             MoneyField(

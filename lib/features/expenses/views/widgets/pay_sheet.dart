@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/moment.dart';
 import '../../../../core/widgets/check_side_selector.dart';
 import '../../../../core/widgets/money_field.dart';
+import '../../../../core/widgets/movement_sheet_title.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../../wallets/models/balance_check.dart';
 import '../../../wallets/models/wallet.dart';
@@ -146,12 +147,7 @@ class _PaySheetState extends State<PaySheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              widget.title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            MovementSheetTitle(widget.title, isIncome: false),
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,

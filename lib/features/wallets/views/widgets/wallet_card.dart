@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/money_colors.dart';
 import '../../../../core/utils/money.dart';
 import '../../../budget/models/wallet_summary.dart';
 
@@ -25,6 +26,7 @@ class WalletCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final wallet = summary.wallet;
+    final colors = MoneyColors.of(context);
 
     return Card(
       child: InkWell(
@@ -63,7 +65,7 @@ class WalletCard extends StatelessWidget {
                       value: formatMoney(summary.balance),
                       color: summary.balance < 0
                           ? theme.colorScheme.error
-                          : wallet.color,
+                          : theme.colorScheme.onSurface,
                       onTap: onCheckBalance,
                     ),
                   ),
@@ -72,7 +74,7 @@ class WalletCard extends StatelessWidget {
                     child: _Metric(
                       label: 'Recebido',
                       value: formatMoney(summary.receivedInMonth),
-                      color: theme.colorScheme.onSurface,
+                      color: colors.income,
                       onTap: onRegisterReceipt,
                     ),
                   ),
@@ -81,7 +83,7 @@ class WalletCard extends StatelessWidget {
                     child: _Metric(
                       label: 'Gasto',
                       value: formatMoney(summary.spentInMonth),
-                      color: theme.colorScheme.onSurface,
+                      color: colors.spending,
                       onTap: onRegisterOutflow,
                     ),
                   ),
@@ -117,6 +119,8 @@ class WalletCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: summary.usageRatio,
                     minHeight: 6,
+                    semanticsLabel: 'Parte do recebido no mês que já foi gasta',
+                    semanticsValue: '${(summary.usageRatio * 100).round()}%',
                     color: wallet.color,
                     backgroundColor: wallet.color.withValues(alpha: 0.15),
                   ),

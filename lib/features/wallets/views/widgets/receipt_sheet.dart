@@ -5,6 +5,7 @@ import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/check_side_selector.dart';
 import '../../../../core/widgets/money_field.dart';
+import '../../../../core/widgets/movement_sheet_title.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../models/receipt.dart';
 import '../../models/wallet.dart';
@@ -114,11 +115,9 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            MovementSheetTitle(
               'Entrada em ${widget.wallet.name}',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              isIncome: true,
             ),
             if (_isPredicted) ...[
               const SizedBox(height: 4),

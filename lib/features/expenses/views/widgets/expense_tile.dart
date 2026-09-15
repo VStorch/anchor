@@ -170,6 +170,8 @@ class _PartialBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: payable.paidRatio,
             minHeight: 4,
+            semanticsLabel: 'Parte paga',
+            semanticsValue: '${(payable.paidRatio * 100).round()}%',
             color: theme.colorScheme.primary,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
           ),
@@ -250,7 +252,6 @@ class _PaidToggle extends StatelessWidget {
         if (!fitsLabel) {
           return IconButton(
             onPressed: onPressed,
-            visualDensity: VisualDensity.compact,
             color: color,
             tooltip: _label,
             icon: Icon(_icon, size: 20),
@@ -261,8 +262,8 @@ class _PaidToggle extends StatelessWidget {
           onPressed: onPressed,
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            minimumSize: const Size(48, 48),
+            tapTargetSize: MaterialTapTargetSize.padded,
             foregroundColor: color,
           ),
           icon: Icon(_icon, size: 16),

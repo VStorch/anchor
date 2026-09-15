@@ -291,30 +291,41 @@ class _ColorSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+      spacing: 4,
+      runSpacing: 4,
       children: List.generate(AppPalette.wallets.length, (index) {
         final color = AppPalette.walletColorAt(index);
         final isSelected = viewModel.colorIndex == index;
 
-        return GestureDetector(
-          onTap: () => viewModel.setColorIndex(index),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              border: isSelected
-                  ? Border.all(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      width: 3,
-                    )
-                  : null,
+        return Semantics(
+          button: true,
+          selected: isSelected,
+          label: 'Cor ${index + 1} de ${AppPalette.wallets.length}',
+          child: InkResponse(
+            onTap: () => viewModel.setColorIndex(index),
+            radius: 24,
+            child: SizedBox.square(
+              dimension: 48,
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: isSelected
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            width: 3,
+                          )
+                        : null,
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 20)
+                      : null,
+                ),
+              ),
             ),
-            child: isSelected
-                ? const Icon(Icons.check, color: Colors.white, size: 20)
-                : null,
           ),
         );
       }),

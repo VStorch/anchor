@@ -307,7 +307,18 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
 - Money figures take their colour from the `MoneyColors` theme extension (`app/theme/money_colors.dart`,
   `MoneyColors.of(context)`): `income`, `spending`, `neutral` and `predicted`, one set per brightness.
   `test/app/theme/money_colors_test.dart` holds every one of them at 4.5:1 or more against the surfaces.
+  A movement is coloured by what it is — `income`, `spending`, `neutral` for a balance check,
+  `predicted` for what has not happened (a receipt to confirm, a bill not yet paid) — and drawn with
+  `MoneyIcons` (`app/theme/money_icons.dart`): down comes in, up goes out, in the Carteiras list, the
+  agenda and the sheet titles (`MovementSheetTitle`). `wallet.color` paints avatars and bars only,
+  never text: a balance is `onSurface`, or `error` when negative.
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
+  A list under an extended FAB ends with `fabClearance(context)` of bottom padding
+  (`core/widgets/fab_clearance.dart`), which scales with the font.
+- Anything tappable is at least 48dp and says what it is to TalkBack (the colour dots are labelled
+  buttons, the month title is a header). `responsive_test.dart` runs `androidTapTargetGuideline` and
+  `textContrastGuideline` on every tab in light and dark, `labeledTapTargetGuideline` on the wallet
+  form, and checks the FAB never covers the last item at 320dp and 1.3x font.
 - `FilledButton` is themed full-width (`minimumSize: Size.fromHeight(52)`), so it only goes inside a
   `Row` wrapped in `Expanded` — loose in a row it asks for infinite width and the layout throws.
 - Nothing gets a hardcoded width or height that holds text: scale it with

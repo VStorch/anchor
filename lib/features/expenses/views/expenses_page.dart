@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/fab_clearance.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/stat_tile.dart';
@@ -22,7 +23,23 @@ class ExpensesPage extends StatelessWidget {
     final viewModel = context.watch<ExpensesViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Despesas')),
+      appBar: AppBar(
+        title: const Text('Despesas'),
+        actions: [
+          viewModel.layout == ExpenseLayout.table
+              ? IconButton(
+                  onPressed: () => viewModel.applyLayout(ExpenseLayout.list),
+                  icon: const Icon(Icons.view_agenda_outlined),
+                  tooltip: 'Ver como lista',
+                )
+              : IconButton(
+                  onPressed: () => viewModel.applyLayout(ExpenseLayout.table),
+                  icon: const Icon(Icons.table_chart_outlined),
+                  tooltip: 'Ver como tabela',
+                ),
+          const SizedBox(width: 4),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'new-expense',
         onPressed: () => ExpenseFormPage.open(
@@ -65,7 +82,7 @@ class ExpensesPage extends StatelessWidget {
 
   Widget _list(BuildContext context, ExpensesViewModel viewModel) {
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, fabClearance(context)),
       itemCount: viewModel.payables.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -174,50 +191,20 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<ExpensesViewModel>();
 
-    return SizedBox(
-      height: 56,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Expanded(
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: ExpenseFilter.values
-                  .map(
-                    (filter) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(filter.label),
-                        selected: viewModel.filter == filter,
-                        onSelected: (_) => viewModel.applyFilter(filter),
-                      ),
-                    ),
-                  )
-                  .toList(),
+          for (final filter in ExpenseFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(filter.label),
+                selected: viewModel.filter == filter,
+                onSelected: (_) => viewModel.applyFilter(filter),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: SegmentedButton<ExpenseLayout>(
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
-              segments: const [
-                ButtonSegment(
-                  value: ExpenseLayout.list,
-                  icon: Icon(Icons.view_agenda_outlined),
-                  tooltip: 'Lista',
-                ),
-                ButtonSegment(
-                  value: ExpenseLayout.table,
-                  icon: Icon(Icons.table_chart_outlined),
-                  tooltip: 'Tabela',
-                ),
-              ],
-              selected: {viewModel.layout},
-              onSelectionChanged: (selection) =>
-                  viewModel.applyLayout(selection.single),
-            ),
-          ),
         ],
       ),
     );

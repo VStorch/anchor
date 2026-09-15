@@ -77,7 +77,7 @@ class _WalletChip extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 color: summary.balance < 0
                     ? theme.colorScheme.error
-                    : wallet.color,
+                    : theme.colorScheme.onSurface,
               ),
             ),
             if (summary.pendingInMonth > 0)

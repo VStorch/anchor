@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/money_colors.dart';
+import '../../../app/theme/money_icons.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../budget/models/budget_snapshot.dart';
-import '../../wallets/models/wallet.dart';
 import '../viewmodels/dashboard_view_model.dart';
 
 class MonthAgendaPage extends StatelessWidget {
@@ -63,7 +64,14 @@ class MonthAgendaPage extends StatelessWidget {
   }
 }
 
-enum _EntryKind { income, expectedIncome, bill, paidBill, spending }
+enum _EntryKind {
+  income,
+  expectedIncome,
+  bill,
+  overdueBill,
+  paidBill,
+  spending,
+}
 
 class _AgendaEntry {
   const _AgendaEntry({
@@ -71,30 +79,27 @@ class _AgendaEntry {
     required this.title,
     required this.amount,
     required this.kind,
-    this.wallet,
   });
 
   final int day;
   final String title;
   final double amount;
   final _EntryKind kind;
-  final Wallet? wallet;
 
   IconData get icon => switch (kind) {
-    _EntryKind.income => Icons.arrow_downward,
-    _EntryKind.expectedIncome => Icons.schedule,
-    _EntryKind.bill => Icons.arrow_upward,
-    _EntryKind.paidBill => Icons.check_circle_outline,
-    _EntryKind.spending => Icons.shopping_bag_outlined,
+    _EntryKind.income || _EntryKind.expectedIncome => MoneyIcons.income,
+    _ => MoneyIcons.spending,
   };
 
-  Color colorOf(ColorScheme colors) => switch (kind) {
-    _EntryKind.income ||
-    _EntryKind.expectedIncome => wallet?.color ?? colors.primary,
-    _EntryKind.bill => colors.error,
-    _EntryKind.paidBill => colors.primary,
-    _EntryKind.spending => colors.onSurfaceVariant,
-  };
+  Color colorOf(BuildContext context) {
+    final colors = MoneyColors.of(context);
+    return switch (kind) {
+      _EntryKind.income => colors.income,
+      _EntryKind.expectedIncome || _EntryKind.bill => colors.predicted,
+      _EntryKind.overdueBill => Theme.of(context).colorScheme.error,
+      _EntryKind.paidBill || _EntryKind.spending => colors.spending,
+    };
+  }
 }
 
 class _AgendaDay {
@@ -108,7 +113,11 @@ class _AgendaDay {
           day: payable.dueDate.day,
           title: payable.name,
           amount: payable.amount,
-          kind: payable.isPaid ? _EntryKind.paidBill : _EntryKind.bill,
+          kind: payable.isPaid
+              ? _EntryKind.paidBill
+              : payable.isOverdue
+              ? _EntryKind.overdueBill
+              : _EntryKind.bill,
         ),
       for (final outflow in snapshot.summary.outflows)
         _AgendaEntry(
@@ -116,7 +125,6 @@ class _AgendaDay {
           title: outflow.label,
           amount: outflow.amount,
           kind: _EntryKind.spending,
-          wallet: snapshot.walletById(outflow.walletId),
         ),
     ];
 
@@ -144,7 +152,6 @@ class _AgendaDay {
             kind: receipt.isPredicted
                 ? _EntryKind.expectedIncome
                 : _EntryKind.income,
-            wallet: snapshot.walletById(receipt.walletId),
           ),
       for (final wallet in snapshot.wallets)
         for (final payout in wallet.payouts)
@@ -154,7 +161,6 @@ class _AgendaDay {
               title: payout.label,
               amount: payout.amount,
               kind: _EntryKind.expectedIncome,
-              wallet: wallet,
             ),
     ];
   }
@@ -249,7 +255,7 @@ class _AgendaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = entry.colorOf(theme.colorScheme);
+    final color = entry.colorOf(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
