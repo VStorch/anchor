@@ -2,6 +2,9 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/services/budget_service.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
+import 'package:anchor/features/expenses/models/expense_payment.dart';
+import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -312,5 +315,96 @@ void main() {
       expect(august.summary.totalReceived, 3000);
       expect(august.awaitingConfirmation, 3000);
     });
+  });
+
+  test('excluir a carteira com entradas, gastos, saldo, cartão e contas '
+      'deixa as contas pagas e nenhum dinheiro para trás', () async {
+    final changes = DataChanges();
+    final cards = CardRepository(database, changes);
+    final id = await wallets.saveWallet(
+      Wallet(
+        name: 'Salário',
+        kind: WalletKind.salary,
+        colorIndex: 0,
+        createdAt: DateTime(2026, 9),
+      ),
+    );
+    await wallets.saveReceipt(
+      Receipt(
+        walletId: id,
+        month: september,
+        amount: 1000,
+        receivedAt: DateTime(2026, 9, 1, 12),
+      ),
+    );
+    await wallets.saveOutflow(
+      Outflow(
+        walletId: id,
+        description: 'Mercado',
+        amount: 30,
+        spentAt: DateTime(2026, 9, 12, 12),
+      ),
+    );
+    await wallets.saveBalanceCheck(
+      BalanceCheck(walletId: id, amount: 500, checkedAt: now),
+    );
+    final cardId = await cards.saveCard(
+      CreditCard(
+        name: 'Nubank',
+        closingDay: 3,
+        dueDay: 10,
+        walletId: id,
+        createdAt: DateTime(2026, 9),
+      ),
+    );
+    await expenses.saveExpense(
+      Expense(
+        name: 'Aluguel',
+        type: ExpenseType.recurring,
+        amount: 100,
+        dueDay: 10,
+        startMonth: september,
+        walletId: id,
+        createdAt: DateTime(2026, 9),
+      ),
+    );
+    final rent = (await expenses.fetchExpenses()).single;
+    await expenses.savePayment(
+      ExpensePayment(
+        expenseId: rent.id!,
+        walletId: id,
+        month: september,
+        amount: 100,
+        paidAt: DateTime(2026, 9, 10, 12),
+      ),
+    );
+
+    final before = await service.loadSnapshot(september, now: now);
+    final impact = before.deletionImpactOf(id);
+    expect(
+      [
+        impact.receipts,
+        impact.outflows,
+        impact.checks,
+        impact.paidBills,
+        impact.plannedBills,
+        impact.cards,
+      ],
+      [1, 1, 1, 1, 1, 1],
+    );
+
+    await wallets.deleteWallet(id);
+    final after = await service.loadSnapshot(september, now: now);
+
+    final occurrence = after.summary.occurrenceOf(rent.id!)!;
+    expect(occurrence.isPaid, isTrue);
+    expect(occurrence.payments.single.settledOutside, isTrue);
+    expect(after.summary.totalSpent, 0);
+    expect(after.summary.totalReceived, 0);
+    expect(after.checks, isEmpty);
+    expect(after.outflows, isEmpty);
+    expect(after.expenses.single.walletId, isNull);
+    expect(after.cards.single.walletId, isNull);
+    expect(after.cardById(cardId), isNotNull);
   });
 }

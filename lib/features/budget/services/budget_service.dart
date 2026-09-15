@@ -73,6 +73,7 @@ class BudgetService {
       payments: payments,
       cards: cards,
       checks: checks,
+      outflows: outflows,
     );
   }
 }

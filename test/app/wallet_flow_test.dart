@@ -10,6 +10,7 @@ import 'package:anchor/features/dashboard/views/widgets/month_so_far_card.dart';
 import 'package:anchor/features/dashboard/views/widgets/today_card.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/balance_check.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/receipt_status.dart';
@@ -418,6 +419,46 @@ void main() {
       DataChanges(),
     ).fetchBalanceChecks();
     expect(checks.single.amount, 700);
+  });
+
+  testWidgets('excluir a carteira diz o que vai junto', (tester) async {
+    await seedSalary();
+    final repository = WalletRepository(database, DataChanges());
+    await repository.saveOutflow(
+      Outflow(
+        walletId: 1,
+        description: 'Mercado',
+        amount: 30,
+        spentAt: DateTime.now(),
+      ),
+    );
+    await repository.saveOutflow(
+      Outflow(
+        walletId: 1,
+        description: 'Farmácia',
+        amount: 20,
+        spentAt: DateTime.now(),
+      ),
+    );
+    await repository.saveBalanceCheck(
+      BalanceCheck(walletId: 1, amount: 500, checkedAt: DateTime.now()),
+    );
+    await pumpApp(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Excluir carteira'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('2 gastos e 1 saldo informado serão apagados.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('remove o saldo informado pela movimentação', (tester) async {

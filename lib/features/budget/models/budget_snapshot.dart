@@ -5,8 +5,10 @@ import '../../cards/models/credit_card.dart';
 import '../../expenses/models/expense.dart';
 import '../../expenses/models/expense_payment.dart';
 import '../../wallets/models/balance_check.dart';
+import '../../wallets/models/outflow.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
+import '../../wallets/models/wallet_deletion_impact.dart';
 import 'month_forecast.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
@@ -21,6 +23,7 @@ class BudgetSnapshot {
     required this.payments,
     this.cards = const <CreditCard>[],
     this.checks = const <BalanceCheck>[],
+    this.outflows = const <Outflow>[],
     this.forecast,
   });
 
@@ -41,6 +44,7 @@ class BudgetSnapshot {
   final List<ExpensePayment> payments;
   final List<CreditCard> cards;
   final List<BalanceCheck> checks;
+  final List<Outflow> outflows;
   final MonthForecast? forecast;
 
   bool get hasWallets => wallets.isNotEmpty;
@@ -59,6 +63,21 @@ class BudgetSnapshot {
       .map((payment) => (payment.expenseId, payment.month))
       .toSet()
       .length;
+
+  WalletDeletionImpact deletionImpactOf(int walletId) => WalletDeletionImpact(
+    receipts: receipts
+        .where((receipt) => receipt.walletId == walletId)
+        .where((receipt) => receipt.isConfirmed)
+        .length,
+    outflows: outflows.where((outflow) => outflow.walletId == walletId).length,
+    checks: checks.where((check) => check.walletId == walletId).length,
+    paidBills: paymentCountOf(walletId),
+    plannedBills: expenses
+        .where((expense) => expense.walletId == walletId)
+        .where((expense) => expense.cardId == null)
+        .length,
+    cards: cards.where((card) => card.walletId == walletId).length,
+  );
 
   double get walletsBalance => roundCents(
     walletSummaries.fold(0, (total, summary) => total + summary.balance),

@@ -7,6 +7,7 @@ import '../../../core/utils/month.dart';
 import '../../../core/widgets/section_header.dart';
 import '../models/payout.dart';
 import '../models/wallet.dart';
+import '../models/wallet_deletion_impact.dart';
 import '../models/wallet_kind.dart';
 import '../repositories/wallet_repository.dart';
 import '../viewmodels/wallet_form_view_model.dart';
@@ -129,22 +130,17 @@ class _WalletFormView extends StatelessWidget {
     final viewModel = context.read<WalletsViewModel>();
     final navigator = Navigator.of(context);
 
-    final paidBills = viewModel.paymentCountOf(wallet);
-    final paidNote = switch (paidBills) {
-      0 => '',
-      1 => '\n\n1 conta paga com ela continua paga, como “Outro dinheiro”.',
-      _ =>
-        '\n\n$paidBills contas pagas com ela continuam pagas, '
-            'como “Outro dinheiro”.',
-    };
+    final lines = _impactLines(viewModel.deletionImpactOf(wallet));
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Excluir ${wallet.name}?'),
         content: Text(
-          'O calendário de recebimentos e todas as entradas dessa carteira '
-          'também serão apagados.$paidNote',
+          lines.isEmpty
+              ? 'O calendário de recebimentos dessa carteira também será '
+                    'apagado.'
+              : lines.join('\n\n'),
         ),
         actions: [
           TextButton(
@@ -164,6 +160,45 @@ class _WalletFormView extends StatelessWidget {
       navigator.pop();
     }
   }
+
+  static List<String> _impactLines(WalletDeletionImpact impact) {
+    final removed = [
+      if (impact.receipts > 0) _count(impact.receipts, 'entrada', 'entradas'),
+      if (impact.outflows > 0) _count(impact.outflows, 'gasto', 'gastos'),
+      if (impact.checks > 0)
+        _count(impact.checks, 'saldo informado', 'saldos informados'),
+    ];
+    final removedTotal = impact.receipts + impact.outflows + impact.checks;
+    final onlyReceipts = impact.outflows + impact.checks == 0;
+    final unassigned = [
+      if (impact.plannedBills > 0)
+        _count(impact.plannedBills, 'conta', 'contas'),
+      if (impact.cards > 0) _count(impact.cards, 'cartão', 'cartões'),
+    ];
+
+    return [
+      if (removed.isNotEmpty)
+        '${_joined(removed)} '
+            '${removedTotal == 1 ? 'será' : 'serão'} '
+            'apagad${onlyReceipts ? 'a' : 'o'}${removedTotal == 1 ? '' : 's'}.',
+      if (impact.paidBills == 1)
+        '1 conta paga continua paga, como “Outro dinheiro”.',
+      if (impact.paidBills > 1)
+        '${impact.paidBills} contas pagas continuam pagas, '
+            'como “Outro dinheiro”.',
+      if (unassigned.isNotEmpty)
+        '${_joined(unassigned)} '
+            '${impact.plannedBills + impact.cards == 1 ? 'fica' : 'ficam'} '
+            'sem carteira definida.',
+    ];
+  }
+
+  static String _count(int count, String singular, String plural) =>
+      '$count ${count == 1 ? singular : plural}';
+
+  static String _joined(List<String> parts) => parts.length == 1
+      ? parts.single
+      : '${parts.take(parts.length - 1).join(', ')} e ${parts.last}';
 
   Future<void> _addPayout(
     BuildContext context,

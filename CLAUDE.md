@@ -105,7 +105,10 @@ mutated:
   `paidFromWallets`. The default origin comes from `ExpensesViewModel.defaultOriginFor`, which falls
   back to the first wallet when the expense was saved as "Definir na hora". Schema v9 marked the
   null-wallet rows as outside, and `WalletRepository.deleteWallet` turns the wallet's payments into
-  outside ones in the same transaction, so the bills it paid stay paid.
+  outside ones in the same transaction, so the bills it paid stay paid. Its confirmation dialog says
+  what goes with it from `BudgetSnapshot.deletionImpactOf` (`WalletDeletionImpact`): the receipts,
+  outflows and balance checks the CASCADE deletes, the bills that stay paid as "Outro dinheiro", and
+  the bills and cards left with no wallet — one line per non-zero count.
 
   `paid_at` is chosen, not stamped, and never in the future: "Marcar como paga" uses
   `Payable.suggestedPaidAt` (the due day for a past month, now for the current or a later one — the

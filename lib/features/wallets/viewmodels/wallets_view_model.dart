@@ -15,6 +15,7 @@ import '../models/outflow.dart';
 import '../models/receipt.dart';
 import '../models/receipt_status.dart';
 import '../models/wallet.dart';
+import '../models/wallet_deletion_impact.dart';
 import '../models/wallet_kind.dart';
 import '../models/wallet_movement.dart';
 import '../repositories/wallet_repository.dart';
@@ -131,7 +132,8 @@ class WalletsViewModel extends ReactiveViewModel {
 
   void goToCurrentMonth() => _monthSelection.goToToday();
 
-  int paymentCountOf(Wallet wallet) => _snapshot.paymentCountOf(wallet.id!);
+  WalletDeletionImpact deletionImpactOf(Wallet wallet) =>
+      _snapshot.deletionImpactOf(wallet.id!);
 
   Future<void> deleteWallet(Wallet wallet) =>
       _walletRepository.deleteWallet(wallet.id!);
