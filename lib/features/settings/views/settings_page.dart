@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/database/database_backup.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../reminders/models/due_reminder.dart';
+import '../../reminders/models/reminder_lead.dart';
 import '../../reminders/viewmodels/reminders_view_model.dart';
 import '../viewmodels/backup_view_model.dart';
 import '../viewmodels/settings_view_model.dart';
@@ -42,14 +43,36 @@ class SettingsPage extends StatelessWidget {
           ),
           const SectionHeader(title: 'Lembretes'),
           Card(
-            child: SwitchListTile(
-              value: reminders.isEnabled,
-              onChanged: (value) => _setReminders(context, reminders, value),
-              secondary: const Icon(Icons.notifications_outlined),
-              title: const Text('Avisar no dia do vencimento'),
-              subtitle: Text(
-                'Às ${DueReminder.hourOfDay}h, se ainda não foi paga',
-              ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  value: reminders.isEnabled,
+                  onChanged: (value) =>
+                      _setReminders(context, reminders, value),
+                  secondary: const Icon(Icons.notifications_outlined),
+                  title: const Text('Avisar sobre vencimentos'),
+                  subtitle: Text(
+                    'Às ${DueReminder.hourOfDay}h, se ainda não foi paga',
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<ReminderLead>(
+                      showSelectedIcon: false,
+                      segments: [
+                        for (final lead in ReminderLead.values)
+                          ButtonSegment(value: lead, label: Text(lead.label)),
+                      ],
+                      selected: {reminders.lead},
+                      onSelectionChanged: reminders.isEnabled
+                          ? (selection) => reminders.setLead(selection.single)
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SectionHeader(title: 'Cópia dos dados'),

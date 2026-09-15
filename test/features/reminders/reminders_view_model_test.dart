@@ -7,6 +7,7 @@ import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/features/reminders/models/reminder_lead.dart';
 import 'package:anchor/features/reminders/viewmodels/reminders_view_model.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,11 +67,12 @@ void main() {
     await viewModel.initialize();
 
     expect(notifications.permissionRequests, 1);
-    expect(notifications.scheduled.first.title, 'Aluguel vence hoje');
+    expect(notifications.scheduled.first.title, 'Aluguel vence amanhã');
     expect(
       notifications.scheduled.first.at,
-      DateTime(clock.year, clock.month, 10, 9),
+      DateTime(clock.year, clock.month, 9, 9),
     );
+    expect(notifications.scheduled[1].title, 'Aluguel vence hoje');
 
     changes.publish();
     await viewModel.idle;
@@ -94,7 +96,7 @@ void main() {
     );
     await viewModel.idle;
 
-    expect(notifications.scheduled, hasLength(before - 1));
+    expect(notifications.scheduled, hasLength(before - 2));
     expect(
       notifications.scheduled.every((r) => r.at.month != clock.month),
       isTrue,
@@ -113,6 +115,25 @@ void main() {
     changes.publish();
     await viewModel.idle;
     expect(notifications.permissionRequests, 1);
+  });
+
+  test('escolher só no dia guarda a escolha e reagenda', () async {
+    await seedRent();
+    final viewModel = buildViewModel();
+    await viewModel.initialize();
+    expect(viewModel.lead, ReminderLead.both);
+
+    await viewModel.setLead(ReminderLead.sameDay);
+
+    expect(notifications.scheduled.map((r) => r.title).toSet(), {
+      'Aluguel vence hoje',
+    });
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('reminders_lead'), 'sameDay');
+
+    final reopened = buildViewModel();
+    await reopened.initialize();
+    expect(reopened.lead, ReminderLead.sameDay);
   });
 
   test('desligar no Ajustes limpa o que estava agendado', () async {

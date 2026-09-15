@@ -253,8 +253,12 @@ the new one fails. The file I/O there is synchronous on purpose — see the widg
 The system file dialogs sit behind `BackupFiles`, which `AnchorApp` takes so tests can fake them.
 
 **Reminders** (`features/reminders/`) are rebuilt from scratch on every `DataChanges`:
-`RemindersViewModel` loads the current and next month, `DueReminder.plan` turns each unpaid occurrence
-into a 9h notification (one per day, id `yyyymmdd`), and `ReminderNotifications.replaceAll` cancels
+`RemindersViewModel` loads the current and next month (`loadSnapshot(month, now:)` with its clock),
+`DueReminder.plan` turns each unpaid payable into a 9h notification on the due day ("vence hoje"), the
+day before ("vence amanhã") or both, as the `ReminderLead` picked in Ajustes says (prefs
+`reminders_lead`, default both). Bills sharing a due day and a lead share one notification, whose id is
+`yyyymmdd * 10 + days ahead` — a bill due tomorrow and one due today never collide at the same 9h, and
+the id stays below 2^31. `ReminderNotifications.replaceAll` cancels
 everything and schedules the new list — so paying a bill is what cancels its reminder, with no
 bookkeeping of notification ids. Android is asked for permission the first time there is something
 to remind, never on its own again; a refusal turns the switch in Ajustes off. Scheduling is inexact

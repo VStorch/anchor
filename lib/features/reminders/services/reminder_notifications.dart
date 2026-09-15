@@ -15,7 +15,7 @@ class LocalReminderNotifications implements ReminderNotifications {
   static const AndroidNotificationDetails _channel = AndroidNotificationDetails(
     'due_reminders',
     'Vencimentos',
-    channelDescription: 'Aviso no dia em que uma conta vence',
+    channelDescription: 'Aviso na véspera e no dia em que uma conta vence',
   );
 
   final FlutterLocalNotificationsPlugin _plugin =

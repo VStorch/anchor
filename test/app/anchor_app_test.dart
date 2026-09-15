@@ -11,6 +11,7 @@ import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
+import 'package:anchor/features/reminders/models/reminder_lead.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
@@ -343,5 +344,39 @@ void main() {
 
     await tapTab(tester, Icons.tune_outlined);
     expect(find.text('Padrão do sistema'), findsOneWidget);
+  });
+
+  testWidgets('escolhe a antecedência do lembrete no Ajustes', (tester) async {
+    await seedSalaryAndExpense();
+    final notifications = FakeReminderNotifications();
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: notifications,
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapTab(tester, Icons.tune_outlined);
+
+    await tester.tap(find.text('No dia'));
+    await tester.pumpAndSettle();
+
+    final preferences = await SharedPreferences.getInstance();
+    expect(preferences.getString('reminders_lead'), 'sameDay');
+    expect(notifications.scheduled, isNotEmpty);
+    expect(
+      notifications.scheduled.every((r) => r.title.endsWith('hoje')),
+      isTrue,
+    );
+
+    await tester.tap(find.text('Avisar sobre vencimentos'));
+    await tester.pumpAndSettle();
+    final lead = tester.widget<SegmentedButton<ReminderLead>>(
+      find.byType(SegmentedButton<ReminderLead>),
+    );
+    expect(lead.onSelectionChanged, isNull);
   });
 }

@@ -5,6 +5,7 @@ import '../../../core/state/data_changes.dart';
 import '../../../core/utils/month.dart';
 import '../../budget/services/budget_service.dart';
 import '../models/due_reminder.dart';
+import '../models/reminder_lead.dart';
 import '../services/reminder_notifications.dart';
 
 class RemindersViewModel extends ChangeNotifier {
@@ -22,6 +23,7 @@ class RemindersViewModel extends ChangeNotifier {
 
   static const String _enabledKey = 'reminders_enabled';
   static const String _permissionAskedKey = 'reminders_permission_asked';
+  static const String _leadKey = 'reminders_lead';
 
   final BudgetService _budgetService;
   final ReminderNotifications _notifications;
@@ -29,9 +31,12 @@ class RemindersViewModel extends ChangeNotifier {
   final DateTime Function() _clock;
 
   bool _isEnabled = true;
+  ReminderLead _lead = ReminderLead.both;
   Future<void> _queue = Future<void>.value();
 
   bool get isEnabled => _isEnabled;
+
+  ReminderLead get lead => _lead;
 
   @visibleForTesting
   Future<void> get idle => _queue;
@@ -39,6 +44,7 @@ class RemindersViewModel extends ChangeNotifier {
   Future<void> initialize() async {
     final preferences = await SharedPreferences.getInstance();
     _isEnabled = preferences.getBool(_enabledKey) ?? true;
+    _lead = ReminderLead.fromId(preferences.getString(_leadKey));
     notifyListeners();
     await _reschedule();
   }
@@ -49,6 +55,16 @@ class RemindersViewModel extends ChangeNotifier {
     await _store(value && granted);
     await _reschedule();
     return granted;
+  }
+
+  Future<void> setLead(ReminderLead value) async {
+    if (_lead != value) {
+      _lead = value;
+      notifyListeners();
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(_leadKey, value.id);
+    }
+    await _reschedule();
   }
 
   Future<void> _reschedule() =>
@@ -68,13 +84,14 @@ class RemindersViewModel extends ChangeNotifier {
 
   Future<List<DueReminder>> _plan(DateTime now) async {
     final month = Month.fromDate(now);
-    final current = await _budgetService.loadSnapshot(month);
-    final next = await _budgetService.loadSnapshot(month.next);
+    final current = await _budgetService.loadSnapshot(month, now: now);
+    final next = await _budgetService.loadSnapshot(month.next, now: now);
 
-    return DueReminder.plan([
-      ...current.summary.payables,
-      ...next.summary.payables,
-    ], now: now);
+    return DueReminder.plan(
+      [...current.summary.payables, ...next.summary.payables],
+      now: now,
+      lead: _lead,
+    );
   }
 
   /// The first bill worth a reminder is when Android gets asked. After that
