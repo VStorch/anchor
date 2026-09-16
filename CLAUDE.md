@@ -49,11 +49,24 @@ today's balance plus what is still expected in (`predicted` receipts, overdue or
 payouts with no receipt yet) minus the `remaining` of the occurrences planned on it, over every month
 from the current one to the one on screen; bills with no wallet go to `unassignedToPay`. It is
 outlined and coloured `MoneyColors.predicted`, and holds no real number. **<Mês> até agora** (current
-month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou`/`Saiu`/`Diferença`,
-confirmed money only, so `totalReceived - totalSpent == difference` reconciles on screen.
-`MonthSummary` carries no planned income; the payout calendar's total lives on `Wallet.monthlyIncome`
-and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
+month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou` and `Saiu`,
+confirmed money only. `MonthSummary` carries no planned income; the payout calendar's total lives
+on `Wallet.monthlyIncome` and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
 real one in the same block.**
+
+The two real blocks reconcile with the balance instead of contradicting it. `TodayCard` opens
+"De onde vem esse valor" and reads each wallet's balance as
+`checkAmount + receivedSinceCheck - spentSinceCheck` (`WalletSummary`, the same folds that build
+`balance`, so the invariant holds by construction): "Saldo informado em 15/09, 9h04" — the hour only
+when the check does not close the day (`closesDay`) — then "Entrou depois" and "Saiu depois", a zero
+line dropped and "Nada lançado depois" when both are. A wallet with no check starts at "Desde o
+cadastro em 13/09". `MonthSoFarCard` shows a third figure, `MonthReconciliation.balanceChange`
+("Somou ao saldo"/"Tirou do saldo"), **only when nothing of the month is inside an informed balance**
+— a payment counts in the month of the bill, so with a check inside the month the subtraction would
+count money twice. Otherwise it shows the note with `receivedBeforeCheck`/`spentBeforeCheck` and the
+`coveringChecks` that hold them. `MonthReconciliation` (`features/budget/models/`) is built by
+`BudgetService` from the `WalletSummary` list — `MonthSummary` knows nothing of wallets or checks —
+and `MonthSummary.difference` stays for the tests only: no view reads it.
 
 "Today" is injectable: `MonthSummary.build(today:)` keeps it in `summary.today`, and
 `BudgetService.loadSnapshot(month, now:)` passes the same instant to `registerDuePayouts(now:)`, the

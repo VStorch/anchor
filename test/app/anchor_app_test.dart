@@ -9,11 +9,16 @@ import 'package:anchor/features/dashboard/views/widgets/today_card.dart';
 import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
+import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/reminders/models/reminder_lead.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
+import 'package:anchor/features/wallets/models/balance_check.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
+import 'package:anchor/features/wallets/models/payout_schedule.dart';
+import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
@@ -181,12 +186,13 @@ void main() {
       find.descendant(of: month, matching: find.textContaining('até agora')),
       findsOneWidget,
     );
-    for (final label in ['Entrou', 'Saiu', 'Diferença']) {
+    for (final label in ['Entrou', 'Saiu', 'Somou ao saldo']) {
       expect(
         find.descendant(of: month, matching: find.text(label)),
         findsOneWidget,
       );
     }
+    expect(find.text('Diferença'), findsNothing);
     expect(find.text('Sobrou'), findsNothing);
 
     await tester.scrollUntilVisible(
@@ -199,6 +205,168 @@ void main() {
       find.descendant(
         of: find.widgetWithText(SectionHeader, 'A pagar'),
         matching: find.textContaining('450,00 a pagar'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  Future<void> seedMariana(DateTime today) async {
+    final changes = DataChanges();
+    final wallets = WalletRepository(database, changes);
+    final expenses = ExpenseRepository(database, changes);
+    final month = Month.fromDate(today);
+    final start = DateTime(today.year, today.month);
+
+    Future<int> source(String name, WalletKind kind) => wallets.saveWallet(
+      Wallet(
+        name: name,
+        kind: kind,
+        colorIndex: kind == WalletKind.salary ? 0 : 1,
+        createdAt: start,
+      ),
+    );
+
+    final salaryId = await source('Salário', WalletKind.salary);
+    final voucherId = await source('VR', WalletKind.benefit);
+    await wallets.savePayout(
+      Payout(
+        walletId: salaryId,
+        label: '',
+        amount: 3200,
+        day: 5,
+        schedule: PayoutSchedule.businessDay,
+        createdAt: start,
+      ),
+    );
+    await wallets.savePayout(
+      Payout(
+        walletId: voucherId,
+        label: '',
+        amount: 600,
+        day: 1,
+        createdAt: start,
+      ),
+    );
+    await wallets.registerDuePayouts(await wallets.fetchWallets(), now: today);
+    for (final receipt in await wallets.fetchReceipts()) {
+      await wallets.saveReceipt(
+        receipt.copyWith(status: ReceiptStatus.confirmed),
+      );
+    }
+
+    final checkedAt = DateTime(today.year, today.month, today.day, 9, 4);
+    await wallets.saveBalanceCheck(
+      BalanceCheck(walletId: salaryId, amount: 850, checkedAt: checkedAt),
+    );
+    await wallets.saveBalanceCheck(
+      BalanceCheck(walletId: voucherId, amount: 210, checkedAt: checkedAt),
+    );
+
+    final bills = <String, (double, int, DateTime)>{
+      'Aluguel': (1100, 10, DateTime(2026, 9, 10, 12)),
+      'Celular': (89, 12, DateTime(2026, 9, 12, 12)),
+      'Academia': (110, 5, DateTime(2026, 9, 5, 12)),
+      'Geladeira': (115, 14, DateTime(2026, 9, 14, 12)),
+      'Internet': (99.90, 15, DateTime(2026, 9, 15, 10)),
+    };
+    for (final bill in bills.entries) {
+      final (amount, dueDay, paidAt) = bill.value;
+      final expenseId = await expenses.saveExpense(
+        Expense(
+          name: bill.key,
+          type: ExpenseType.recurring,
+          amount: amount,
+          dueDay: dueDay,
+          startMonth: month,
+          walletId: salaryId,
+          createdAt: start,
+        ),
+      );
+      await expenses.savePayment(
+        ExpensePayment(
+          expenseId: expenseId,
+          walletId: salaryId,
+          month: month,
+          amount: amount,
+          paidAt: paidAt,
+        ),
+      );
+    }
+
+    await wallets.saveOutflow(
+      Outflow(
+        walletId: voucherId,
+        description: 'Mercado',
+        amount: 47.30,
+        spentAt: DateTime(2026, 9, 15, 12),
+      ),
+    );
+  }
+
+  testWidgets('o saldo de hoje se explica e o mês não vira sobra', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+
+    final today = DateTime(2026, 9, 15, 14);
+    await seedMariana(today);
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+        clock: () => today,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byType(TodayCard);
+    expect(
+      find.descendant(of: card, matching: find.text(formatMoney(912.80))),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('De onde vem esse valor'));
+    await tester.pumpAndSettle();
+
+    Finder inCard(String text) =>
+        find.descendant(of: card, matching: find.text(text));
+
+    expect(inCard('Saldo informado em 15/09, 9h04'), findsNWidgets(2));
+    expect(inCard('Saiu depois'), findsNWidgets(2));
+    expect(inCard('Salário'), findsOneWidget);
+    expect(inCard(formatMoney(750.10)), findsOneWidget);
+    expect(inCard('− ${formatMoney(99.90)}'), findsOneWidget);
+    expect(inCard('VR'), findsOneWidget);
+    expect(inCard(formatMoney(162.70)), findsOneWidget);
+    expect(inCard('− ${formatMoney(47.30)}'), findsOneWidget);
+
+    final month = find.byType(MonthSoFarCard);
+    await tester.scrollUntilVisible(
+      month,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      find.descendant(of: month, matching: find.text(formatMoney(3800))),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: month, matching: find.text(formatMoney(1561.20))),
+      findsOneWidget,
+    );
+    expect(find.text('Diferença'), findsNothing);
+    expect(find.text('Somou ao saldo'), findsNothing);
+    expect(
+      find.text(
+        '${formatMoney(3800)} do que entrou e ${formatMoney(1414)} do que '
+        'saiu já estavam no saldo que você informou em 15/09.',
       ),
       findsOneWidget,
     );

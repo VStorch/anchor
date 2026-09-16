@@ -10,6 +10,7 @@ import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
 import '../../wallets/models/wallet_deletion_impact.dart';
 import 'month_forecast.dart';
+import 'month_reconciliation.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
 
@@ -25,6 +26,7 @@ class BudgetSnapshot {
     this.checks = const <BalanceCheck>[],
     this.outflows = const <Outflow>[],
     this.forecast,
+    this.reconciliation = MonthReconciliation.empty,
   });
 
   factory BudgetSnapshot.empty(MonthSummary summary) => BudgetSnapshot(
@@ -46,6 +48,9 @@ class BudgetSnapshot {
   final List<BalanceCheck> checks;
   final List<Outflow> outflows;
   final MonthForecast? forecast;
+
+  /// How the month's Entrou and Saiu meet the balances the user informed.
+  final MonthReconciliation reconciliation;
 
   bool get hasWallets => wallets.isNotEmpty;
 

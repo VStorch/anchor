@@ -75,6 +75,7 @@ class DashboardPage extends StatelessWidget {
         children: [
           TodayCard(
             balance: snapshot.walletsBalance,
+            wallets: snapshot.walletSummaries,
             awaitingConfirmation: snapshot.awaitingConfirmation,
             onConfirm: () {
               viewModel.goToCurrentMonth();
@@ -95,7 +96,11 @@ class DashboardPage extends StatelessWidget {
             ForecastCard(forecast: forecast),
             const SizedBox(height: 12),
           ],
-          if (showsMonthSoFar) MonthSoFarCard(summary: summary),
+          if (showsMonthSoFar)
+            MonthSoFarCard(
+              summary: summary,
+              reconciliation: snapshot.reconciliation,
+            ),
           const SizedBox(height: 20),
           SectionHeader(
             title: 'Carteiras',

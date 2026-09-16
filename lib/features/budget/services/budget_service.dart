@@ -4,6 +4,7 @@ import '../../expenses/repositories/expense_repository.dart';
 import '../../wallets/repositories/wallet_repository.dart';
 import '../models/budget_snapshot.dart';
 import '../models/month_forecast.dart';
+import '../models/month_reconciliation.dart';
 import '../models/month_summary.dart';
 import '../models/wallet_summary.dart';
 
@@ -68,6 +69,10 @@ class BudgetService {
             summaryOf(ahead),
           summary,
         ],
+      ),
+      reconciliation: MonthReconciliation.build(
+        summary: summary,
+        wallets: walletSummaries,
       ),
       expenses: expenses,
       wallets: wallets,

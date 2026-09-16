@@ -10,6 +10,10 @@ DateTime stampFor(DateTime day, {DateTime? now}) {
 DateTime endOfDay(DateTime day) =>
     DateTime(day.year, day.month, day.day, 23, 59, 59, 999);
 
+/// A check informed for a past day is taken at the end of it, so it has no
+/// hour worth showing.
+bool closesDay(DateTime at) => at.isAtSameMomentAs(endOfDay(at));
+
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 

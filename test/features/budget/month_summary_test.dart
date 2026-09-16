@@ -340,6 +340,71 @@ void main() {
       expect(wallet.balance, -97.9);
     });
 
+    test('o saldo se explica pelo informado mais o que veio depois', () {
+      final wallet = salaryOf(
+        receipts: [
+          salaryPayout.copyWith(status: ReceiptStatus.confirmed),
+          Receipt(
+            id: 9,
+            walletId: 1,
+            payoutId: 2,
+            month: september,
+            amount: 500,
+            receivedAt: DateTime(2026, 9, 2),
+            pendingAtCheckId: informed.id,
+          ),
+        ],
+        payments: [
+          ExpensePayment(
+            expenseId: rent.id!,
+            walletId: 1,
+            month: september,
+            amount: 1100,
+            paidAt: DateTime(2026, 9, 10, 12),
+          ),
+          ExpensePayment(
+            expenseId: rent.id!,
+            month: september,
+            amount: 200,
+            paidAt: DateTime(2026, 9, 14, 12),
+            settledOutside: true,
+          ),
+        ],
+        outflows: [
+          Outflow(
+            walletId: 1,
+            description: 'Mercado',
+            amount: 47.30,
+            spentAt: DateTime(2026, 9, 14, 12),
+          ),
+        ],
+        checks: [informed],
+      );
+
+      expect(wallet.checkAmount, 850);
+      expect(wallet.receivedSinceCheck, 500);
+      expect(wallet.spentSinceCheck, 47.30);
+      expect(wallet.receivedInMonthBeforeCheck, 3200);
+      expect(wallet.spentInMonthBeforeCheck, 1100);
+      expect(wallet.balance, 1302.70);
+      expect(
+        wallet.balance,
+        wallet.checkAmount + wallet.receivedSinceCheck - wallet.spentSinceCheck,
+      );
+    });
+
+    test('sem saldo informado, tudo desde o cadastro conta', () {
+      final wallet = salaryOf(
+        receipts: [salaryPayout.copyWith(status: ReceiptStatus.confirmed)],
+      );
+
+      expect(wallet.checkAmount, 0);
+      expect(wallet.receivedSinceCheck, 3200);
+      expect(wallet.receivedInMonthBeforeCheck, 0);
+      expect(wallet.spentInMonthBeforeCheck, 0);
+      expect(wallet.balance, 3200);
+    });
+
     test('aceita um saldo negativo', () {
       final overdrawn = BalanceCheck(
         walletId: 1,

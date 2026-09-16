@@ -245,8 +245,18 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final breakdown = find.text('De onde vem esse valor');
+      await tester.ensureVisible(breakdown);
+      await tester.pumpAndSettle();
+      await tester.tap(breakdown);
+      await tester.pumpAndSettle();
+
       final details = find.text('Como chegamos nisso');
-      await tester.ensureVisible(details);
+      await tester.scrollUntilVisible(
+        details,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(details);
       await tester.pumpAndSettle();
@@ -275,6 +285,9 @@ void main() {
           database: database,
         ),
       );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('De onde vem esse valor'));
       await tester.pumpAndSettle();
 
       for (final icon in const <IconData?>[
