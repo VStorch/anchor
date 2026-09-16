@@ -74,7 +74,12 @@ class ExpensesViewModel extends ReactiveViewModel {
     ExpenseFilter.paid => summary.paidOccurrences,
   };
 
-  CardInvoice? invoiceOf(int cardId) => summary.invoiceOf(cardId);
+  CardInvoice? invoiceOf(int cardId) => invoiceFor(cardId, month);
+
+  /// Any month's invoice, so a sheet opens the one it was asked for without
+  /// moving the month the app is showing.
+  CardInvoice? invoiceFor(int cardId, Month month) =>
+      _snapshot.invoiceOf(cardId, month);
 
   @override
   Future<void> loadData() async {
@@ -98,7 +103,10 @@ class ExpensesViewModel extends ReactiveViewModel {
   void goToNextMonth() => _monthSelection.goToNext();
 
   ExpenseOccurrence? occurrenceOf(int expenseId) =>
-      summary.occurrenceOf(expenseId);
+      occurrenceIn(expenseId, month);
+
+  ExpenseOccurrence? occurrenceIn(int expenseId, Month month) =>
+      _snapshot.occurrenceOf(expenseId, month);
 
   Future<void> savePaymentLine(
     ExpenseOccurrence occurrence, {

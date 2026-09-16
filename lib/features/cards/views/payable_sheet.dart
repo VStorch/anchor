@@ -11,6 +11,7 @@ Future<void> showPayableSheet(BuildContext context, Payable payable) =>
       CardInvoice invoice => CardInvoiceSheet.show(
         context,
         cardId: invoice.card.id!,
+        month: invoice.month,
       ),
       ExpenseOccurrence occurrence => ExpenseLedgerSheet.show(
         context,

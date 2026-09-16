@@ -79,6 +79,7 @@ class BudgetService {
       receipts: receipts,
       payments: payments,
       cards: cards,
+      monthAmounts: monthAmounts,
       checks: checks,
       outflows: outflows,
     );

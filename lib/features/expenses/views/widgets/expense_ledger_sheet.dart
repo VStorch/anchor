@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/utils/money.dart';
+import '../../../../core/utils/month.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../../wallets/models/wallet.dart';
 import '../../models/expense.dart';
@@ -14,7 +15,11 @@ import '../expense_form_page.dart';
 import 'pay_sheet.dart';
 
 class ExpenseLedgerSheet extends StatefulWidget {
-  const ExpenseLedgerSheet({super.key, required this.expenseId});
+  const ExpenseLedgerSheet({
+    super.key,
+    required this.expenseId,
+    required this.month,
+  });
 
   static Future<void> show(
     BuildContext context, {
@@ -29,12 +34,19 @@ class ExpenseLedgerSheet extends StatefulWidget {
       showDragHandle: true,
       builder: (_) => ChangeNotifierProvider<ExpensesViewModel>.value(
         value: viewModel,
-        child: ExpenseLedgerSheet(expenseId: occurrence.expense.id!),
+        child: ExpenseLedgerSheet(
+          expenseId: occurrence.expense.id!,
+          month: occurrence.month,
+        ),
       ),
     );
   }
 
   final int expenseId;
+
+  /// The month the sheet was opened on, which the ledger keeps reading even
+  /// when it belongs to an invoice outside the month on screen.
+  final Month month;
 
   @override
   State<ExpenseLedgerSheet> createState() => _ExpenseLedgerSheetState();
@@ -46,7 +58,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<ExpensesViewModel>();
-    final occurrence = viewModel.occurrenceOf(widget.expenseId);
+    final occurrence = viewModel.occurrenceIn(widget.expenseId, widget.month);
     if (occurrence == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
@@ -200,7 +212,10 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
           ),
           IconButton(
             onPressed: () {
-              final occurrence = viewModel.occurrenceOf(widget.expenseId);
+              final occurrence = viewModel.occurrenceIn(
+                widget.expenseId,
+                widget.month,
+              );
               if (occurrence != null &&
                   occurrence.offRule &&
                   occurrence.payments.length == 1) {
@@ -233,7 +248,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
           viewModel.snapshot.latestCheckOf(walletId)?.checkedAt,
       isEdit: true,
     );
-    final occurrence = viewModel.occurrenceOf(widget.expenseId);
+    final occurrence = viewModel.occurrenceIn(widget.expenseId, widget.month);
     if (edit == null || occurrence == null) return;
 
     await viewModel.savePaymentLine(

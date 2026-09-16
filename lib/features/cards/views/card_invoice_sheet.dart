@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/money.dart';
+import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/expense_payment.dart';
 import '../../expenses/models/payable.dart';
@@ -14,9 +15,19 @@ import '../models/card_invoice.dart';
 import 'card_form_page.dart';
 
 class CardInvoiceSheet extends StatelessWidget {
-  const CardInvoiceSheet({super.key, required this.cardId});
+  const CardInvoiceSheet({
+    super.key,
+    required this.cardId,
+    required this.month,
+  });
 
-  static Future<void> show(BuildContext context, {required int cardId}) {
+  /// [month] is the invoice's own month, which is not always the month the
+  /// app is showing: the open invoice can be one or two months ahead.
+  static Future<void> show(
+    BuildContext context, {
+    required int cardId,
+    required Month month,
+  }) {
     final viewModel = context.read<ExpensesViewModel>();
 
     return showModalBottomSheet<void>(
@@ -26,17 +37,18 @@ class CardInvoiceSheet extends StatelessWidget {
       showDragHandle: true,
       builder: (_) => ChangeNotifierProvider<ExpensesViewModel>.value(
         value: viewModel,
-        child: CardInvoiceSheet(cardId: cardId),
+        child: CardInvoiceSheet(cardId: cardId, month: month),
       ),
     );
   }
 
   final int cardId;
+  final Month month;
 
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<ExpensesViewModel>();
-    final invoice = viewModel.invoiceOf(cardId);
+    final invoice = viewModel.invoiceFor(cardId, month);
     if (invoice == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);

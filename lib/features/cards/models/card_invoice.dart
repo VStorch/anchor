@@ -67,12 +67,22 @@ class CardInvoice implements Payable {
         : InvoiceStatus.open;
   }
 
-  String get statusLabel => switch (status) {
-    InvoiceStatus.open =>
-      '${status.label} · fecha ${_dayAndMonth(closingDate)}',
-    InvoiceStatus.closed => '${status.label} · vence ${_dayAndMonth(dueDate)}',
-    InvoiceStatus.overdue || InvoiceStatus.paid => status.label,
-  };
+  /// An invoice with no purchases owes nothing, so it never says "Fechada"
+  /// nor names a due date.
+  String get statusLabel {
+    if (items.isEmpty) {
+      return status == InvoiceStatus.open
+          ? 'Sem compras · fecha ${_dayAndMonth(closingDate)}'
+          : 'Sem compras';
+    }
+    return switch (status) {
+      InvoiceStatus.open =>
+        '${status.label} · fecha ${_dayAndMonth(closingDate)}',
+      InvoiceStatus.closed =>
+        '${status.label} · vence ${_dayAndMonth(dueDate)}',
+      InvoiceStatus.overdue || InvoiceStatus.paid => status.label,
+    };
+  }
 
   /// The purchases in the order they were made; one saved before the purchase
   /// day was recorded goes first, as the oldest.

@@ -128,6 +128,17 @@ void main() {
     });
   });
 
+  test('a fatura sem compras não fecha nem vence', () {
+    expect(
+      invoiceOf(september, today: DateTime(2026, 9, 1)).statusLabel,
+      'Sem compras · fecha 03/09',
+    );
+    expect(
+      invoiceOf(september, today: DateTime(2026, 9, 14)).statusLabel,
+      'Sem compras',
+    );
+  });
+
   test('a fatura diz quando vence, e paga não vence mais', () {
     final tennis = purchase(id: 1, purchasedAt: DateTime(2026, 9, 13));
 

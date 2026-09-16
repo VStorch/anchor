@@ -10,7 +10,10 @@ import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/expenses/viewmodels/expense_form_view_model.dart';
+import 'package:anchor/features/expenses/views/expense_form_page.dart';
+import 'package:anchor/features/expenses/views/widgets/expense_ledger_sheet.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
+import 'package:anchor/features/wallets/views/widgets/card_overview_tile.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
@@ -18,7 +21,9 @@ import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:anchor/core/widgets/day_of_month_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:anchor/core/utils/money.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 import '../support/fake_reminder_notifications.dart';
 import '../support/preferences.dart';
@@ -26,6 +31,7 @@ import '../support/test_database.dart';
 
 void main() {
   late AppDatabase database;
+  final today = DateTime.now();
 
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
@@ -38,7 +44,6 @@ void main() {
 
   Future<void> seed({bool withCard = true}) async {
     final changes = DataChanges();
-    final today = DateTime.now();
     final wallets = WalletRepository(database, changes);
     final salaryId = await wallets.saveWallet(
       Wallet(
@@ -111,6 +116,23 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  /// Scrolls [target] into view and out of the FAB's corner, so a tap on it
+  /// is not swallowed by the button.
+  Future<void> bringIntoReach(
+    WidgetTester tester,
+    Finder target,
+    Finder list,
+  ) async {
+    await tester.scrollUntilVisible(target, 200, scrollable: list);
+    await tester.pumpAndSettle();
+    final limit = tester.getSize(find.byType(MaterialApp)).height - 120;
+    final bottom = tester.getRect(target).bottom;
+    if (bottom > limit) {
+      await tester.drag(list, Offset(0, limit - bottom));
+      await tester.pumpAndSettle();
+    }
   }
 
   Finder inSheet(String text) => find.descendant(
@@ -221,37 +243,132 @@ void main() {
     expect(saved.startMonth, card.invoiceMonthFor(DateTime.now()));
   });
 
+  testWidgets('a aba Carteiras mostra a fatura aberta e abre a compra dela', (
+    tester,
+  ) async {
+    await seed();
+    await pumpApp(tester);
+    await tapTab(tester, Icons.account_balance_wallet_outlined);
+
+    final tile = find.byType(CardOverviewTile);
+    await bringIntoReach(tester, tile, find.byType(Scrollable).first);
+
+    expect(
+      find.descendant(
+        of: tile,
+        matching: find.textContaining('Aberta · fecha'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: tile, matching: find.text(formatMoney(450))),
+      findsOneWidget,
+    );
+
+    final purchase = find.descendant(of: tile, matching: find.text('Compra'));
+    await bringIntoReach(tester, purchase, find.byType(Scrollable).first);
+    await tester.tap(purchase);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ExpenseFormPage), findsOneWidget);
+    expect(
+      find.text(DateFormat.yMMMMd('pt_BR').format(DateUtils.dateOnly(today))),
+      findsOneWidget,
+    );
+    expect(find.textContaining('vai para a fatura de'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nome da despesa'),
+      'Tênis',
+    );
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '50',
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Cadastrar despesa'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Cadastrar despesa'));
+    await tester.pumpAndSettle();
+
+    final saved = (await ExpenseRepository(
+      database,
+      DataChanges(),
+    ).fetchExpenses()).firstWhere((expense) => expense.name == 'Tênis');
+    final card = (await CardRepository(
+      database,
+      DataChanges(),
+    ).fetchCards()).single;
+    expect(saved.startMonth, card.invoiceMonthFor(today));
+    expect(
+      find.descendant(of: tile, matching: find.text(formatMoney(500))),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
-    'a compra de 13/09 adicionada na fatura de setembro vai para outubro',
+    'a fatura pendente abre o mês dela, e a compra de hoje vai para a '
+    'seguinte',
     (tester) async {
       await seed(withCard: false);
-      await CardRepository(database, DataChanges()).saveCard(
+      final changes = DataChanges();
+      final cardId = await CardRepository(database, changes).saveCard(
         CreditCard(
           name: 'Inter',
           closingDay: 3,
           dueDay: 10,
+          walletId: 1,
+          createdAt: DateTime(2026, 9),
+        ),
+      );
+      await ExpenseRepository(database, changes).saveExpense(
+        Expense(
+          name: 'Livro',
+          type: ExpenseType.single,
+          amount: 80,
+          dueDay: 10,
+          startMonth: const Month(2026, 9),
+          walletId: 1,
+          cardId: cardId,
+          purchasedAt: DateTime(2026, 9, 1),
           createdAt: DateTime(2026, 9),
         ),
       );
       await pumpApp(tester);
       await tapTab(tester, Icons.account_balance_wallet_outlined);
 
-      const september = Month(2026, 9);
-      final distance = Month.current().monthsSince(september);
-      for (var step = 0; step < distance.abs(); step++) {
-        await tester.tap(
-          find.byTooltip(distance > 0 ? 'Mês anterior' : 'Próximo mês'),
-        );
-        await tester.pumpAndSettle();
-      }
+      final tile = find.byType(CardOverviewTile);
+      final pending = find.descendant(
+        of: tile,
+        matching: find.text('Atrasada'),
+      );
+      await bringIntoReach(tester, pending, find.byType(Scrollable).first);
+      expect(pending, findsOneWidget);
+      expect(
+        find.descendant(
+          of: tile,
+          matching: find.text('Sem compras · fecha 03/10'),
+        ),
+        findsOneWidget,
+      );
 
-      final invoiceTile = find.widgetWithText(ListTile, 'Inter');
-      final list = find.byType(Scrollable).first;
-      await tester.scrollUntilVisible(invoiceTile, 200, scrollable: list);
-      await tester.drag(list, const Offset(0, -160));
+      await tester.tap(pending);
       await tester.pumpAndSettle();
-      await tester.tap(invoiceTile);
+
+      expect(inSheet('Livro'), findsOneWidget);
+
+      await tester.tap(find.text('Livro'));
       await tester.pumpAndSettle();
+      expect(find.byType(ExpenseLedgerSheet), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Adicionar compra'));
       await tester.pumpAndSettle();
 
@@ -305,12 +422,11 @@ void main() {
 
       expect(find.byType(CardInvoiceSheet), findsOneWidget);
       expect(inSheet('Tênis'), findsNothing);
-      expect(inSheet('Atrasada'), findsNothing);
 
       final saved = (await ExpenseRepository(
         database,
         DataChanges(),
-      ).fetchExpenses()).single;
+      ).fetchExpenses()).firstWhere((expense) => expense.name == 'Tênis');
       expect(saved.startMonth, const Month(2026, 10));
       expect(saved.purchasedAt, DateTime(2026, 9, 13));
       expect(saved.dueDay, 10);

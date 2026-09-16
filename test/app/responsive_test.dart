@@ -19,6 +19,7 @@ import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
 import 'package:anchor/features/wallets/views/wallet_detail_page.dart';
 import 'package:anchor/features/wallets/views/wallet_form_page.dart';
 import 'package:anchor/features/wallets/views/wallets_page.dart';
+import 'package:anchor/features/wallets/views/widgets/card_overview_tile.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -163,6 +164,23 @@ void main() {
     );
   }
 
+  /// Scrolls [target] into view and out of the FAB's corner, so a tap on it
+  /// is not swallowed by the button.
+  Future<void> bringIntoReach(
+    WidgetTester tester,
+    Finder target,
+    Finder list,
+  ) async {
+    await tester.scrollUntilVisible(target, 200, scrollable: list);
+    await tester.pumpAndSettle();
+    final limit = tester.getSize(find.byType(MaterialApp)).height - 120;
+    final bottom = tester.getRect(target).bottom;
+    if (bottom > limit) {
+      await tester.drag(list, Offset(0, limit - bottom));
+      await tester.pumpAndSettle();
+    }
+  }
+
   for (final screen in _screens) {
     testWidgets('nada estoura em ${screen.name}', (tester) async {
       tester.view.physicalSize = Size(screen.width, screen.height);
@@ -206,23 +224,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final invoice = find.widgetWithText(
-        ListTile,
-        'Cartão de crédito do banco',
+      final walletsList = find
+          .descendant(
+            of: find.byType(WalletsPage),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final invoice = find.descendant(
+        of: find.byType(CardOverviewTile),
+        matching: find.text('Atrasada'),
       );
-      await tester.scrollUntilVisible(
-        invoice,
-        200,
-        scrollable: find
-            .descendant(
-              of: find.byType(WalletsPage),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.ensureVisible(invoice);
-      await tester.pumpAndSettle();
-      await tester.tapAt(tester.getTopRight(invoice) + const Offset(-8, 8));
+      await bringIntoReach(tester, invoice, walletsList);
+      await tester.tap(invoice);
       await tester.pumpAndSettle();
       final addPurchase = find.text('Adicionar compra');
       await tester.ensureVisible(addPurchase);

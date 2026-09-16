@@ -6,7 +6,8 @@ import '../../../core/utils/moment.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/viewmodels/reactive_view_model.dart';
 import '../../budget/models/budget_snapshot.dart';
-import '../../cards/models/card_invoice.dart';
+import '../../budget/models/card_overview.dart';
+import '../../cards/models/credit_card.dart';
 import '../../budget/models/month_summary.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../budget/services/budget_service.dart';
@@ -47,7 +48,9 @@ class WalletsViewModel extends ReactiveViewModel {
 
   List<Wallet> get wallets => _snapshot.wallets;
 
-  List<CardInvoice> get invoices => _snapshot.summary.invoices;
+  List<CardOverview> get cardOverview => _snapshot.cardOverview;
+
+  List<CreditCard> get cards => _snapshot.cards;
 
   List<WalletSummary> summariesOf(WalletKind kind) =>
       summaries.where((summary) => summary.wallet.kind == kind).toList();

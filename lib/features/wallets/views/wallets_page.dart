@@ -8,15 +8,13 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
-import '../../cards/models/card_invoice.dart';
-import '../../cards/models/credit_card.dart';
 import '../../cards/views/card_form_page.dart';
-import '../../cards/views/card_invoice_sheet.dart';
 import '../models/wallet_kind.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_actions.dart';
 import 'wallet_detail_page.dart';
 import 'wallet_form_page.dart';
+import 'widgets/card_overview_tile.dart';
 import 'widgets/movement_tile.dart';
 import 'widgets/wallet_card.dart';
 
@@ -95,7 +93,14 @@ class WalletsPage extends StatelessWidget {
             tooltip: 'Adicionar cartão',
           ),
         ),
-        ...viewModel.invoices.map((invoice) => _InvoiceTile(invoice: invoice)),
+        ...viewModel.cardOverview.map(
+          (overview) => CardOverviewTile(
+            overview: overview,
+            month: viewModel.month,
+            wallets: viewModel.wallets,
+            cards: viewModel.cards,
+          ),
+        ),
         const SizedBox(height: 20),
         SectionHeader(
           title: 'Movimentações do mês',
@@ -172,44 +177,6 @@ class _TotalBalanceCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InvoiceTile extends StatelessWidget {
-  const _InvoiceTile({required this.invoice});
-
-  final CardInvoice invoice;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        onTap: () => CardInvoiceSheet.show(context, cardId: invoice.card.id!),
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            CreditCard.icon,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-        ),
-        title: Text(invoice.card.name),
-        subtitle: Text(
-          invoice.statusLabel,
-          style: invoice.isOverdue
-              ? TextStyle(color: theme.colorScheme.error)
-              : null,
-        ),
-        trailing: Text(
-          formatMoney(invoice.amount),
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
         ),
       ),
     );

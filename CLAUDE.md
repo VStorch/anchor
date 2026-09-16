@@ -193,8 +193,18 @@ lands on a statement that is already due. A purchase saved before v10 has no dat
 editable until one is picked. `CardInvoice` takes `today` from `MonthSummary` and reports
 `InvoiceStatus` — paid, else overdue, else closed once `today` is past `CreditCard.closingDateOf`,
 else open — shown as "Aberta · fecha 03/10", "Fechada · vence 10/10", "Atrasada" or "Paga"; its
-`purchases` are ordered by purchase day. Deleting a card leaves its purchases as loose expenses
+`purchases` are ordered by purchase day — an invoice with no purchases says "Sem compras · fecha
+03/10" instead, because it owes nothing. Deleting a card leaves its purchases as loose expenses
 (`ON DELETE SET NULL`).
+
+The Carteiras tab shows a card through `BudgetSnapshot.cardOverview` (`CardOverview`): in the current
+month, `shown` is the invoice a purchase made today lands on (`invoiceMonthFor(today)`, which can be
+two months ahead) and `pending` holds the older invoices with purchases and still unpaid, up to 12
+months back, oldest first; in any other month it is that month's invoice alone. Those invoices are
+built on demand with `BudgetSnapshot.invoiceOf(cardId, month)` and `occurrenceOf(expenseId, month)`,
+which rebuild a `MonthSummary` for that month from the raw lists **with the snapshot's own `today`**,
+so nothing reads the clock again. `CardInvoiceSheet.show` and `ExpenseLedgerSheet.show` therefore
+carry the month they were opened on, and `MonthSelection` never moves to show an invoice.
 
 A **wallet** (`features/wallets/`) is a money source — salary or a benefit (VR/VA/mercado). It owns
 `payouts` (the flexible calendar) which generate `receipts` (credits). A wallet's balance is its

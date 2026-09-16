@@ -128,6 +128,14 @@ class _ExpenseFormView extends StatelessWidget {
             ),
             onChanged: viewModel.setName,
           ),
+          if (cards.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SourceDropdown(
+              viewModel: viewModel,
+              wallets: wallets,
+              cards: cards,
+            ),
+          ],
           const SizedBox(height: 16),
           _TypeDropdown(viewModel: viewModel),
           const SizedBox(height: 16),
@@ -165,8 +173,14 @@ class _ExpenseFormView extends StatelessWidget {
             ],
           ],
           const SizedBox(height: 24),
-          _SourceDropdown(viewModel: viewModel, wallets: wallets, cards: cards),
-          const SizedBox(height: 24),
+          if (cards.isEmpty) ...[
+            _SourceDropdown(
+              viewModel: viewModel,
+              wallets: wallets,
+              cards: cards,
+            ),
+            const SizedBox(height: 24),
+          ],
           if (viewModel.card != null) ...[
             const SectionHeader(title: 'Compra'),
             _PurchaseDateField(viewModel: viewModel),
@@ -649,6 +663,14 @@ class _TotalPreview extends StatelessWidget {
                 if (viewModel.installmentPlan != null)
                   Text(
                     viewModel.installmentPlan!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                if (viewModel.card != null)
+                  Text(
+                    'Na fatura de '
+                    '${_monthName(viewModel.invoiceMonth ?? viewModel.startMonth)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onPrimaryContainer,
                     ),
