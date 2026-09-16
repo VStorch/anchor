@@ -229,6 +229,14 @@ card opens `WalletDetailPage` — the same header and buttons plus `MonthSwitche
 the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
 `WalletFormPage`; deleting the wallet leaves `summaryFor` null and the page pops itself.
 
+The tab's FAB is **"Novo gasto"** (`heroTag: 'new-spending'`): with a single wallet and no card it
+opens the outflow sheet straight away, otherwise `SpendingSourceSheet` asks "De onde saiu o dinheiro?"
+and returns a `SpendingSource` — `WalletSource` (outflow), `CardSource` (the expense form on that
+card, "Entra na fatura de outubro" from `WalletsViewModel.invoiceMonthForToday`) or `BillSource` (the
+expense form with no source). Creating a wallet moved to the `SectionHeader`s of Salário and
+Benefícios, which open `WalletFormPage(initialKind:)`, plus a text button under the salaries while
+there is no benefit; the empty tab has no FAB, only "Cadastrar salário ou benefício".
+
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
 national holidays (`BrazilianHolidays`, where November 20 only counts from 2024); state and city holidays

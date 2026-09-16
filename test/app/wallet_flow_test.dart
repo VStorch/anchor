@@ -19,7 +19,10 @@ import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/cards/models/credit_card.dart';
+import 'package:anchor/features/cards/repositories/card_repository.dart';
 import 'package:anchor/features/wallets/views/wallet_detail_page.dart';
+import 'package:anchor/features/wallets/views/widgets/spending_source_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/balance_check_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
@@ -68,6 +71,43 @@ void main() {
         amount: amount,
         day: 1,
         schedule: schedule ?? PayoutSchedule.dayOfMonth,
+        createdAt: DateTime(today.year, today.month),
+      ),
+    );
+  }
+
+  Future<int> seedVoucher() async {
+    final repository = WalletRepository(database, DataChanges());
+    final today = DateTime.now();
+
+    final walletId = await repository.saveWallet(
+      Wallet(
+        name: 'VR',
+        kind: WalletKind.benefit,
+        colorIndex: 1,
+        createdAt: DateTime(today.year, today.month),
+      ),
+    );
+    await repository.savePayout(
+      Payout(
+        walletId: walletId,
+        label: '',
+        amount: 600,
+        day: 1,
+        createdAt: DateTime(today.year, today.month),
+      ),
+    );
+    return walletId;
+  }
+
+  Future<void> seedCard() async {
+    final today = DateTime.now();
+    await CardRepository(database, DataChanges()).saveCard(
+      CreditCard(
+        name: 'Nubank',
+        closingDay: 20,
+        dueDay: 28,
+        walletId: 1,
         createdAt: DateTime(today.year, today.month),
       ),
     );
@@ -598,6 +638,109 @@ void main() {
       DataChanges(),
     ).fetchOutflows()).single;
     expect(outflow.amount, 47.90);
+  });
+
+  group('Novo gasto', () {
+    Finder fab() => find.widgetWithText(FloatingActionButton, 'Novo gasto');
+
+    testWidgets('com mais de uma fonte, pergunta de onde saiu o dinheiro', (
+      tester,
+    ) async {
+      await seedSalary();
+      final voucherId = await seedVoucher();
+      await seedCard();
+      await pumpApp(tester);
+
+      await tester.tap(fab());
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(SpendingSourceSheet);
+      expect(find.text('De onde saiu o dinheiro?'), findsOneWidget);
+      for (final name in ['Salário', 'VR', 'Nubank']) {
+        expect(
+          find.descendant(of: sheet, matching: find.text(name)),
+          findsOneWidget,
+        );
+      }
+      expect(find.text('É uma conta com vencimento'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.textContaining('Entra na fatura de'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.descendant(of: sheet, matching: find.text('VR')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Gasto em VR'), findsOneWidget);
+      await tester.enterText(moneyInput(), '47,90');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Registrar gasto'));
+      await tester.pumpAndSettle();
+
+      final outflow = (await WalletRepository(
+        database,
+        DataChanges(),
+      ).fetchOutflows()).single;
+      expect((outflow.walletId, outflow.amount), (voucherId, 47.90));
+    });
+
+    testWidgets('escolher o cartão abre a compra com a data de hoje', (
+      tester,
+    ) async {
+      await seedSalary();
+      await seedVoucher();
+      await seedCard();
+      await pumpApp(tester);
+
+      await tester.tap(fab());
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SpendingSourceSheet),
+          matching: find.text('Nubank'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Data da compra'), findsOneWidget);
+      expect(
+        find.text(
+          DateFormat.yMMMMd('pt_BR').format(DateUtils.dateOnly(DateTime.now())),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Dia do vencimento'), findsNothing);
+    });
+
+    testWidgets('com uma carteira só e nenhum cartão, vai direto ao gasto', (
+      tester,
+    ) async {
+      await seedSalary();
+      await pumpApp(tester);
+
+      await tester.tap(fab());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SpendingSourceSheet), findsNothing);
+      expect(find.text('Gasto em Salário'), findsOneWidget);
+    });
+
+    testWidgets('o cabeçalho de cada seção cadastra a fonte daquele tipo', (
+      tester,
+    ) async {
+      await seedSalary();
+      await pumpApp(tester);
+
+      expect(find.text('Adicionar VR, VA ou outro benefício'), findsOneWidget);
+      await tester.tap(find.byTooltip('Adicionar salário'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nova carteira'), findsOneWidget);
+      expect(find.text('Criar carteira'), findsOneWidget);
+    });
   });
 
   testWidgets('o gasto lançado num mês passado fica naquele mês', (

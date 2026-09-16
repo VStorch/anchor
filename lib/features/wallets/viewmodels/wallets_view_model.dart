@@ -52,6 +52,10 @@ class WalletsViewModel extends ReactiveViewModel {
 
   List<CreditCard> get cards => _snapshot.cards;
 
+  /// The invoice a purchase made now goes to, for the "Novo gasto" sheet.
+  Month invoiceMonthForToday(CreditCard card) =>
+      card.invoiceMonthFor(_snapshot.summary.today);
+
   List<WalletSummary> summariesOf(WalletKind kind) =>
       summaries.where((summary) => summary.wallet.kind == kind).toList();
 

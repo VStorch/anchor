@@ -11,10 +11,11 @@ class WalletFormViewModel extends ChangeNotifier {
     required WalletRepository repository,
     Wallet? wallet,
     int suggestedColorIndex = 0,
+    WalletKind? initialKind,
   }) : _repository = repository,
        _wallet = wallet,
        _name = wallet?.name ?? '',
-       _kind = wallet?.kind ?? WalletKind.salary,
+       _kind = wallet?.kind ?? initialKind ?? WalletKind.salary,
        _colorIndex = wallet?.colorIndex ?? suggestedColorIndex,
        _payouts = List<Payout>.of(wallet?.payouts ?? const <Payout>[]);
 

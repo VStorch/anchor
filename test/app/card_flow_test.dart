@@ -438,10 +438,10 @@ void main() {
     await pumpApp(tester);
     await tapTab(tester, Icons.account_balance_wallet_outlined);
 
-    await tester.scrollUntilVisible(
+    await bringIntoReach(
+      tester,
       find.byTooltip('Adicionar cartão'),
-      200,
-      scrollable: find.byType(Scrollable).first,
+      find.byType(Scrollable).first,
     );
     await tester.tap(find.byTooltip('Adicionar cartão'));
     await tester.pumpAndSettle();

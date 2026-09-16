@@ -15,18 +15,25 @@ import '../viewmodels/wallets_view_model.dart';
 import 'widgets/payout_editor_sheet.dart';
 
 class WalletFormPage extends StatelessWidget {
-  const WalletFormPage({super.key, this.wallet, this.suggestedColorIndex = 0});
+  const WalletFormPage({
+    super.key,
+    this.wallet,
+    this.suggestedColorIndex = 0,
+    this.initialKind,
+  });
 
   static Future<void> open(
     BuildContext context, {
     Wallet? wallet,
     int suggestedColorIndex = 0,
+    WalletKind? initialKind,
   }) {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => WalletFormPage(
           wallet: wallet,
           suggestedColorIndex: suggestedColorIndex,
+          initialKind: initialKind,
         ),
       ),
     );
@@ -35,6 +42,9 @@ class WalletFormPage extends StatelessWidget {
   final Wallet? wallet;
   final int suggestedColorIndex;
 
+  /// Which kind the form opens on when it is not editing a wallet.
+  final WalletKind? initialKind;
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -42,6 +52,7 @@ class WalletFormPage extends StatelessWidget {
         repository: context.read<WalletRepository>(),
         wallet: wallet,
         suggestedColorIndex: suggestedColorIndex,
+        initialKind: initialKind,
       ),
       child: _WalletFormView(wallet: wallet),
     );

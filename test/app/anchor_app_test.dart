@@ -141,6 +141,15 @@ void main() {
     expect(find.text('Cadastrar meu salário'), findsOneWidget);
   });
 
+  testWidgets('a aba Carteiras vazia não tem botão de gasto', (tester) async {
+    await pumpApp(tester);
+    await tapTab(tester, Icons.account_balance_wallet_outlined);
+
+    expect(find.text('Comece pelo dinheiro que entra'), findsOneWidget);
+    expect(find.text('Cadastrar salário ou benefício'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
   testWidgets('a capa separa o que se tem hoje, a previsão e o mês', (
     tester,
   ) async {

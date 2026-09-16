@@ -9,12 +9,15 @@ import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../cards/views/card_form_page.dart';
+import '../../expenses/views/expense_form_page.dart';
+import '../models/spending_source.dart';
 import '../models/wallet_kind.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_actions.dart';
 import 'wallet_detail_page.dart';
 import 'wallet_form_page.dart';
 import 'widgets/card_overview_tile.dart';
+import 'widgets/spending_source_sheet.dart';
 import 'widgets/movement_tile.dart';
 import 'widgets/wallet_card.dart';
 
@@ -27,21 +30,63 @@ class WalletsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Carteiras')),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'new-wallet',
-        onPressed: () => WalletFormPage.open(
-          context,
-          suggestedColorIndex: viewModel.summaries.length,
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('Nova carteira'),
-      ),
+      floatingActionButton: viewModel.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'new-spending',
+              onPressed: () => _newSpending(context, viewModel),
+              icon: const Icon(Icons.add),
+              label: const Text('Novo gasto'),
+            ),
       body: viewModel.isLoading
           ? const LoadingView()
           : viewModel.isEmpty
           ? _emptyState(context)
           : _content(context, viewModel),
     );
+  }
+
+  /// With a single wallet and no card there is nothing to ask.
+  Future<void> _newSpending(
+    BuildContext context,
+    WalletsViewModel viewModel,
+  ) async {
+    if (viewModel.summaries.length == 1 && viewModel.cards.isEmpty) {
+      return WalletActions.registerOutflow(
+        context,
+        viewModel.summaries.single.wallet,
+      );
+    }
+
+    final source = await SpendingSourceSheet.show(
+      context,
+      wallets: viewModel.summaries,
+      cards: viewModel.cards,
+      invoiceMonthOf: viewModel.invoiceMonthForToday,
+    );
+    if (source == null || !context.mounted) return;
+
+    switch (source) {
+      case WalletSource(:final wallet):
+        await WalletActions.registerOutflow(context, wallet);
+      case CardSource(:final card):
+        await Navigator.of(context).push(
+          ExpenseFormPage.route(
+            referenceMonth: viewModel.month,
+            wallets: viewModel.wallets,
+            cards: viewModel.cards,
+            card: card,
+          ),
+        );
+      case BillSource():
+        await Navigator.of(context).push(
+          ExpenseFormPage.route(
+            referenceMonth: viewModel.month,
+            wallets: viewModel.wallets,
+            cards: viewModel.cards,
+          ),
+        );
+    }
   }
 
   Widget _emptyState(BuildContext context) {
@@ -52,10 +97,26 @@ class WalletsPage extends StatelessWidget {
       action: FilledButton.icon(
         onPressed: () => WalletFormPage.open(context),
         icon: const Icon(Icons.add),
-        label: const Text('Criar carteira'),
+        label: const Text('Cadastrar salário ou benefício'),
       ),
     );
   }
+
+  Widget _addWalletButton(
+    BuildContext context,
+    WalletsViewModel viewModel,
+    WalletKind kind,
+  ) => IconButton.filledTonal(
+    onPressed: () => WalletFormPage.open(
+      context,
+      suggestedColorIndex: viewModel.summaries.length,
+      initialKind: kind,
+    ),
+    icon: const Icon(Icons.add),
+    tooltip: kind == WalletKind.salary
+        ? 'Adicionar salário'
+        : 'Adicionar benefício',
+  );
 
   Widget _content(BuildContext context, WalletsViewModel viewModel) {
     final salaries = viewModel.summariesOf(WalletKind.salary);
@@ -74,14 +135,36 @@ class WalletsPage extends StatelessWidget {
         _TotalBalanceCard(viewModel: viewModel),
         if (salaries.isNotEmpty) ...[
           const SizedBox(height: 20),
-          const SectionHeader(title: 'Salário'),
+          SectionHeader(
+            title: 'Salário',
+            trailing: _addWalletButton(context, viewModel, WalletKind.salary),
+          ),
           ...salaries.map((summary) => _card(context, viewModel, summary)),
         ],
         if (benefits.isNotEmpty) ...[
           const SizedBox(height: 20),
-          const SectionHeader(title: 'Benefícios'),
+          SectionHeader(
+            title: 'Benefícios',
+            trailing: _addWalletButton(context, viewModel, WalletKind.benefit),
+          ),
           ...benefits.map((summary) => _card(context, viewModel, summary)),
-        ],
+        ] else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => WalletFormPage.open(
+                context,
+                suggestedColorIndex: viewModel.summaries.length,
+                initialKind: WalletKind.benefit,
+              ),
+              style: TextButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                alignment: Alignment.centerLeft,
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar VR, VA ou outro benefício'),
+            ),
+          ),
         const SizedBox(height: 20),
         SectionHeader(
           title: 'Cartões',

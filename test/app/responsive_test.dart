@@ -20,6 +20,7 @@ import 'package:anchor/features/wallets/views/wallet_detail_page.dart';
 import 'package:anchor/features/wallets/views/wallet_form_page.dart';
 import 'package:anchor/features/wallets/views/wallets_page.dart';
 import 'package:anchor/features/wallets/views/widgets/card_overview_tile.dart';
+import 'package:anchor/features/wallets/views/widgets/spending_source_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -276,6 +277,12 @@ void main() {
       navigator.pop();
       await tester.pumpAndSettle();
 
+      await tester.tap(find.widgetWithText(FloatingActionButton, 'Novo gasto'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SpendingSourceSheet), findsOneWidget);
+      navigator.pop();
+      await tester.pumpAndSettle();
+
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
@@ -356,6 +363,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).first,
+      );
+      await tester.tap(find.widgetWithText(FloatingActionButton, 'Novo gasto'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SpendingSourceSheet), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      navigator.pop();
+      await tester.pumpAndSettle();
+
       await tester.tap(
         find.descendant(
           of: find.byType(WalletCard),
@@ -471,7 +490,7 @@ void main() {
         Icons.account_balance_wallet_outlined,
         WalletsPage,
         ListTile,
-        'new-wallet',
+        'new-spending',
       ),
     ]) {
       await tester.tap(
