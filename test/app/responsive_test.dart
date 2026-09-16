@@ -16,8 +16,10 @@ import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/wallets/views/wallet_detail_page.dart';
 import 'package:anchor/features/wallets/views/wallet_form_page.dart';
 import 'package:anchor/features/wallets/views/wallets_page.dart';
+import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -237,6 +239,30 @@ void main() {
       await tester.pumpAndSettle();
       navigator.pop();
       await tester.pumpAndSettle();
+
+      final walletName = find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário da empresa'),
+      );
+      await tester.scrollUntilVisible(
+        walletName,
+        -200,
+        scrollable: find
+            .descendant(
+              of: find.byType(WalletsPage),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(walletName);
+      await tester.pumpAndSettle();
+      expect(find.byType(WalletDetailPage), findsOneWidget);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      navigator.pop();
+      await tester.pumpAndSettle();
+
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
@@ -317,7 +343,19 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Salário da empresa'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(WalletCard),
+          matching: find.text('Salário da empresa'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(WalletDetailPage), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+
+      await tester.tap(find.byTooltip('Editar carteira'));
       await tester.pumpAndSettle();
       expect(find.byType(WalletFormPage), findsOneWidget);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));

@@ -211,6 +211,14 @@ still owed on the rules". The Carteiras tab lists receipts, expense payments and
 as `WalletMovement`, with the balance checks; receipts, outflows and checks are editable there, and
 what `WalletSummary.countsInBalance` leaves out shows faded as "antes do saldo informado".
 
+Each wallet card carries the actions instead of hiding them: `WalletBalanceHeader` (the balance, then
+"R$ 850,00 informado em 15/09 · −R$ 99,90 depois" and "Setembro: entrou … · saiu …", both built from
+`WalletSummary`), `WalletActionButtons` (Gasto, Entrada, Informar saldo in a `Wrap`, ordered by
+`WalletKind`) and, for a benefit only, the usage bar under "Usou R$ 47,30 de R$ 600,00". Tapping the
+card opens `WalletDetailPage` — the same header and buttons plus `MonthSwitcher` and the statement of
+the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
+`WalletFormPage`; deleting the wallet leaves `summaryFor` null and the page pops itself.
+
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
 national holidays (`BrazilianHolidays`, where November 20 only counts from 2024); state and city holidays
@@ -371,6 +379,11 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
 - A new expense, card or payout starts with no day picked: `DayOfMonthPicker` takes a null
   `selectedDay`, and the save button stays disabled reading "Escolha o dia…" until one is chosen,
   so a default never slips into the data unnoticed. Widget tests that save one tap the day first.
+
+- Wallet actions (the outflow, receipt, balance-check and confirm sheets) live in
+  `wallets/views/wallet_actions.dart` and are shared by the Carteiras tab and `WalletDetailPage`;
+  the movement line is `widgets/movement_tile.dart`. A page that opens with
+  `ChangeNotifierProvider.value` keeps the app's `WalletsViewModel`, so the month stays shared.
 
 - Clean Code: few comments, names that explain themselves.
 - Theme lives in `app/theme/`; the palette is green tones (`AppPalette`) and the app must work in

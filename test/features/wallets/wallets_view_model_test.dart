@@ -133,6 +133,42 @@ void main() {
       expect(await balance(), 880);
     });
 
+    test('o extrato de uma carteira só traz os movimentos dela', () async {
+      final otherId = await wallets.saveWallet(
+        Wallet(
+          name: 'VR',
+          kind: WalletKind.benefit,
+          colorIndex: 1,
+          createdAt: DateTime.now(),
+        ),
+      );
+      await wallets.saveOutflow(
+        Outflow(
+          walletId: wallet.id!,
+          description: 'Mercado',
+          amount: 30,
+          spentAt: DateTime.now(),
+        ),
+      );
+      await wallets.saveOutflow(
+        Outflow(
+          walletId: otherId,
+          description: 'Padaria',
+          amount: 12,
+          spentAt: DateTime.now(),
+        ),
+      );
+      await viewModel.refresh();
+
+      expect(
+        viewModel.movementsOf(wallet.id!).map((movement) => movement.title),
+        ['Mercado'],
+      );
+      expect(viewModel.movementsOf(otherId).map((movement) => movement.title), [
+        'Padaria',
+      ]);
+    });
+
     test('confirmar abre a primeira entrada ainda prevista do mês', () async {
       final month = Month.current();
       for (final day in [20, 1]) {

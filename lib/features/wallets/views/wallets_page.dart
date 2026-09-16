@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/theme/money_colors.dart';
-import '../../../app/theme/money_icons.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/fab_clearance.dart';
@@ -15,17 +12,12 @@ import '../../cards/models/card_invoice.dart';
 import '../../cards/models/credit_card.dart';
 import '../../cards/views/card_form_page.dart';
 import '../../cards/views/card_invoice_sheet.dart';
-import '../models/balance_check.dart';
-import '../models/outflow.dart';
-import '../models/receipt.dart';
-import '../models/wallet.dart';
 import '../models/wallet_kind.dart';
-import '../models/wallet_movement.dart';
 import '../viewmodels/wallets_view_model.dart';
+import 'wallet_actions.dart';
+import 'wallet_detail_page.dart';
 import 'wallet_form_page.dart';
-import 'widgets/balance_check_sheet.dart';
-import 'widgets/outflow_sheet.dart';
-import 'widgets/receipt_sheet.dart';
+import 'widgets/movement_tile.dart';
 import 'widgets/wallet_card.dart';
 
 class WalletsPage extends StatelessWidget {
@@ -85,12 +77,12 @@ class WalletsPage extends StatelessWidget {
         if (salaries.isNotEmpty) ...[
           const SizedBox(height: 20),
           const SectionHeader(title: 'Salário'),
-          ...salaries.map((summary) => _card(context, summary)),
+          ...salaries.map((summary) => _card(context, viewModel, summary)),
         ],
         if (benefits.isNotEmpty) ...[
           const SizedBox(height: 20),
           const SectionHeader(title: 'Benefícios'),
-          ...benefits.map((summary) => _card(context, summary)),
+          ...benefits.map((summary) => _card(context, viewModel, summary)),
         ],
         const SizedBox(height: 20),
         SectionHeader(
@@ -110,206 +102,34 @@ class WalletsPage extends StatelessWidget {
           subtitle: viewModel.monthMovements.isEmpty ? 'Nada ainda' : null,
         ),
         ...viewModel.monthMovements.map(
-          (movement) => _MovementTile(
+          (movement) => MovementTile(
             movement: movement,
             wallet: viewModel.walletById(movement.walletId),
-            onTap: () => _openMovement(context, movement),
+            onTap: () => WalletActions.openMovement(context, movement),
           ),
         ),
       ],
     );
   }
 
-  Widget _card(BuildContext context, WalletSummary summary) {
+  Widget _card(
+    BuildContext context,
+    WalletsViewModel viewModel,
+    WalletSummary summary,
+  ) {
+    final wallet = summary.wallet;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: WalletCard(
         summary: summary,
-        onTap: () => WalletFormPage.open(context, wallet: summary.wallet),
-        onRegisterReceipt: () => _registerReceipt(context, summary.wallet),
-        onRegisterOutflow: () => _registerOutflow(context, summary.wallet),
-        onCheckBalance: () => _checkBalance(context, summary),
-        onConfirm: _confirmFirst(context, summary.wallet),
+        month: viewModel.month,
+        onTap: () => WalletDetailPage.open(context, walletId: wallet.id!),
+        onRegisterReceipt: () => WalletActions.registerReceipt(context, wallet),
+        onRegisterOutflow: () => WalletActions.registerOutflow(context, wallet),
+        onCheckBalance: () => WalletActions.checkBalance(context, summary),
+        onConfirm: WalletActions.confirmFirst(context, wallet),
       ),
-    );
-  }
-
-  VoidCallback? _confirmFirst(BuildContext context, Wallet wallet) {
-    final receipt = context.read<WalletsViewModel>().firstUnconfirmedOf(wallet);
-    if (receipt == null) return null;
-    return () => _editReceipt(context, receipt);
-  }
-
-  Future<void> _registerReceipt(BuildContext context, Wallet wallet) async {
-    final viewModel = context.read<WalletsViewModel>();
-    final edit = await ReceiptSheet.show(
-      context,
-      wallet: wallet,
-      month: viewModel.month,
-      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
-    );
-    if (edit == null || edit.isDiscarded) return;
-
-    await viewModel.registerReceipt(
-      wallet: wallet,
-      amount: edit.amount,
-      receivedAt: edit.receivedAt,
-    );
-  }
-
-  Future<void> _registerOutflow(BuildContext context, Wallet wallet) async {
-    final viewModel = context.read<WalletsViewModel>();
-    final edit = await OutflowSheet.show(
-      context,
-      wallet: wallet,
-      month: viewModel.month,
-      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
-    );
-    if (edit == null || edit.isDiscarded) return;
-
-    await viewModel.saveOutflow(
-      wallet: wallet,
-      description: edit.description,
-      amount: edit.amount,
-      spentAt: edit.spentAt,
-    );
-  }
-
-  Future<void> _checkBalance(
-    BuildContext context,
-    WalletSummary summary, {
-    BalanceCheck? check,
-  }) async {
-    final viewModel = context.read<WalletsViewModel>();
-    final wallet = summary.wallet;
-    final edit = await BalanceCheckSheet.show(
-      context,
-      wallet: wallet,
-      calculatedBalance: summary.balance,
-      dueUnconfirmed: (day) => viewModel.dueUnconfirmedOf(
-        wallet,
-        WalletsViewModel.checkedAtFor(day),
-      ),
-      check: check,
-      latestCheck: viewModel.latestCheckOf(wallet),
-    );
-    if (edit == null || !context.mounted) return;
-
-    if (edit.isRemoved) {
-      await viewModel.deleteBalanceCheck(check!);
-      return;
-    }
-
-    final sameDay = check == null
-        ? viewModel.checkOnDay(wallet, edit.day)
-        : null;
-    if (sameDay != null && !await _confirmReplace(context, sameDay)) return;
-
-    await viewModel.saveBalanceCheck(
-      wallet,
-      amount: edit.amount,
-      day: edit.day,
-      editing: check ?? sameDay,
-      confirm: edit.confirm,
-      leftPending: edit.leftPending,
-    );
-  }
-
-  Future<bool> _confirmReplace(
-    BuildContext context,
-    BalanceCheck existing,
-  ) async {
-    final replace = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Text(
-          'Já existe um saldo informado em '
-          '${DateFormat('dd/MM').format(existing.checkedAt)} '
-          '(${formatMoney(existing.amount)}). Substituir?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Substituir'),
-          ),
-        ],
-      ),
-    );
-    return replace ?? false;
-  }
-
-  Future<void> _openMovement(
-    BuildContext context,
-    WalletMovement movement,
-  ) async {
-    final receipt = movement.receipt;
-    final outflow = movement.outflow;
-    final check = movement.check;
-
-    if (check != null) {
-      final summary = context.read<WalletsViewModel>().summaryFor(
-        check.walletId,
-      );
-      if (summary == null) return;
-      return _checkBalance(context, summary, check: check);
-    }
-    if (receipt != null) return _editReceipt(context, receipt);
-    if (outflow != null) return _editOutflow(context, outflow);
-  }
-
-  Future<void> _editOutflow(BuildContext context, Outflow outflow) async {
-    final viewModel = context.read<WalletsViewModel>();
-    final wallet = viewModel.walletById(outflow.walletId);
-    if (wallet == null) return;
-
-    final edit = await OutflowSheet.show(
-      context,
-      wallet: wallet,
-      outflow: outflow,
-      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
-    );
-    if (edit == null) return;
-
-    if (edit.isDiscarded) {
-      await viewModel.deleteOutflow(outflow);
-      return;
-    }
-
-    await viewModel.saveOutflow(
-      wallet: wallet,
-      outflow: outflow,
-      description: edit.description,
-      amount: edit.amount,
-      spentAt: edit.spentAt,
-    );
-  }
-
-  Future<void> _editReceipt(BuildContext context, Receipt receipt) async {
-    final viewModel = context.read<WalletsViewModel>();
-    final wallet = viewModel.walletById(receipt.walletId);
-    if (wallet == null) return;
-
-    final edit = await ReceiptSheet.show(
-      context,
-      wallet: wallet,
-      receipt: receipt,
-      latestCheckAt: viewModel.latestCheckOf(wallet)?.checkedAt,
-    );
-    if (edit == null) return;
-
-    if (edit.isDiscarded) {
-      await viewModel.discardReceipt(receipt);
-      return;
-    }
-
-    await viewModel.confirmReceipt(
-      receipt,
-      amount: edit.amount,
-      receivedAt: edit.receivedAt,
     );
   }
 }
@@ -355,83 +175,6 @@ class _TotalBalanceCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _MovementTile extends StatelessWidget {
-  const _MovementTile({
-    required this.movement,
-    required this.wallet,
-    required this.onTap,
-  });
-
-  final WalletMovement movement;
-  final Wallet? wallet;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = MoneyColors.of(context);
-    final color = movement.isCheck
-        ? colors.neutral
-        : movement.isPredicted
-        ? colors.predicted
-        : movement.isIncome
-        ? colors.income
-        : colors.spending;
-    final notes = [
-      if (movement.isPredicted) 'a confirmar',
-      if (!movement.countsInBalance) 'antes do saldo informado',
-    ];
-
-    return Opacity(
-      opacity: movement.countsInBalance ? 1 : 0.6,
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        onTap: movement.isEditable ? onTap : null,
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.14),
-          child: Icon(_icon, size: 18, color: color),
-        ),
-        title: Text(
-          movement.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          [
-            DateFormat.MMMd('pt_BR').format(movement.date),
-            if (!movement.titleIsWalletName)
-              wallet?.name ?? 'Carteira removida',
-            ...notes,
-          ].join(' · '),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Text(
-          movement.isCheck ? formatMoney(movement.amount) : _signedAmount,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String get _signedAmount {
-    final sign = movement.amount > 0
-        ? '+'
-        : movement.amount < 0
-        ? '−'
-        : '';
-    return '$sign${formatMoney(movement.amount.abs())}';
-  }
-
-  IconData get _icon {
-    if (movement.isCheck) return MoneyIcons.check;
-    return movement.isIncome ? MoneyIcons.income : MoneyIcons.spending;
   }
 }
 

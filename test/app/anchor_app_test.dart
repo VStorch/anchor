@@ -475,6 +475,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Editar carteira'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Excluir carteira'));
     await tester.pumpAndSettle();

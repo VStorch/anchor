@@ -246,11 +246,10 @@ void main() {
       }
 
       final invoiceTile = find.widgetWithText(ListTile, 'Inter');
-      await tester.scrollUntilVisible(
-        invoiceTile,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+      final list = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(invoiceTile, 200, scrollable: list);
+      await tester.drag(list, const Offset(0, -160));
+      await tester.pumpAndSettle();
       await tester.tap(invoiceTile);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Adicionar compra'));

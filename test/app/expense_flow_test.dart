@@ -444,7 +444,10 @@ void main() {
     final card = find.byType(WalletCard);
 
     expect(
-      find.descendant(of: card, matching: find.textContaining('100,00')),
+      find.descendant(
+        of: card,
+        matching: find.textContaining('saiu ${formatMoney(100)}'),
+      ),
       findsOneWidget,
       reason: 'o gasto precisa aparecer na carteira',
     );

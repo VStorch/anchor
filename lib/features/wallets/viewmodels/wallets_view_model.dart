@@ -100,6 +100,10 @@ class WalletsViewModel extends ReactiveViewModel {
     return movements;
   }
 
+  List<WalletMovement> movementsOf(int walletId) => monthMovements
+      .where((movement) => movement.walletId == walletId)
+      .toList();
+
   bool _countsInBalance(int walletId, DateTime at) =>
       _snapshot.summaryFor(walletId)?.countsInBalance(at) ?? true;
 

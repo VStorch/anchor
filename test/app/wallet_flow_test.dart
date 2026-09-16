@@ -19,6 +19,7 @@ import 'package:anchor/features/wallets/models/receipt_status.dart';
 import 'package:anchor/features/wallets/models/wallet.dart';
 import 'package:anchor/features/wallets/models/wallet_kind.dart';
 import 'package:anchor/features/wallets/repositories/wallet_repository.dart';
+import 'package:anchor/features/wallets/views/wallet_detail_page.dart';
 import 'package:anchor/features/wallets/views/widgets/balance_check_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/payout_editor_sheet.dart';
 import 'package:anchor/features/wallets/views/widgets/wallet_card.dart';
@@ -98,6 +99,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> openWalletForm(WidgetTester tester, String name) async {
+    await tester.tap(
+      find.descendant(of: find.byType(WalletCard), matching: find.text(name)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(WalletDetailPage), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Editar carteira'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar carteira'), findsOneWidget);
+  }
+
   Future<void> goToDashboard(WidgetTester tester) async {
     await tester.tap(
       find.descendant(
@@ -119,7 +132,7 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
-    await tester.tap(find.text('Saldo').first);
+    await tester.tap(find.text('Informar saldo').first);
     await tester.pumpAndSettle();
     await tester.enterText(moneyInput(), '5200');
     await tester.pumpAndSettle();
@@ -153,7 +166,7 @@ void main() {
     final card = find.byType(WalletCard);
     expect(
       find.descendant(of: card, matching: find.text(formatMoney(0))),
-      findsNWidgets(3),
+      findsOneWidget,
     );
     expect(find.textContaining('a confirmar'), findsWidgets);
 
@@ -210,7 +223,7 @@ void main() {
     await seedSalary(amount: 3200);
     await pumpApp(tester);
 
-    await tester.tap(find.text('Saldo').first);
+    await tester.tap(find.text('Informar saldo').first);
     await tester.pumpAndSettle();
 
     expect(find.byType(BalanceCheckSheet), findsOneWidget);
@@ -236,7 +249,10 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: walletCard, matching: find.text(formatMoney(3200))),
+      find.descendant(
+        of: walletCard,
+        matching: find.textContaining('entrou ${formatMoney(3200)}'),
+      ),
       findsOneWidget,
     );
     expect(find.textContaining('a confirmar'), findsNothing);
@@ -268,7 +284,7 @@ void main() {
     await seedSalary(amount: 3200);
     await pumpApp(tester);
 
-    await tester.tap(find.text('Saldo').first);
+    await tester.tap(find.text('Informar saldo').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
@@ -394,7 +410,7 @@ void main() {
     );
     await pumpApp(tester);
 
-    await tester.tap(find.text('Saldo').first);
+    await tester.tap(find.text('Informar saldo').first);
     await tester.pumpAndSettle();
     await tester.enterText(moneyInput(), '700');
     await tester.tap(
@@ -465,13 +481,7 @@ void main() {
     );
     await pumpApp(tester);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(WalletCard),
-        matching: find.text('Salário'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openWalletForm(tester, 'Salário');
     await tester.tap(find.byTooltip('Excluir carteira'));
     await tester.pumpAndSettle();
 
@@ -485,7 +495,7 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
-    await tester.tap(find.text('Saldo').first);
+    await tester.tap(find.text('Informar saldo').first);
     await tester.pumpAndSettle();
     await tester.enterText(moneyInput(), '-120');
     await tester.pumpAndSettle();
@@ -536,10 +546,58 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(WalletCard),
-        matching: find.textContaining('47,90'),
+        matching: find.textContaining('saiu ${formatMoney(47.90)}'),
       ),
-      findsNWidgets(2),
+      findsOneWidget,
     );
+  });
+
+  testWidgets('tocar no card abre o extrato, que lança o gasto pelo botão', (
+    tester,
+  ) async {
+    await seedSalary();
+    await pumpApp(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WalletDetailPage), findsOneWidget);
+    final monthName = DateFormat.MMMM('pt_BR').format(Month.current().firstDay);
+    expect(find.text('Extrato de $monthName'), findsOneWidget);
+    expect(find.textContaining('a confirmar'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(FloatingActionButton, 'Gasto'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gasto em Salário'), findsOneWidget);
+    await tester.enterText(moneyInput(), '47,90');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'No que foi'),
+      'Mercado',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar gasto'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(WalletDetailPage),
+        matching: find.text('Mercado'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('saiu ${formatMoney(47.90)}'), findsOneWidget);
+
+    final outflow = (await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchOutflows()).single;
+    expect(outflow.amount, 47.90);
   });
 
   testWidgets('o gasto lançado num mês passado fica naquele mês', (
@@ -609,13 +667,7 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(WalletCard),
-        matching: find.text('Salário'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openWalletForm(tester, 'Salário');
 
     await tester.tap(find.textContaining('3.000,00 · '));
     await tester.pumpAndSettle();
@@ -644,6 +696,10 @@ void main() {
     await tester.tap(find.text('Salvar alterações'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(WalletDetailPage), findsOneWidget);
+    await tester.tap(find.byTooltip('Editar carteira'));
+    await tester.pumpAndSettle();
+
     expect(find.textContaining('5º dia útil'), findsWidgets);
   });
 
@@ -653,13 +709,7 @@ void main() {
     await seedSalary(schedule: PayoutSchedule.businessDay);
     await pumpApp(tester);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(WalletCard),
-        matching: find.text('Salário'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openWalletForm(tester, 'Salário');
     await tester.tap(find.textContaining('3.000,00 · '));
     await tester.pumpAndSettle();
 
