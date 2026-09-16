@@ -73,8 +73,8 @@ and `MonthSummary.difference` stays for the tests only: no view reads it.
 summaries and the forecast, so a service test pins the date instead of reading the clock. The whole
 app can be pinned too: `AnchorApp(clock:)` (a `Clock`, `core/utils/clock.dart`, also provided) feeds
 `BudgetService(clock:)`, `MonthSelection(clock:)`, `RemindersViewModel` and the onboarding. Widgets
-that pick dates (`pickMovementDate`, `Month.suggestedDate`, `ExpenseOccurrence.isOverdue`, the "Hoje"
-button) still read the device clock.
+that pick dates (`pickMovementDate`, `Month.suggestedDate`, the "Hoje" button) still read the device
+clock.
 
 - **`features/budget/`** is not a screen. It is the aggregation layer every other feature reads:
   `BudgetService.loadSnapshot(month)` reads all four repositories and returns a `BudgetSnapshot`
@@ -169,7 +169,13 @@ needs `Expense.canEndIn(month)` — a recurring rule that still bills the month 
 months after an old end.
 
 `ExpenseOccurrence` is where the two meet: `amount` (month value), `paidAmount`, `remaining`, `isPaid`,
-`isPartlyPaid`. Views read those — never re-derive them.
+`isPartlyPaid`. Views read those — never re-derive them. The same goes for the date: `Payable.dueState`
+(`DueState`: paid, offRule, overdue, today, tomorrow, upcoming, in that precedence) is read against the
+`today` `MonthSummary.build` injects into every occurrence and invoice, so a test pins the day and no
+view compares dates. `isOverdue` is `dueState == DueState.overdue`; the tile paints "Atrasada",
+"Vence hoje" (`MoneyColors.spending`, badge included) and "Vence amanhã" from it, the dashboard's
+"A pagar" counts `overduePayables` and `dueTodayPayables`, and the "já tinha saído?" question is
+worded by the hour of the check when the bill is due today.
 
 A **credit card** (`features/cards/`) is not a money source and has no balance: its purchases are
 ordinary expenses carrying `card_id`. `CardRepository.saveCard` copies the card's due day and paying

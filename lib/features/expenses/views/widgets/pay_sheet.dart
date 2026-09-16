@@ -202,9 +202,7 @@ class _PaySheetState extends State<PaySheet> {
             if (_pendingCheck case final check?) ...[
               const SizedBox(height: 16),
               Text(
-                'Essa conta venceu antes de você informar o saldo de '
-                '${_walletName()} (${DateFormat('dd/MM').format(check.checkedAt)}). '
-                'O valor já tinha saído?',
+                checkCoveringQuestion(widget.payable!, check, _walletName()),
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),
@@ -296,6 +294,23 @@ class _PaySheetState extends State<PaySheet> {
   }
 }
 
+/// Whether the amount had already left when the balance was informed: a bill
+/// that fell due earlier is asked by day, one due today by the hour.
+String checkCoveringQuestion(
+  Payable payable,
+  BalanceCheck check,
+  String walletName,
+) {
+  if (payable.dueState.isDueToday) {
+    return 'Essa conta vence hoje e você informou o saldo de $walletName às '
+        '${DateFormat("H'h'mm").format(check.checkedAt)}. '
+        'O valor já tinha saído?';
+  }
+  return 'Essa conta venceu antes de você informar o saldo de $walletName '
+      '(${DateFormat('dd/MM').format(check.checkedAt)}). '
+      'O valor já tinha saído?';
+}
+
 /// The day a one-tap payment is recorded with. When the wallet's balance was
 /// informed after the bill fell due, only the user knows whether that amount
 /// was already without it; null means the question was dismissed.
@@ -312,11 +327,7 @@ Future<DateTime?> choosePaidAt(
   final alreadyOut = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      content: Text(
-        'Essa conta venceu antes de você informar o saldo de $walletName '
-        '(${DateFormat('dd/MM').format(check.checkedAt)}). '
-        'O valor já tinha saído?',
-      ),
+      content: Text(checkCoveringQuestion(payable, check, walletName)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),

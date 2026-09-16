@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import '../../../core/utils/month.dart';
+import '../../expenses/models/due_state.dart';
 import '../../expenses/models/expense_occurrence.dart';
 import '../../expenses/models/payable.dart';
 import 'credit_card.dart';
@@ -47,8 +48,14 @@ class CardInvoice implements Payable {
   bool get isPartlyPaid => paidAmount > 0 && !isPaid;
 
   @override
-  bool get isOverdue =>
-      items.isNotEmpty && !isPaid && dueDate.isBefore(_startOf(today));
+  bool get isOverdue => dueState == DueState.overdue;
+
+  @override
+  DueState get dueState {
+    if (isPaid) return DueState.paid;
+    if (items.isEmpty) return DueState.upcoming;
+    return dueStateOf(dueDate, today);
+  }
 
   DateTime get closingDate => card.closingDateOf(month);
 

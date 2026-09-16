@@ -161,6 +161,33 @@ void main() {
       );
     });
 
+    test('separa o que vence hoje do que já venceu', () {
+      final summary = MonthSummary.build(
+        month: august,
+        expenses: expenses,
+        payments: payments,
+        receipts: receipts,
+        today: DateTime(2026, 8, 10, 9),
+      );
+
+      expect(summary.dueTodayPayables.map((payable) => payable.name), [
+        'Despesa 2',
+        'Despesa 3',
+      ]);
+      expect(summary.overduePayables, isEmpty);
+
+      final nextDay = MonthSummary.build(
+        month: august,
+        expenses: expenses,
+        payments: payments,
+        receipts: receipts,
+        today: DateTime(2026, 8, 11, 9),
+      );
+
+      expect(nextDay.dueTodayPayables, isEmpty);
+      expect(nextDay.overduePayables, hasLength(2));
+    });
+
     test('ordena as ocorrências por vencimento', () {
       final summary = buildSummary();
 

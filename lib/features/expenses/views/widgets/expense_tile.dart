@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/money_colors.dart';
 import '../../../../core/utils/money.dart';
 import '../../../wallets/models/wallet.dart';
 import '../../../cards/models/card_invoice.dart';
 import '../../../cards/models/invoice_status.dart';
+import '../../models/due_state.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/payable.dart';
 
@@ -23,11 +25,20 @@ class ExpenseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = payable.isPaid
-        ? theme.colorScheme.primary
-        : payable.isOverdue
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
+    final colors = MoneyColors.of(context);
+    final state = payable.dueState;
+    final accent = switch (state) {
+      DueState.paid || DueState.offRule => theme.colorScheme.primary,
+      DueState.overdue => theme.colorScheme.error,
+      DueState.today => colors.spending,
+      _ => theme.colorScheme.onSurfaceVariant,
+    };
+    final status = switch (state) {
+      DueState.overdue => ('Atrasada', theme.colorScheme.error),
+      DueState.today => ('Vence hoje', colors.spending),
+      DueState.tomorrow => ('Vence amanhã', theme.colorScheme.onSurfaceVariant),
+      _ => null,
+    };
 
     return Card(
       child: InkWell(
@@ -57,32 +68,25 @@ class ExpenseTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 6,
                         children: [
-                          Flexible(
-                            child: Text(
-                              _subtitle(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                          Text(
+                            _subtitle(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          if (payable.isOverdue) ...[
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Atrasada',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.error,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                          if (status != null)
+                            Text(
+                              status.$1,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: status.$2,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ],
                         ],
                       ),
                       if (payable.isPartlyPaid) ...[

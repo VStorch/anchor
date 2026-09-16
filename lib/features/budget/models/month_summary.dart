@@ -30,6 +30,7 @@ class MonthSummary {
     List<CreditCard> cards = const <CreditCard>[],
     DateTime? today,
   }) {
+    final now = today ?? DateTime.now();
     final paymentsByExpense = <int, List<ExpensePayment>>{};
     for (final payment in payments) {
       if (payment.month != month) continue;
@@ -49,7 +50,7 @@ class MonthSummary {
       final expensePayments =
           paymentsByExpense[expense.id] ?? const <ExpensePayment>[];
 
-      final occurrence = expense.occurrenceIn(month);
+      final occurrence = expense.occurrenceIn(month, today: now);
       if (occurrence == null) {
         if (expensePayments.isNotEmpty) {
           occurrences.add(
@@ -58,6 +59,7 @@ class MonthSummary {
               month: month,
               monthAmount: monthAmount,
               payments: expensePayments,
+              today: now,
             ),
           );
         }
@@ -87,7 +89,7 @@ class MonthSummary {
           .toList(),
       outflows: outflows.where((outflow) => outflow.month == month).toList(),
       cards: cards,
-      today: today,
+      today: now,
     );
   }
 
@@ -152,6 +154,9 @@ class MonthSummary {
 
   List<Payable> get overduePayables =>
       payables.where((payable) => payable.isOverdue).toList();
+
+  List<Payable> get dueTodayPayables =>
+      payables.where((payable) => payable.dueState.isDueToday).toList();
 
   ExpenseOccurrence? occurrenceOf(int expenseId) {
     for (final occurrence in occurrences) {

@@ -3,6 +3,7 @@ import 'package:anchor/features/budget/models/month_summary.dart';
 import 'package:anchor/features/cards/models/card_invoice.dart';
 import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/cards/models/invoice_status.dart';
+import 'package:anchor/features/expenses/models/due_state.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -125,6 +126,56 @@ void main() {
       expect(invoice.status, InvoiceStatus.paid);
       expect(invoice.statusLabel, 'Paga');
     });
+  });
+
+  test('a fatura diz quando vence, e paga não vence mais', () {
+    final tennis = purchase(id: 1, purchasedAt: DateTime(2026, 9, 13));
+
+    expect(
+      invoiceOf(
+        october,
+        today: DateTime(2026, 10, 9),
+        expenses: [tennis],
+      ).dueState,
+      DueState.tomorrow,
+    );
+    expect(
+      invoiceOf(
+        october,
+        today: DateTime(2026, 10, 10, 8),
+        expenses: [tennis],
+      ).dueState,
+      DueState.today,
+    );
+    expect(
+      invoiceOf(
+        october,
+        today: DateTime(2026, 10, 11),
+        expenses: [tennis],
+      ).dueState,
+      DueState.overdue,
+    );
+    expect(
+      invoiceOf(
+        october,
+        today: DateTime(2026, 10, 11),
+        expenses: [tennis],
+        payments: [
+          ExpensePayment(
+            expenseId: 1,
+            walletId: 1,
+            month: october,
+            amount: 200,
+            paidAt: DateTime(2026, 10, 9),
+          ),
+        ],
+      ).dueState,
+      DueState.paid,
+    );
+    expect(
+      invoiceOf(october, today: DateTime(2026, 10, 10)).dueState,
+      DueState.upcoming,
+    );
   });
 
   test('a compra de 13/09 não deixa a fatura de setembro atrasada', () {

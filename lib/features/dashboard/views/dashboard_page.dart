@@ -149,10 +149,12 @@ class DashboardPage extends StatelessWidget {
 
 String? _pendingLine(MonthSummary summary) {
   final overdue = summary.overduePayables.length;
+  final dueToday = summary.dueTodayPayables.length;
   final parts = [
+    if (overdue > 0) '$overdue em atraso',
+    if (dueToday > 0) '$dueToday vence${dueToday > 1 ? 'm' : ''} hoje',
     if (summary.totalPending > 0)
       '${formatMoney(summary.totalPending)} a pagar',
-    if (overdue > 0) '$overdue em atraso',
   ];
   return parts.isEmpty ? null : parts.join(' · ');
 }

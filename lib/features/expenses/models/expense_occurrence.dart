@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
+import 'due_state.dart';
 import 'expense.dart';
 import 'expense_payment.dart';
 import 'expense_type.dart';
@@ -14,6 +15,7 @@ class ExpenseOccurrence implements Payable {
     this.installmentNumber,
     this.monthAmount,
     this.payments = const <ExpensePayment>[],
+    this.today,
   }) : offRule = false;
 
   /// A paid month the current rule no longer projects.
@@ -22,6 +24,7 @@ class ExpenseOccurrence implements Payable {
     required this.month,
     this.monthAmount,
     required this.payments,
+    this.today,
   }) : installmentNumber = null,
        offRule = true;
 
@@ -32,6 +35,9 @@ class ExpenseOccurrence implements Payable {
   final double? monthAmount;
   final List<ExpensePayment> payments;
   final bool offRule;
+
+  /// The day the month summary was built with; null reads the device clock.
+  final DateTime? today;
 
   @override
   String get name => expense.name;
@@ -80,7 +86,14 @@ class ExpenseOccurrence implements Payable {
   DateTime get dueDate => month.dayOf(expense.dueDay);
 
   @override
-  bool get isOverdue => !offRule && !isPaid && dueDate.isBefore(_today);
+  bool get isOverdue => dueState == DueState.overdue;
+
+  @override
+  DueState get dueState {
+    if (offRule) return DueState.offRule;
+    if (isPaid) return DueState.paid;
+    return dueStateOf(dueDate, today ?? DateTime.now());
+  }
 
   String? get installmentLabel =>
       expense.type == ExpenseType.installment && installmentNumber != null
@@ -100,6 +113,7 @@ class ExpenseOccurrence implements Payable {
           month: month,
           monthAmount: monthAmount,
           payments: payments,
+          today: today,
         )
       : ExpenseOccurrence(
           expense: expense,
@@ -107,12 +121,8 @@ class ExpenseOccurrence implements Payable {
           installmentNumber: installmentNumber,
           monthAmount: monthAmount,
           payments: payments,
+          today: today,
         );
-
-  static DateTime get _today {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day);
-  }
 }
 
 extension OccurrenceTotals on Iterable<ExpenseOccurrence> {

@@ -1,4 +1,5 @@
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/expenses/models/due_state.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_occurrence.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
@@ -123,6 +124,39 @@ void main() {
       expect(occurrence.remaining, 0);
       expect(occurrence.isPaid, isTrue);
       expect(occurrence.isOverdue, isFalse);
+    });
+  });
+
+  group('situação do vencimento', () {
+    ExpenseOccurrence dueOn(int day, {DateTime? today}) =>
+        market.copyWith(dueDay: day).occurrenceIn(september, today: today)!;
+
+    final today = DateTime(2026, 9, 15, 14);
+
+    test('diz se venceu, vence hoje, vence amanhã ou ainda vai vencer', () {
+      expect(dueOn(14, today: today).dueState, DueState.overdue);
+      expect(dueOn(14, today: today).isOverdue, isTrue);
+      expect(dueOn(15, today: today).dueState, DueState.today);
+      expect(dueOn(16, today: today).dueState, DueState.tomorrow);
+      expect(dueOn(20, today: today).dueState, DueState.upcoming);
+      expect(dueOn(15, today: today).isOverdue, isFalse);
+    });
+
+    test('paga e fora da regra vêm antes da data', () {
+      final paid = dueOn(
+        14,
+        today: today,
+      ).withLedger(payments: [payment(amount: 600, walletId: 2)]);
+      expect(paid.dueState, DueState.paid);
+
+      final offRule = ExpenseOccurrence.offRule(
+        expense: market,
+        month: september,
+        payments: [payment(amount: 50, walletId: 2)],
+        today: today,
+      );
+      expect(offRule.dueState, DueState.offRule);
+      expect(offRule.isOverdue, isFalse);
     });
   });
 

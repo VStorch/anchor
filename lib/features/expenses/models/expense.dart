@@ -69,19 +69,19 @@ class Expense {
   bool projectsBackIntoPast(Month month) =>
       type != ExpenseType.single && month < Month.fromDate(createdAt);
 
-  ExpenseOccurrence? occurrenceIn(Month month) {
+  ExpenseOccurrence? occurrenceIn(Month month, {DateTime? today}) {
     if (month < startMonth) return null;
 
     return switch (type) {
       ExpenseType.single =>
         month == startMonth
-            ? ExpenseOccurrence(expense: this, month: month)
+            ? ExpenseOccurrence(expense: this, month: month, today: today)
             : null,
       ExpenseType.recurring =>
         endMonth != null && month > endMonth!
             ? null
-            : ExpenseOccurrence(expense: this, month: month),
-      ExpenseType.installment => _installmentOccurrence(month),
+            : ExpenseOccurrence(expense: this, month: month, today: today),
+      ExpenseType.installment => _installmentOccurrence(month, today),
     };
   }
 
@@ -96,7 +96,7 @@ class Expense {
       if (occurrenceIn(month) == null) month,
   };
 
-  ExpenseOccurrence? _installmentOccurrence(Month month) {
+  ExpenseOccurrence? _installmentOccurrence(Month month, DateTime? today) {
     final total = totalInstallments;
     if (total == null) return null;
 
@@ -107,6 +107,7 @@ class Expense {
       expense: this,
       month: month,
       installmentNumber: number,
+      today: today,
     );
   }
 

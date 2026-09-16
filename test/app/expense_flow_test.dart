@@ -138,6 +138,79 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('a conta que vence hoje se destaca na lista e no resumo', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+
+    final today = DateTime.now();
+    final changes = DataChanges();
+    final expenses = ExpenseRepository(database, changes);
+    final hasOverdue = today.day > 1;
+
+    await WalletRepository(database, changes).saveWallet(
+      Wallet(
+        name: 'Salário',
+        kind: WalletKind.salary,
+        colorIndex: 0,
+        createdAt: DateTime(today.year, today.month),
+      ),
+    );
+
+    Future<void> bill(String name, double amount, int dueDay) =>
+        expenses.saveExpense(
+          Expense(
+            name: name,
+            type: ExpenseType.recurring,
+            amount: amount,
+            dueDay: dueDay,
+            startMonth: Month.current(),
+            createdAt: DateTime(today.year, today.month),
+          ),
+        );
+
+    await bill('Internet', 99.90, today.day);
+    if (hasOverdue) await bill('Aluguel', 1100, today.day - 1);
+
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('A pagar'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(
+      find.textContaining(
+        hasOverdue ? '1 em atraso · 1 vence hoje' : '1 vence hoje',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Vence hoje'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.receipt_long_outlined),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vence hoje'), findsOneWidget);
+    if (hasOverdue) expect(find.text('Atrasada'), findsOneWidget);
+  });
+
   testWidgets('tocar na despesa abre os pagamentos, e excluir fica no menu', (
     tester,
   ) async {
