@@ -113,9 +113,11 @@ void main() {
     );
   }
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  Future<void> pumpApp(WidgetTester tester, {double bottomInset = 0}) async {
     tester.view.physicalSize = const Size(1080, 2200);
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(bottom: bottomInset);
+    tester.view.viewPadding = FakeViewPadding(bottom: bottomInset);
     addTearDown(tester.view.reset);
 
     final settings = SettingsViewModel();
@@ -644,6 +646,28 @@ void main() {
       DataChanges(),
     ).fetchOutflows()).single;
     expect(outflow.amount, 47.90);
+  });
+
+  testWidgets('o botão do extrato fica acima da barra de gestos', (
+    tester,
+  ) async {
+    await seedSalary();
+    await pumpApp(tester, bottomInset: 48);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(WalletCard),
+        matching: find.text('Salário'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fab = find.byWidgetPredicate(
+      (widget) =>
+          widget is FloatingActionButton &&
+          widget.heroTag == 'wallet-detail-outflow',
+    );
+    expect(tester.getRect(fab).bottom, lessThanOrEqualTo(2200 - 48));
   });
 
   group('Novo gasto', () {

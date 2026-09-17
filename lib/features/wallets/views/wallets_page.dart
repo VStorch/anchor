@@ -29,19 +29,22 @@ class WalletsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<WalletsViewModel>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Carteiras')),
-      body: viewModel.isLoading
-          ? const LoadingView()
-          : viewModel.isEmpty
-          ? _emptyState(context)
-          : ScrollAwareFab(
-              heroTag: 'new-spending',
-              icon: Icons.add,
-              label: 'Novo gasto',
-              onPressed: () => _newSpending(context, viewModel),
-              child: _content(context, viewModel),
-            ),
+    return ScrollAwareFab(
+      heroTag: 'new-spending',
+      icon: Icons.add,
+      label: 'Novo gasto',
+      onPressed: () => _newSpending(context, viewModel),
+      visible: !viewModel.isLoading && !viewModel.isEmpty,
+      contentKey: (viewModel.month, viewModel.summaries),
+      builder: (context, fab) => Scaffold(
+        appBar: AppBar(title: const Text('Carteiras')),
+        floatingActionButton: fab,
+        body: viewModel.isLoading
+            ? const LoadingView()
+            : viewModel.isEmpty
+            ? _emptyState(context)
+            : _content(context, viewModel),
+      ),
     );
   }
 

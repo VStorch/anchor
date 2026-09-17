@@ -23,36 +23,43 @@ class ExpensesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<ExpensesViewModel>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Despesas'),
-        actions: [
-          viewModel.layout == ExpenseLayout.table
-              ? IconButton(
-                  onPressed: () => viewModel.applyLayout(ExpenseLayout.list),
-                  icon: const Icon(Icons.view_agenda_outlined),
-                  tooltip: 'Ver como lista',
-                )
-              : IconButton(
-                  onPressed: () => viewModel.applyLayout(ExpenseLayout.table),
-                  icon: const Icon(Icons.table_chart_outlined),
-                  tooltip: 'Ver como tabela',
-                ),
-          const SizedBox(width: 4),
-        ],
+    return ScrollAwareFab(
+      heroTag: 'new-expense',
+      icon: Icons.add,
+      label: 'Nova despesa',
+      extended: viewModel.layout == ExpenseLayout.list,
+      onPressed: () => ExpenseFormPage.open(
+        context,
+        referenceMonth: viewModel.month,
+        wallets: viewModel.snapshot.wallets,
+        cards: viewModel.snapshot.cards,
       ),
-      body: ScrollAwareFab(
-        heroTag: 'new-expense',
-        icon: Icons.add,
-        label: 'Nova despesa',
-        extended: viewModel.layout == ExpenseLayout.list,
-        onPressed: () => ExpenseFormPage.open(
-          context,
-          referenceMonth: viewModel.month,
-          wallets: viewModel.snapshot.wallets,
-          cards: viewModel.snapshot.cards,
+      contentKey: (
+        viewModel.month,
+        viewModel.filter,
+        viewModel.layout,
+        viewModel.snapshot,
+      ),
+      builder: (context, fab) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Despesas'),
+          actions: [
+            viewModel.layout == ExpenseLayout.table
+                ? IconButton(
+                    onPressed: () => viewModel.applyLayout(ExpenseLayout.list),
+                    icon: const Icon(Icons.view_agenda_outlined),
+                    tooltip: 'Ver como lista',
+                  )
+                : IconButton(
+                    onPressed: () => viewModel.applyLayout(ExpenseLayout.table),
+                    icon: const Icon(Icons.table_chart_outlined),
+                    tooltip: 'Ver como tabela',
+                  ),
+            const SizedBox(width: 4),
+          ],
         ),
-        child: SafeArea(
+        floatingActionButton: fab,
+        body: SafeArea(
           top: false,
           child: Column(
             children: [

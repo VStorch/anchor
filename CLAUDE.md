@@ -442,9 +442,12 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   A list under an extended FAB ends with `fabClearance(context)` of bottom padding
   (`core/widgets/fab_clearance.dart`), which scales with the font. The add buttons of Despesas,
   Carteiras and `WalletDetailPage` are `ScrollAwareFab` (`core/widgets/scroll_aware_fab.dart`),
-  which wraps the page body: at rest the button sits over the right column, so it slides away while
-  the list scrolls down, comes back on scrolling up or at the end, shrinks to its icon once the list
-  leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
+  which wraps the page's `Scaffold` and hands its `builder` the button for
+  `Scaffold.floatingActionButton` — so the Scaffold still lifts it above the gesture bar and
+  snackbars. At rest the button sits over the right column, so it slides away while the list scrolls
+  down, comes back on scrolling up, at the end, when the list cannot scroll or when `contentKey`
+  changes (month, filter, layout, a reload — an empty state has nothing to scroll back up), shrinks
+  to its icon once the list leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
   collapsed button has no label. The month table keeps "Total" as a fixed footer inside the same
   horizontal scroll, and its cells are typed with no "R$" (`MoneyInputFormatter(symbol: false)`,
   headers "Valor (R$)"/"Pago (R$)").

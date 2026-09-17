@@ -46,23 +46,25 @@ class WalletDetailPage extends StatelessWidget {
     final movements = viewModel.movementsOf(walletId);
     final monthName = DateFormat.MMMM('pt_BR').format(viewModel.month.firstDay);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(wallet.name),
-        actions: [
-          IconButton(
-            onPressed: () => WalletFormPage.open(context, wallet: wallet),
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Editar carteira',
-          ),
-        ],
-      ),
-      body: ScrollAwareFab(
-        heroTag: 'wallet-detail-outflow',
-        icon: Icons.add,
-        label: 'Gasto',
-        onPressed: () => WalletActions.registerOutflow(context, wallet),
-        child: ListView(
+    return ScrollAwareFab(
+      heroTag: 'wallet-detail-outflow',
+      icon: Icons.add,
+      label: 'Gasto',
+      onPressed: () => WalletActions.registerOutflow(context, wallet),
+      contentKey: (viewModel.month, summary),
+      builder: (context, fab) => Scaffold(
+        appBar: AppBar(
+          title: Text(wallet.name),
+          actions: [
+            IconButton(
+              onPressed: () => WalletFormPage.open(context, wallet: wallet),
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Editar carteira',
+            ),
+          ],
+        ),
+        floatingActionButton: fab,
+        body: ListView(
           padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
           children: [
             MonthSwitcher(

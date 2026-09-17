@@ -364,28 +364,63 @@ void main() {
           widget is FloatingActionButton && widget.heroTag == 'new-expense',
     );
 
-    double fabOpacity(WidgetTester tester) => tester
-        .widget<AnimatedOpacity>(
-          find.ancestor(of: fab(), matching: find.byType(AnimatedOpacity)),
+    bool fabHidden(WidgetTester tester) => tester
+        .widget<IgnorePointer>(
+          find.ancestor(of: fab(), matching: find.byType(IgnorePointer)).first,
         )
-        .opacity;
+        .ignoring;
 
     testWidgets('rolar para baixo esconde o botão e rolar para cima o traz', (
       tester,
     ) async {
       await openManyBills(tester);
-      expect(fabOpacity(tester), 1);
+      expect(fabHidden(tester), isFalse);
       expect(tester.widget<FloatingActionButton>(fab()).isExtended, isTrue);
 
       final list = find.byType(Scrollable).last;
       await tester.drag(list, const Offset(0, -200));
       await tester.pumpAndSettle();
-      expect(fabOpacity(tester), 0);
+      expect(fabHidden(tester), isTrue);
 
       await tester.drag(list, const Offset(0, 80));
       await tester.pumpAndSettle();
-      expect(fabOpacity(tester), 1);
+      expect(fabHidden(tester), isFalse);
       expect(tester.widget<FloatingActionButton>(fab()).isExtended, isFalse);
+    });
+
+    testWidgets('o botão volta quando o mês trocado não tem o que rolar', (
+      tester,
+    ) async {
+      await openManyBills(tester);
+
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+      await tester.pumpAndSettle();
+      expect(fabHidden(tester), isTrue);
+
+      await tester.tap(find.byTooltip('Mês anterior'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nenhuma despesa cadastrada'), findsNothing);
+      expect(fabHidden(tester), isFalse);
+      expect(tester.widget<FloatingActionButton>(fab()).isExtended, isTrue);
+    });
+
+    testWidgets('o botão volta quando o filtro esvazia a lista', (
+      tester,
+    ) async {
+      await openManyBills(tester);
+
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+      await tester.pumpAndSettle();
+      expect(fabHidden(tester), isTrue);
+
+      await tester.ensureVisible(find.text('Pagas'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pagas'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nada neste filtro'), findsOneWidget);
+      expect(fabHidden(tester), isFalse);
     });
 
     testWidgets('na tabela o total aparece sem rolar e o botão é redondo', (
