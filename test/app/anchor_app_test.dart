@@ -14,6 +14,7 @@ import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/expenses/repositories/expense_repository.dart';
 import 'package:anchor/features/reminders/models/reminder_lead.dart';
+import 'package:anchor/features/reminders/views/notifications_blocked_notice.dart';
 import 'package:anchor/features/settings/viewmodels/settings_view_model.dart';
 import 'package:anchor/features/wallets/models/balance_check.dart';
 import 'package:anchor/features/wallets/models/outflow.dart';
@@ -675,5 +676,27 @@ void main() {
       find.byType(SegmentedButton<ReminderLead>),
     );
     expect(lead.onSelectionChanged, isNull);
+  });
+
+  testWidgets('o Ajustes avisa quando o Android bloqueia as notificações', (
+    tester,
+  ) async {
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(systemEnabled: false),
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapTab(tester, Icons.tune_outlined);
+
+    expect(find.byType(NotificationsBlockedNotice), findsOneWidget);
+    expect(
+      find.textContaining('Ajustes do Android › Apps › Anchor'),
+      findsOneWidget,
+    );
   });
 }

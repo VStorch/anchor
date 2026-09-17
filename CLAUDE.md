@@ -259,7 +259,7 @@ there is no benefit; the empty tab has no FAB, only "Cadastrar salário ou benef
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
 national holidays (`BrazilianHolidays`, where November 20 only counts from 2024); state and city holidays
-still need a manual correction. `PayoutSchedule.businessDaySaturday` ("Contar sábado (prazo da CLT)", a
+still need a manual correction. `PayoutSchedule.businessDaySaturday` ("Se cair no sábado, contar como dia útil", a
 switch under "Dia útil") counts Saturdays too, and a date that lands on one moves back to the bank business
 day before it. A position below 1 reads as 1; `schedule_kind` is TEXT, so a new schedule needs no migration.
 
@@ -341,7 +341,11 @@ day before ("vence amanhã") or both, as the `ReminderLead` picked in Ajustes sa
 the id stays below 2^31. `ReminderNotifications.replaceAll` cancels
 everything and schedules the new list — so paying a bill is what cancels its reminder, with no
 bookkeeping of notification ids. Android is asked for permission the first time there is something
-to remind, never on its own again; a refusal turns the switch in Ajustes off. Scheduling is inexact
+to remind, never on its own again; a refusal turns the switch in Ajustes off.
+`ReminderNotifications.areEnabled()` asks Android whether the app's notifications can show at all;
+when the switch is on and they cannot (`RemindersViewModel.systemBlocked`), Ajustes and the
+onboarding's Lembretes step show `NotificationsBlockedNotice`, which only says where to turn them on —
+opening the system settings would take another plugin. Scheduling is inexact
 (`inexactAllowWhileIdle`), which needs no exact-alarm permission. The plugin requires core library
 desugaring in `android/app/build.gradle.kts` and the two receivers in `AndroidManifest.xml`.
 
@@ -388,7 +392,8 @@ below does not cross isolates) and it opens `libsqlite3.so.0` explicitly, becaus
 `reminderNotifications: FakeReminderNotifications()` — the real plugin has no platform side in tests.
 Its `setUp` calls `mockPreferences()` (`test/support/preferences.dart`), which sets `onboarding_done`
 so an empty database opens on the tabs instead of the first run; extra prefs go in its map
-(`mockPreferences({'theme_mode': theme})`). `test/app/onboarding_flow_test.dart` starts without it and
+(`mockPreferences({'theme_mode': theme})`). `FakeReminderNotifications` grants the permission and
+reports the notifications enabled; `grantsPermission` and `systemEnabled` turn either off. `test/app/onboarding_flow_test.dart` starts without it and
 pins `AnchorApp(clock:)` to 15/09/2026; `test/support/onboarding_driver.dart` fills the whole setup
 and is reused by `responsive_test.dart`, which walks it at 320dp and 1.5x for overflow and, on a
 320×2400 view (no target half scrolled out, which the guideline would measure as a sliver), checks
@@ -435,7 +440,18 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   never text: a balance is `onSurface`, or `error` when negative.
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
   A list under an extended FAB ends with `fabClearance(context)` of bottom padding
-  (`core/widgets/fab_clearance.dart`), which scales with the font.
+  (`core/widgets/fab_clearance.dart`), which scales with the font. The add buttons of Despesas,
+  Carteiras and `WalletDetailPage` are `ScrollAwareFab` (`core/widgets/scroll_aware_fab.dart`),
+  which wraps the page body: at rest the button sits over the right column, so it slides away while
+  the list scrolls down, comes back on scrolling up or at the end, shrinks to its icon once the list
+  leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
+  collapsed button has no label. The month table keeps "Total" as a fixed footer inside the same
+  horizontal scroll, and its cells are typed with no "R$" (`MoneyInputFormatter(symbol: false)`,
+  headers "Valor (R$)"/"Pago (R$)").
+- Every day, date or month picker calls `releaseFocus()` (`core/widgets/dismiss_focus.dart`) before
+  opening: a closing route gives the focus back to the field focused before it, and the keyboard
+  would cover the answer. `DayButton` takes a `placeholder` that names which day it asks ("Dia em que
+  a fatura fecha"), and after a pick scrolls itself up so a question that appears below is seen.
 - Anything tappable is at least 48dp and says what it is to TalkBack (the colour dots are labelled
   buttons, the month title is a header). `responsive_test.dart` runs `androidTapTargetGuideline` and
   `textContrastGuideline` on every tab in light and dark, `labeledTapTargetGuideline` on the wallet

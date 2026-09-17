@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../reminders/models/due_reminder.dart';
 import '../../../reminders/models/reminder_lead.dart';
+import '../../../reminders/viewmodels/reminders_view_model.dart';
+import '../../../reminders/views/notifications_blocked_notice.dart';
 import '../../viewmodels/onboarding_view_model.dart';
 import 'onboarding_widgets.dart';
 
@@ -51,8 +53,8 @@ class RemindersStep extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Ao ativar, o Android pergunta se o Anchor pode mandar '
-                'notificações. Dá para mudar depois em Ajustes.',
+                'Os lembretes chegam como notificação. Se o celular pedir '
+                'permissão, toque em Permitir. Dá para mudar depois em Ajustes.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -60,6 +62,10 @@ class RemindersStep extends StatelessWidget {
             ),
           ],
         ),
+        if (context.watch<RemindersViewModel>().systemBlocked) ...[
+          const SizedBox(height: 16),
+          const NotificationsBlockedNotice(),
+        ],
       ],
     );
   }

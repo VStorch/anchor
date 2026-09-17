@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/fab_clearance.dart';
 import '../../../core/widgets/month_switcher.dart';
+import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/section_header.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_actions.dart';
@@ -56,58 +57,58 @@ class WalletDetailPage extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      body: ScrollAwareFab(
         heroTag: 'wallet-detail-outflow',
+        icon: Icons.add,
+        label: 'Gasto',
         onPressed: () => WalletActions.registerOutflow(context, wallet),
-        icon: const Icon(Icons.add),
-        label: const Text('Gasto'),
-      ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
-        children: [
-          MonthSwitcher(
-            month: viewModel.month,
-            onPrevious: viewModel.goToPreviousMonth,
-            onNext: viewModel.goToNextMonth,
-            onToday: viewModel.goToCurrentMonth,
-          ),
-          const SizedBox(height: 12),
-          WalletBalanceHeader(summary: summary, month: viewModel.month),
-          if (summary.unconfirmedInMonth > 0) ...[
-            const SizedBox(height: 12),
-            _ConfirmButton(
-              label: summary.unconfirmedInMonth == 1
-                  ? 'Confirmar '
-                        '${formatMoney(summary.pendingConfirmationInMonth)}'
-                  : 'Confirmar (${summary.unconfirmedInMonth})',
-              onPressed: WalletActions.confirmFirst(context, wallet),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
+          children: [
+            MonthSwitcher(
+              month: viewModel.month,
+              onPrevious: viewModel.goToPreviousMonth,
+              onNext: viewModel.goToNextMonth,
+              onToday: viewModel.goToCurrentMonth,
             ),
-          ],
-          const SizedBox(height: 16),
-          WalletActionButtons(
-            summary: summary,
-            onOutflow: () => WalletActions.registerOutflow(context, wallet),
-            onReceipt: () => WalletActions.registerReceipt(context, wallet),
-            onCheck: () => WalletActions.checkBalance(context, summary),
-          ),
-          const SizedBox(height: 16),
-          SectionHeader(title: 'Extrato de $monthName'),
-          if (movements.isEmpty)
-            Text(
-              'Nada lançado em $monthName nesta carteira.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            const SizedBox(height: 12),
+            WalletBalanceHeader(summary: summary, month: viewModel.month),
+            if (summary.unconfirmedInMonth > 0) ...[
+              const SizedBox(height: 12),
+              _ConfirmButton(
+                label: summary.unconfirmedInMonth == 1
+                    ? 'Confirmar '
+                          '${formatMoney(summary.pendingConfirmationInMonth)}'
+                    : 'Confirmar (${summary.unconfirmedInMonth})',
+                onPressed: WalletActions.confirmFirst(context, wallet),
+              ),
+            ],
+            const SizedBox(height: 16),
+            WalletActionButtons(
+              summary: summary,
+              onOutflow: () => WalletActions.registerOutflow(context, wallet),
+              onReceipt: () => WalletActions.registerReceipt(context, wallet),
+              onCheck: () => WalletActions.checkBalance(context, summary),
+            ),
+            const SizedBox(height: 16),
+            SectionHeader(title: 'Extrato de $monthName'),
+            if (movements.isEmpty)
+              Text(
+                'Nada lançado em $monthName nesta carteira.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ...movements.map(
+              (movement) => MovementTile(
+                movement: movement,
+                wallet: wallet,
+                showsWallet: false,
+                onTap: () => WalletActions.openMovement(context, movement),
               ),
             ),
-          ...movements.map(
-            (movement) => MovementTile(
-              movement: movement,
-              wallet: wallet,
-              showsWallet: false,
-              onTap: () => WalletActions.openMovement(context, movement),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

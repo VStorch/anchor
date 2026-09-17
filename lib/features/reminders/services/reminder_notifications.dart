@@ -6,6 +6,10 @@ import '../models/due_reminder.dart';
 abstract interface class ReminderNotifications {
   Future<bool> requestPermission();
 
+  /// Whether Android lets the app's notifications through right now: off
+  /// when the permission was denied or the channel was blocked in settings.
+  Future<bool> areEnabled();
+
   Future<void> replaceAll(List<DueReminder> reminders);
 }
 
@@ -31,6 +35,12 @@ class LocalReminderNotifications implements ReminderNotifications {
   Future<bool> requestPermission() async {
     await _initialize();
     return await _android?.requestNotificationsPermission() ?? false;
+  }
+
+  @override
+  Future<bool> areEnabled() async {
+    await _initialize();
+    return await _android?.areNotificationsEnabled() ?? true;
   }
 
   @override

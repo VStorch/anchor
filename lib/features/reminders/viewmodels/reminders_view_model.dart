@@ -31,12 +31,16 @@ class RemindersViewModel extends ChangeNotifier {
   final DateTime Function() _clock;
 
   bool _isEnabled = true;
+  bool _systemBlocked = false;
   ReminderLead _lead = ReminderLead.both;
   Future<void> _queue = Future<void>.value();
 
   bool get isEnabled => _isEnabled;
 
   ReminderLead get lead => _lead;
+
+  /// Reminders are on in the app but Android keeps them from showing.
+  bool get systemBlocked => _isEnabled && _systemBlocked;
 
   @visibleForTesting
   Future<void> get idle => _queue;
@@ -47,6 +51,7 @@ class RemindersViewModel extends ChangeNotifier {
     _lead = ReminderLead.fromId(preferences.getString(_leadKey));
     notifyListeners();
     await _reschedule();
+    await _checkSystem();
   }
 
   /// Returns false when the user wanted reminders but Android refused them.
@@ -54,6 +59,7 @@ class RemindersViewModel extends ChangeNotifier {
     final granted = !value || await _requestPermission();
     await _store(value && granted);
     await _reschedule();
+    await _checkSystem();
     return granted;
   }
 
@@ -106,6 +112,13 @@ class RemindersViewModel extends ChangeNotifier {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(_permissionAskedKey, true);
     return _notifications.requestPermission();
+  }
+
+  Future<void> _checkSystem() async {
+    final blocked = !await _notifications.areEnabled();
+    if (_systemBlocked == blocked) return;
+    _systemBlocked = blocked;
+    notifyListeners();
   }
 
   Future<void> _store(bool value) async {

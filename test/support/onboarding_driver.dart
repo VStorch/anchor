@@ -26,7 +26,7 @@ Future<void> fillOnboarding(
   );
   await pickDay(
     tester,
-    find.descendant(of: salary, matching: find.text('Escolha o dia')),
+    find.descendant(of: salary, matching: find.text('Qual dia útil')),
     5,
   );
   expect(find.text('Em setembro cai ter, 8/set'), findsOneWidget);
@@ -40,7 +40,7 @@ Future<void> fillOnboarding(
   await typeMoney(tester, within: voucher, '600');
   await pickDay(
     tester,
-    find.descendant(of: voucher, matching: find.text('Escolha o dia')),
+    find.descendant(of: voucher, matching: find.text('Dia em que cai')),
     1,
   );
   expect(find.text('Em setembro cai ter, 1/set'), findsOneWidget);
@@ -69,7 +69,7 @@ Future<void> fillOnboarding(
   await typeMoney(tester, within: rent, '1100');
   await pickDay(
     tester,
-    find.descendant(of: rent, matching: find.text('Escolha o dia')),
+    find.descendant(of: rent, matching: find.text('Dia do vencimento')),
     10,
   );
   expect(
@@ -80,7 +80,7 @@ Future<void> fillOnboarding(
   await typeMoney(tester, within: internet, '99,90');
   await pickDay(
     tester,
-    find.descendant(of: internet, matching: find.text('Escolha o dia')),
+    find.descendant(of: internet, matching: find.text('Dia do vencimento')),
     15,
   );
   expect(find.text('Já pagou a de setembro?'), findsOneWidget);
@@ -100,7 +100,7 @@ Future<void> fillOnboarding(
   await tester.pumpAndSettle();
   await pickDay(
     tester,
-    find.descendant(of: fridge, matching: find.text('Escolha o dia')),
+    find.descendant(of: fridge, matching: find.text('Dia do vencimento')),
     5,
   );
   await filled('parcelas');
@@ -112,8 +112,9 @@ Future<void> fillOnboarding(
     'Nubank',
   );
   await tester.pumpAndSettle();
-  await pickDay(tester, find.text('Escolha o dia').first, 3);
-  await pickDay(tester, find.text('Escolha o dia'), 10);
+  expect(find.text('Estão na fatura ou no app do banco.'), findsOneWidget);
+  await pickDay(tester, find.text('Dia em que a fatura fecha'), 3);
+  await pickDay(tester, find.text('Dia em que a fatura vence'), 10);
   expect(find.text('Fecha dia 3'), findsOneWidget);
   expect(find.text('Vence dia 10'), findsOneWidget);
   await filled('cartão');
@@ -151,12 +152,19 @@ Future<void> typeMoney(
   await tester.pumpAndSettle();
 }
 
+/// Picking a day never hands the focus back to a text field, which would
+/// pop the keyboard over the answer.
 Future<void> pickDay(WidgetTester tester, Finder button, int day) async {
   await tapVisible(tester, button);
   await tester.tap(
     find.descendant(of: find.byType(BottomSheet), matching: find.text('$day')),
   );
   await tester.pumpAndSettle();
+  expect(
+    FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<EditableText>(),
+    isNull,
+  );
 }
 
 Future<void> answer(WidgetTester tester, String question, String option) =>

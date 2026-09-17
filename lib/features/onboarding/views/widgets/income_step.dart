@@ -103,7 +103,7 @@ class IncomeForm extends StatelessWidget {
         if (schedule.isBusinessDay)
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Contar sábado (prazo da CLT)'),
+            title: const Text('Se cair no sábado, contar como dia útil'),
             value: schedule == PayoutSchedule.businessDaySaturday,
             onChanged: (countSaturday) => viewModel.edit(
               () => income.setSchedule(
@@ -118,6 +118,9 @@ class IncomeForm extends StatelessWidget {
           label: schedule.isBusinessDay
               ? 'Cai no ${income.day}º dia útil'
               : 'Cai no dia ${income.day}',
+          placeholder: schedule.isBusinessDay
+              ? 'Qual dia útil'
+              : 'Dia em que cai',
           sheetTitle: schedule.isBusinessDay
               ? 'Em qual dia útil cai?'
               : 'Em que dia cai?',

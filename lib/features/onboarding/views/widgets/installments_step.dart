@@ -52,7 +52,7 @@ class _InstallmentCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -81,7 +81,7 @@ class _InstallmentCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   MoneyField(
                     initialValue: item.amount,
                     label: 'Valor da parcela',
@@ -95,7 +95,7 @@ class _InstallmentCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -123,6 +123,7 @@ class _InstallmentCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   DayButton(
                     label: 'Vence dia ${item.dueDay}',
+                    placeholder: 'Dia do vencimento',
                     sheetTitle: 'Em que dia vence?',
                     day: item.dueDay,
                     onPicked: (day) => viewModel.edit(() => item.dueDay = day),

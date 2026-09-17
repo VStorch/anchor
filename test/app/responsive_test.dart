@@ -222,6 +222,19 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.receipt_long_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Ver como tabela'));
+      await tester.pumpAndSettle();
+      expect(find.text('Total'), findsOneWidget);
+      await tester.tap(find.byTooltip('Ver como lista'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
           matching: find.byIcon(Icons.account_balance_wallet_outlined),
         ),
       );
@@ -278,7 +291,13 @@ void main() {
       navigator.pop();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(FloatingActionButton, 'Novo gasto'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is FloatingActionButton &&
+              widget.heroTag == 'new-spending',
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(SpendingSourceSheet), findsOneWidget);
       navigator.pop();
@@ -395,7 +414,13 @@ void main() {
       final navigator = tester.state<NavigatorState>(
         find.byType(Navigator).first,
       );
-      await tester.tap(find.widgetWithText(FloatingActionButton, 'Novo gasto'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is FloatingActionButton &&
+              widget.heroTag == 'new-spending',
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(SpendingSourceSheet), findsOneWidget);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
@@ -554,6 +579,7 @@ void main() {
         (widget) => widget is FloatingActionButton && widget.heroTag == heroTag,
       );
       expect(lastBottom, lessThanOrEqualTo(tester.getRect(fab).top));
+      expect(tester.widget<FloatingActionButton>(fab).isExtended, isFalse);
     }
   });
 }

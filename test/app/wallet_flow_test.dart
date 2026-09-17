@@ -611,7 +611,13 @@ void main() {
     expect(find.text('Extrato de $monthName'), findsOneWidget);
     expect(find.textContaining('a confirmar'), findsWidgets);
 
-    await tester.tap(find.widgetWithText(FloatingActionButton, 'Gasto'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is FloatingActionButton &&
+            widget.heroTag == 'wallet-detail-outflow',
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Gasto em Salário'), findsOneWidget);
@@ -641,7 +647,10 @@ void main() {
   });
 
   group('Novo gasto', () {
-    Finder fab() => find.widgetWithText(FloatingActionButton, 'Novo gasto');
+    Finder fab() => find.byWidgetPredicate(
+      (widget) =>
+          widget is FloatingActionButton && widget.heroTag == 'new-spending',
+    );
 
     testWidgets('com mais de uma fonte, pergunta de onde saiu o dinheiro', (
       tester,
@@ -856,7 +865,7 @@ void main() {
     await tester.tap(find.textContaining('3.000,00 · '));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Contar sábado (prazo da CLT)'));
+    await tester.tap(find.text('Se cair no sábado, contar como dia útil'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar recebimento'));
     await tester.pumpAndSettle();

@@ -7,6 +7,7 @@ import '../../../core/widgets/section_header.dart';
 import '../../reminders/models/due_reminder.dart';
 import '../../reminders/models/reminder_lead.dart';
 import '../../reminders/viewmodels/reminders_view_model.dart';
+import '../../reminders/views/notifications_blocked_notice.dart';
 import '../viewmodels/backup_view_model.dart';
 import '../viewmodels/settings_view_model.dart';
 
@@ -72,6 +73,11 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (reminders.systemBlocked)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: NotificationsBlockedNotice(),
+                  ),
               ],
             ),
           ),

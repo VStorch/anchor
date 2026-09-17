@@ -18,6 +18,28 @@ void main() {
     });
   });
 
+  group('sem o símbolo', () {
+    test('a célula da tabela mostra só o número', () {
+      expect(formatMoneyInput(1100, symbol: false), '1.100,00');
+    });
+
+    test('digitar na célula não põe o R\$ de volta', () {
+      const formatter = MoneyInputFormatter(symbol: false);
+      final typed = formatter.formatEditUpdate(
+        const TextEditingValue(
+          text: '1.100,0',
+          selection: TextSelection.collapsed(offset: 7),
+        ),
+        const TextEditingValue(
+          text: '1.100,05',
+          selection: TextSelection.collapsed(offset: 8),
+        ),
+      );
+      expect(typed.text, '1.100,05');
+      expect(parseMoney(typed.text), 1100.05);
+    });
+  });
+
   group('formatMoneyInput', () {
     test('entra no modo centavos com dois dígitos', () {
       expect(formatMoneyInput(3200), r'R$ 3.200,00');

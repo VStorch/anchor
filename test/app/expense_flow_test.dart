@@ -326,6 +326,90 @@ void main() {
     expect(find.textContaining('600,00'), findsNothing);
   });
 
+  group('botão de nova despesa e total da tabela', () {
+    Future<void> openManyBills(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final repository = ExpenseRepository(database, DataChanges());
+      for (var day = 1; day <= 14; day++) {
+        await repository.saveExpense(
+          Expense(
+            name: 'Conta $day',
+            type: ExpenseType.recurring,
+            amount: 100.0 * day,
+            dueDay: day,
+            startMonth: Month.current(),
+            createdAt: DateTime(2020),
+          ),
+        );
+      }
+
+      final settings = SettingsViewModel();
+      await settings.initialize();
+      await tester.pumpWidget(
+        AnchorApp(
+          reminderNotifications: FakeReminderNotifications(),
+          settings: settings,
+          database: database,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _tapTab(tester, Icons.receipt_long_outlined);
+    }
+
+    Finder fab() => find.byWidgetPredicate(
+      (widget) =>
+          widget is FloatingActionButton && widget.heroTag == 'new-expense',
+    );
+
+    double fabOpacity(WidgetTester tester) => tester
+        .widget<AnimatedOpacity>(
+          find.ancestor(of: fab(), matching: find.byType(AnimatedOpacity)),
+        )
+        .opacity;
+
+    testWidgets('rolar para baixo esconde o botão e rolar para cima o traz', (
+      tester,
+    ) async {
+      await openManyBills(tester);
+      expect(fabOpacity(tester), 1);
+      expect(tester.widget<FloatingActionButton>(fab()).isExtended, isTrue);
+
+      final list = find.byType(Scrollable).last;
+      await tester.drag(list, const Offset(0, -200));
+      await tester.pumpAndSettle();
+      expect(fabOpacity(tester), 0);
+
+      await tester.drag(list, const Offset(0, 80));
+      await tester.pumpAndSettle();
+      expect(fabOpacity(tester), 1);
+      expect(tester.widget<FloatingActionButton>(fab()).isExtended, isFalse);
+    });
+
+    testWidgets('na tabela o total aparece sem rolar e o botão é redondo', (
+      tester,
+    ) async {
+      await openManyBills(tester);
+      await tester.tap(find.byTooltip('Ver como tabela'));
+      await tester.pumpAndSettle();
+
+      final total = find.text('Total');
+      expect(total, findsOneWidget);
+      expect(
+        tester.getRect(total).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(NavigationBar)).top),
+      );
+      expect(
+        tester.getRect(total).bottom,
+        lessThanOrEqualTo(tester.getRect(fab()).top),
+      );
+      expect(tester.widget<FloatingActionButton>(fab()).isExtended, isFalse);
+      expect(find.text('Pago (R\$)'), findsOneWidget);
+    });
+  });
+
   testWidgets('tocar na célula da tabela e sair sem editar não fixa o mês', (
     tester,
   ) async {

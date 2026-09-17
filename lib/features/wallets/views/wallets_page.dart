@@ -6,6 +6,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/fab_clearance.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
+import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../cards/views/card_form_page.dart';
@@ -30,19 +31,17 @@ class WalletsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Carteiras')),
-      floatingActionButton: viewModel.isEmpty
-          ? null
-          : FloatingActionButton.extended(
-              heroTag: 'new-spending',
-              onPressed: () => _newSpending(context, viewModel),
-              icon: const Icon(Icons.add),
-              label: const Text('Novo gasto'),
-            ),
       body: viewModel.isLoading
           ? const LoadingView()
           : viewModel.isEmpty
           ? _emptyState(context)
-          : _content(context, viewModel),
+          : ScrollAwareFab(
+              heroTag: 'new-spending',
+              icon: Icons.add,
+              label: 'Novo gasto',
+              onPressed: () => _newSpending(context, viewModel),
+              child: _content(context, viewModel),
+            ),
     );
   }
 

@@ -22,14 +22,16 @@ double parseMoney(String text) {
   return (negative ? -totalCents : totalCents) / 100;
 }
 
-String formatMoneyInput(double value) {
+/// [symbol] false drops "R$ " for a narrow cell whose header already says
+/// the column is in reais.
+String formatMoneyInput(double value, {bool symbol = true}) {
   final cents = (value.abs() * 100).round();
   return _RawMoney(
     negative: value < 0 && cents > 0,
     reais: '${cents ~/ 100}',
     hasComma: true,
     cents: '${cents % 100}'.padLeft(2, '0'),
-  ).display;
+  ).displayWith(symbol: symbol);
 }
 
 bool coversAmount(double paid, double total) => paid >= total - 0.005;
@@ -46,9 +48,10 @@ double roundCents(double value) => (value * 100).round() / 100;
 /// never a decimal in our own text); a paste or a replaced selection is read
 /// as someone else wrote it. The cursor keeps its distance from the end.
 class MoneyInputFormatter extends TextInputFormatter {
-  const MoneyInputFormatter({this.allowNegative = false});
+  const MoneyInputFormatter({this.allowNegative = false, this.symbol = true});
 
   final bool allowNegative;
+  final bool symbol;
 
   @override
   TextEditingValue formatEditUpdate(
@@ -73,7 +76,7 @@ class MoneyInputFormatter extends TextInputFormatter {
       raw = _RawMoney.edited(after, allowNegative: allowNegative);
     }
 
-    final text = raw.display;
+    final text = raw.displayWith(symbol: symbol);
     final cursor = newValue.selection.isValid
         ? newValue.selection.baseOffset
         : after.length;
@@ -191,7 +194,7 @@ class _RawMoney {
     }
   }
 
-  String get display {
+  String displayWith({required bool symbol}) {
     final sign = negative ? '-' : '';
     if (reais.isEmpty && !hasComma) return sign;
 
@@ -200,7 +203,7 @@ class _RawMoney {
       (_) => '.',
     );
     return '$sign'
-        'R\$ $grouped'
+        '${symbol ? 'R\$ ' : ''}$grouped'
         '${hasComma ? ',$cents' : ''}';
   }
 }

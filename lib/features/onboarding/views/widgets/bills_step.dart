@@ -60,7 +60,7 @@ class _BillCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -96,7 +96,7 @@ class _BillCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   MoneyField(
                     initialValue: bill.amount,
                     onChanged: (value) =>
@@ -105,6 +105,7 @@ class _BillCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   DayButton(
                     label: 'Vence dia ${bill.dueDay}',
+                    placeholder: 'Dia do vencimento',
                     sheetTitle: 'Em que dia vence?',
                     day: bill.dueDay,
                     onPicked: (day) => viewModel.edit(() => bill.dueDay = day),

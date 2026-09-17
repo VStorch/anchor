@@ -24,5 +24,10 @@ class DismissFocus extends StatelessWidget {
     );
   }
 
-  void _unfocus() => FocusManager.instance.primaryFocus?.unfocus();
+  void _unfocus() => releaseFocus();
 }
+
+/// A route that closes gives the focus back to the field focused when it
+/// opened, and the keyboard pops up again over the answer just picked. Every
+/// day, date or month picker calls this before opening.
+void releaseFocus() => FocusManager.instance.primaryFocus?.unfocus();

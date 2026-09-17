@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../utils/month.dart';
+import 'dismiss_focus.dart';
 
 class MonthPickerSheet extends StatefulWidget {
   const MonthPickerSheet({super.key, required this.initialMonth, this.title});
@@ -11,6 +12,7 @@ class MonthPickerSheet extends StatefulWidget {
     required Month initialMonth,
     String? title,
   }) {
+    releaseFocus();
     return showModalBottomSheet<Month>(
       context: context,
       showDragHandle: true,

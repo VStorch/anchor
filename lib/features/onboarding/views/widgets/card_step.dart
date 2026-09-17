@@ -40,16 +40,25 @@ class CardStep extends StatelessWidget {
             onChanged: (value) => viewModel.edit(() => card.name = value),
           ),
           const SizedBox(height: 16),
+          Text(
+            'Estão na fatura ou no app do banco.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
           DayButton(
             label: 'Fecha dia ${card.closingDay}',
-            sheetTitle: 'Em que dia a fatura fecha?',
+            placeholder: 'Dia em que a fatura fecha',
+            sheetTitle: 'A fatura fecha em que dia?',
             day: card.closingDay,
             onPicked: (day) => viewModel.edit(() => card.closingDay = day),
           ),
           const SizedBox(height: 12),
           DayButton(
             label: 'Vence dia ${card.dueDay}',
-            sheetTitle: 'Em que dia a fatura vence?',
+            placeholder: 'Dia em que a fatura vence',
+            sheetTitle: 'A fatura vence em que dia?',
             day: card.dueDay,
             onPicked: (day) => viewModel.edit(() => card.dueDay = day),
           ),

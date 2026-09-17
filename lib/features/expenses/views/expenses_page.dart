@@ -6,6 +6,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/fab_clearance.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
+import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/stat_tile.dart';
 import '../viewmodels/expenses_view_model.dart';
 import 'expense_form_page.dart';
@@ -40,41 +41,42 @@ class ExpensesPage extends StatelessWidget {
           const SizedBox(width: 4),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      body: ScrollAwareFab(
         heroTag: 'new-expense',
+        icon: Icons.add,
+        label: 'Nova despesa',
+        extended: viewModel.layout == ExpenseLayout.list,
         onPressed: () => ExpenseFormPage.open(
           context,
           referenceMonth: viewModel.month,
           wallets: viewModel.snapshot.wallets,
           cards: viewModel.snapshot.cards,
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Nova despesa'),
-      ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: MonthSwitcher(
-                month: viewModel.month,
-                onPrevious: viewModel.goToPreviousMonth,
-                onNext: viewModel.goToNextMonth,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: MonthSwitcher(
+                  month: viewModel.month,
+                  onPrevious: viewModel.goToPreviousMonth,
+                  onNext: viewModel.goToNextMonth,
+                ),
               ),
-            ),
-            const _MonthTotals(),
-            const _FilterBar(),
-            Expanded(
-              child: viewModel.isLoading
-                  ? const LoadingView()
-                  : viewModel.payables.isEmpty
-                  ? _emptyState(context, viewModel)
-                  : viewModel.layout == ExpenseLayout.table
-                  ? _table(context, viewModel)
-                  : _list(context, viewModel),
-            ),
-          ],
+              const _MonthTotals(),
+              const _FilterBar(),
+              Expanded(
+                child: viewModel.isLoading
+                    ? const LoadingView()
+                    : viewModel.payables.isEmpty
+                    ? _emptyState(context, viewModel)
+                    : viewModel.layout == ExpenseLayout.table
+                    ? _table(context, viewModel)
+                    : _list(context, viewModel),
+              ),
+            ],
+          ),
         ),
       ),
     );

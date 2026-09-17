@@ -117,6 +117,25 @@ void main() {
     expect(notifications.permissionRequests, 1);
   });
 
+  test(
+    'as notificações bloqueadas no Android aparecem como bloqueio',
+    () async {
+      notifications.systemEnabled = false;
+      final viewModel = buildViewModel();
+      await viewModel.initialize();
+
+      expect(viewModel.systemBlocked, isTrue);
+
+      notifications.systemEnabled = true;
+      await viewModel.setEnabled(true);
+      expect(viewModel.systemBlocked, isFalse);
+
+      notifications.systemEnabled = false;
+      await viewModel.setEnabled(false);
+      expect(viewModel.systemBlocked, isFalse);
+    },
+  );
+
   test('escolher só no dia guarda a escolha e reagenda', () async {
     await seedRent();
     final viewModel = buildViewModel();

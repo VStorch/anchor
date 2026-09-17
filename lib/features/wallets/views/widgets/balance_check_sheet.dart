@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/utils/moment.dart';
 import '../../../../core/utils/money.dart';
+import '../../../../core/widgets/dismiss_focus.dart';
 import '../../../../core/widgets/money_field.dart';
 import '../../models/balance_check.dart';
 import '../../models/receipt.dart';
@@ -205,6 +206,7 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
 
   Future<void> _pickDay() async {
     final today = DateTime.now();
+    releaseFocus();
     final day = await showDatePicker(
       context: context,
       initialDate: _day,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/widgets/day_of_month_picker.dart';
+import '../../../../core/widgets/dismiss_focus.dart';
 
 class StepHeader extends StatelessWidget {
   const StepHeader({super.key, required this.title, this.message});
@@ -91,11 +92,13 @@ class YesNoQuestion extends StatelessWidget {
 }
 
 /// A day of the month picked in a sheet, so a form with several days stays
-/// short and every day cell keeps its full size.
+/// short and every day cell keeps its full size. With no day picked it reads
+/// [placeholder], which tells two day buttons of the same form apart.
 class DayButton extends StatelessWidget {
   const DayButton({
     super.key,
     required this.label,
+    required this.placeholder,
     required this.sheetTitle,
     required this.day,
     required this.onPicked,
@@ -103,6 +106,7 @@ class DayButton extends StatelessWidget {
   });
 
   final String label;
+  final String placeholder;
   final String sheetTitle;
   final int? day;
   final ValueChanged<int> onPicked;
@@ -110,18 +114,29 @@ class DayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        alignment: Alignment.centerLeft,
+    final colors = Theme.of(context).colorScheme;
+    final picked = day != null;
+
+    return Semantics(
+      label: placeholder,
+      value: picked ? label : null,
+      button: true,
+      excludeSemantics: true,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          alignment: Alignment.centerLeft,
+          foregroundColor: picked ? colors.primary : colors.onSurfaceVariant,
+        ),
+        onPressed: () => _pick(context),
+        icon: Icon(picked ? Icons.event_available : Icons.event_outlined),
+        label: Text(picked ? label : placeholder),
       ),
-      onPressed: () => _pick(context),
-      icon: const Icon(Icons.event_outlined),
-      label: Text(day == null ? 'Escolha o dia' : label),
     );
   }
 
   Future<void> _pick(BuildContext context) async {
+    releaseFocus();
     final picked = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
@@ -148,7 +163,24 @@ class DayButton extends StatelessWidget {
         ),
       ),
     );
-    if (picked != null) onPicked(picked);
+    if (picked == null || !context.mounted) return;
+    onPicked(picked);
+    _revealWhatFollows(context);
+  }
+
+  /// A question may appear right under the day just picked ("Já pagou a de
+  /// setembro?"); it is brought up, clear of the bar at the bottom.
+  static void _revealWhatFollows(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.3,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
+      );
+    });
   }
 }
 
