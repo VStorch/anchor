@@ -199,6 +199,7 @@ class OnboardingViewModel extends ChangeNotifier {
       for (final income in [salary, benefit]) {
         income.balanceToday = null;
         income.arrived = null;
+        income.monthlyReserve = null;
       }
     }
     _moveTo(_following(_step));

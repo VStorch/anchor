@@ -114,6 +114,21 @@ void main() {
     expect(viewModel.canContinue, isTrue);
   });
 
+  test('pular o saldo de hoje descarta também a reserva digitada', () {
+    fillSalary();
+    viewModel.next();
+    viewModel.edit(() {
+      viewModel.salary.balanceToday = 850;
+      viewModel.salary.monthlyReserve = 500;
+    });
+
+    viewModel.skipStep();
+
+    expect(viewModel.salary.balanceToday, isNull);
+    expect(viewModel.salary.monthlyReserve, isNull);
+    expect(viewModel.draft.incomes.single.monthlyReserve, isNull);
+  });
+
   test('pular a renda pula também o saldo de hoje', () {
     viewModel.next();
     viewModel.skipStep();
