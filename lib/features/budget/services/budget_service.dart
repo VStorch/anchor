@@ -3,6 +3,7 @@ import '../../cards/repositories/card_repository.dart';
 import '../../expenses/repositories/expense_repository.dart';
 import '../../wallets/repositories/wallet_repository.dart';
 import '../models/budget_snapshot.dart';
+import '../models/everyday_spending.dart';
 import '../models/month_forecast.dart';
 import '../models/month_reconciliation.dart';
 import '../models/month_summary.dart';
@@ -64,7 +65,11 @@ class BudgetService {
         today: today,
         walletSummaries: walletSummaries,
         receipts: receipts,
-        outflows: outflows,
+        spending: EverydaySpending.collect(
+          outflows: outflows,
+          expenses: expenses,
+          cards: cards,
+        ),
         monthsAhead: [
           for (var ahead = currentMonth; ahead < month; ahead = ahead.next)
             summaryOf(ahead),

@@ -435,6 +435,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(DailySpendingSheet), findsOneWidget);
+    expect(
+      find.textContaining('gastos no Salário ou no cartão pago por ele'),
+      findsOneWidget,
+    );
     await tester.enterText(
       find.descendant(
         of: find.byType(DailySpendingSheet),

@@ -72,6 +72,27 @@ void main() {
     ).cardOverview.single;
   }
 
+  test('o resumo dos cartões é montado uma vez por retrato', () {
+    final snapshot = BudgetSnapshot(
+      summary: MonthSummary.build(
+        month: september,
+        expenses: const [],
+        payments: const [],
+        receipts: const [],
+        cards: [nubank],
+        today: today,
+      ),
+      walletSummaries: const [],
+      expenses: const [],
+      wallets: const [],
+      receipts: const [],
+      payments: const [],
+      cards: [nubank],
+    );
+
+    expect(identical(snapshot.cardOverview, snapshot.cardOverview), isTrue);
+  });
+
   test('a fatura mostrada é a que recebe uma compra de hoje', () {
     final overview = overviewOf(
       september,

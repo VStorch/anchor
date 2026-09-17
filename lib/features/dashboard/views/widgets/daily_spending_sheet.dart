@@ -99,8 +99,8 @@ class _DailySpendingSheetState extends State<DailySpendingSheet> {
             const SizedBox(height: 8),
             Text(
               'Mercado, transporte, lanche, farmácia. Esse valor sai da '
-              'previsão, e o que você lançar como gasto no ${_wallet.name} '
-              'vai abatendo dele.',
+              'previsão, e os gastos no ${_wallet.name} ou no cartão pago '
+              'por ele vão abatendo dele.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

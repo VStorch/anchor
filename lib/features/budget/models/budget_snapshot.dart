@@ -13,6 +13,7 @@ import '../../wallets/models/wallet.dart';
 import '../../wallets/models/wallet_deletion_impact.dart';
 import '../../cards/models/card_invoice.dart';
 import 'card_overview.dart';
+import 'everyday_spending.dart';
 import 'month_forecast.dart';
 import 'outflow_average.dart';
 import 'month_reconciliation.dart';
@@ -20,7 +21,7 @@ import 'month_summary.dart';
 import 'wallet_summary.dart';
 
 class BudgetSnapshot {
-  const BudgetSnapshot({
+  BudgetSnapshot({
     required this.summary,
     required this.walletSummaries,
     required this.expenses,
@@ -158,7 +159,16 @@ class BudgetSnapshot {
   /// How far back an unpaid invoice is still worth showing on the card.
   static const int _pendingMonths = 12;
 
-  List<CardOverview> get cardOverview {
+  /// Built once per snapshot: every card looks up to a year of invoices.
+  late final List<CardOverview> cardOverview = _buildCardOverview();
+
+  late final List<EverydaySpending> everydaySpending = EverydaySpending.collect(
+    outflows: outflows,
+    expenses: expenses,
+    cards: cards,
+  );
+
+  List<CardOverview> _buildCardOverview() {
     final byMonth = <String, MonthSummary>{};
     MonthSummary summaryOf(Month month) =>
         byMonth.putIfAbsent(month.key, () => _summaryOf(month));
@@ -206,7 +216,7 @@ class BudgetSnapshot {
     if (wallet == null) return null;
     return OutflowAverage.of(
       wallet: wallet,
-      outflows: outflows,
+      spending: everydaySpending,
       today: summary.today,
     );
   }

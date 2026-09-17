@@ -63,13 +63,15 @@ real one in the same block.**
 A salary may set aside a **reserve for everyday spending** (`wallets.monthly_reserve`, schema v13,
 null by default and never read for a benefit, whose balance already is what is left for food). It is
 `WalletForecast.reserve`, subtracted from `endBalance`: in the current month
-`max(0, reserve − that wallet's outflows of the month)` — the "gasto" the user launches uses it up —
-plus the whole reserve for every later month up to the one on screen. While no salary has one,
+`max(0, reserve − that wallet's everyday spending of the month)` plus the whole reserve for every
+later month up to the one on screen. Everyday spending is `EverydaySpending.collect`: the wallet's
+outflows and the one-off (`single`) card purchases whose card is paid by that wallet, on their
+`purchased_at` day — a purchase in parcels was planned, so it stays a bill. While no salary has one,
 `ForecastGroup.lacksReserve` shows "Reservar gasto do dia a dia" under the headline; the
 `DailySpendingSheet` saves it through `WalletRepository.saveMonthlyReserve` (one UPDATE, one publish;
 "Sai de" with two or more salaries, "Não usar reserva" clears it) and suggests "Usar a média" from
-`OutflowAverage` (`BudgetSnapshot.outflowAverageOf`): the last three full months after the wallet's
-creation month with at least one outflow. The wallet form and the onboarding's "Quanto tem hoje?"
+`OutflowAverage` (`BudgetSnapshot.outflowAverageOf`): the last three complete months before the
+current one with any everyday spending, months before the wallet was created included. The wallet form and the onboarding's "Quanto tem hoje?"
 step ask it too, both optional. The wallet form carries the stored value, so editing a wallet never
 wipes it.
 
@@ -216,7 +218,8 @@ else open — shown as "Aberta · fecha 03/10", "Fechada · vence 10/10", "Atras
 03/10" instead, because it owes nothing. Deleting a card leaves its purchases as loose expenses
 (`ON DELETE SET NULL`).
 
-The Carteiras tab shows a card through `BudgetSnapshot.cardOverview` (`CardOverview`): in the current
+The Carteiras tab shows a card through `BudgetSnapshot.cardOverview` (`CardOverview`, built once
+per snapshot): in the current
 month, `shown` is the invoice a purchase made today lands on (`invoiceMonthFor(today)`, which can be
 two months ahead) and `pending` holds the older invoices with purchases and still unpaid, up to 12
 months back, oldest first; in any other month it is that month's invoice alone. Those invoices are

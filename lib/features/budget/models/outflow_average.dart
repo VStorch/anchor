@@ -1,7 +1,7 @@
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
-import '../../wallets/models/outflow.dart';
 import '../../wallets/models/wallet.dart';
+import 'everyday_spending.dart';
 
 /// What a wallet's everyday spending came to in the last full months that
 /// had any, offered as the reserve instead of a guess.
@@ -18,23 +18,22 @@ class OutflowAverage {
 
   static const int _months = 3;
 
-  /// Only full months count: after the one the wallet was created in, which
-  /// started halfway, and before the current one, still running. A month
-  /// with no outflow launched says the user was not tracking, not that
-  /// nothing was spent, so it is left out.
+  /// Only full months count: the current one is still running. Months
+  /// before the wallet was created count too — spending typed in for them is
+  /// history the user chose to give. A month with nothing launched says the
+  /// user was not tracking, not that nothing was spent, so it is left out.
   static OutflowAverage? of({
     required Wallet wallet,
-    required List<Outflow> outflows,
+    required List<EverydaySpending> spending,
     required DateTime today,
   }) {
-    final created = Month.fromDate(wallet.createdAt);
     final current = Month.fromDate(today);
     final totals = <Month, double>{};
-    for (final outflow in outflows) {
-      if (outflow.walletId != wallet.id) continue;
-      final month = outflow.month;
-      if (month <= created || month >= current) continue;
-      totals[month] = (totals[month] ?? 0) + outflow.amount;
+    for (final item in spending) {
+      if (item.walletId != wallet.id) continue;
+      final month = item.month;
+      if (month >= current) continue;
+      totals[month] = (totals[month] ?? 0) + item.amount;
     }
     if (totals.isEmpty) return null;
 

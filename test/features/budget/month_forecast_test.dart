@@ -1,4 +1,5 @@
 import 'package:anchor/core/utils/month.dart';
+import 'package:anchor/features/budget/models/everyday_spending.dart';
 import 'package:anchor/features/budget/models/month_forecast.dart';
 import 'package:anchor/features/budget/models/month_summary.dart';
 import 'package:anchor/features/budget/models/wallet_summary.dart';
@@ -126,7 +127,11 @@ MonthForecast? forecastOf(
       outflows: outflows,
     ),
     receipts: receipts,
-    outflows: outflows,
+    spending: EverydaySpending.collect(
+      outflows: outflows,
+      expenses: expenses,
+      cards: cards,
+    ),
     monthsAhead: [
       for (var ahead = Month.fromDate(clock); ahead < month; ahead = ahead.next)
         summaryOf(ahead),
@@ -338,6 +343,60 @@ void main() {
 
         expect(partly.freeMoney.reserve, 320);
         expect(beyond.freeMoney.reserve, 0);
+      });
+
+      group('compra no cartão pago pelo salário', () {
+        final card = CreditCard(
+          id: 7,
+          name: 'Nubank',
+          closingDay: 3,
+          dueDay: 10,
+          walletId: 1,
+          createdAt: DateTime(2026, 9),
+        );
+
+        Expense purchase({
+          required int id,
+          ExpenseType type = ExpenseType.single,
+          DateTime? purchasedAt,
+        }) => Expense(
+          id: id,
+          name: 'Compra $id',
+          type: type,
+          amount: 120,
+          dueDay: 10,
+          startMonth: october,
+          totalInstallments: type == ExpenseType.installment ? 3 : null,
+          walletId: 1,
+          cardId: 7,
+          purchasedAt: purchasedAt ?? DateTime(2026, 9, 12),
+          createdAt: DateTime(2026, 9),
+        );
+
+        test('a compra à vista deste mês consome a reserva', () {
+          final forecast = forecastOf(
+            september,
+            wallets: [reserved],
+            cards: [card],
+            expenses: [purchase(id: 1)],
+          )!;
+
+          expect(forecast.freeMoney.reserve, 380);
+        });
+
+        test('a parcelada e a de outro mês não consomem', () {
+          final forecast = forecastOf(
+            september,
+            wallets: [reserved],
+            cards: [card],
+            expenses: [
+              purchase(id: 1, type: ExpenseType.installment),
+              purchase(id: 2, purchasedAt: DateTime(2026, 8, 30)),
+            ],
+          )!;
+
+          expect(forecast.freeMoney.reserve, 500);
+        });
       });
 
       test('sem reserva em nenhum salário, a previsão avisa que falta', () {

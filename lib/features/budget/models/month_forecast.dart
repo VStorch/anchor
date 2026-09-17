@@ -1,11 +1,11 @@
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
-import '../../wallets/models/outflow.dart';
 import '../../wallets/models/payout.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
 import '../../wallets/models/wallet_kind.dart';
+import 'everyday_spending.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
 
@@ -87,7 +87,7 @@ class MonthForecast {
     required List<WalletSummary> walletSummaries,
     required List<Receipt> receipts,
     required List<MonthSummary> monthsAhead,
-    required List<Outflow> outflows,
+    required List<EverydaySpending> spending,
   }) {
     final currentMonth = Month.fromDate(today);
     if (month < currentMonth) return null;
@@ -123,7 +123,7 @@ class MonthForecast {
               summary.wallet,
               month: month,
               currentMonth: currentMonth,
-              outflows: outflows,
+              spending: spending,
             ),
           ),
       ],
@@ -167,15 +167,15 @@ class MonthForecast {
     Wallet wallet, {
     required Month month,
     required Month currentMonth,
-    required List<Outflow> outflows,
+    required List<EverydaySpending> spending,
   }) {
     final reserve = wallet.monthlyReserve;
     if (reserve == null || wallet.kind != WalletKind.salary) return 0;
 
-    final spent = outflows
-        .where((outflow) => outflow.walletId == wallet.id)
-        .where((outflow) => outflow.month == currentMonth)
-        .fold<double>(0, (total, outflow) => total + outflow.amount);
+    final spent = spending
+        .where((item) => item.walletId == wallet.id)
+        .where((item) => item.month == currentMonth)
+        .fold<double>(0, (total, item) => total + item.amount);
     final left = reserve - spent;
     return roundCents(
       (left > 0 ? left : 0) + reserve * month.monthsSince(currentMonth),
