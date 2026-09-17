@@ -14,6 +14,7 @@ import '../../wallets/models/wallet_deletion_impact.dart';
 import '../../cards/models/card_invoice.dart';
 import 'card_overview.dart';
 import 'month_forecast.dart';
+import 'outflow_average.dart';
 import 'month_reconciliation.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
@@ -197,6 +198,16 @@ class BudgetSnapshot {
       shown: summaryOf(shownMonth).invoiceOf(cardId)!,
       pending: pending,
       isOpenInvoice: shownMonth == openMonth,
+    );
+  }
+
+  OutflowAverage? outflowAverageOf(int walletId) {
+    final wallet = walletById(walletId);
+    if (wallet == null) return null;
+    return OutflowAverage.of(
+      wallet: wallet,
+      outflows: outflows,
+      today: summary.today,
     );
   }
 

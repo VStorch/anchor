@@ -29,6 +29,14 @@ class BalanceStep extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 24),
             child: _BalanceForm(income: income),
           ),
+        if (viewModel.incomes
+                .where((income) => income.kind == WalletKind.salary)
+                .firstOrNull
+            case final salary?)
+          _ReserveQuestion(
+            key: const ValueKey<String>('reserve'),
+            salary: salary,
+          ),
       ],
     );
   }
@@ -73,4 +81,43 @@ class _BalanceForm extends StatelessWidget {
   String _payName(IncomeDraft income) => income.kind == WalletKind.salary
       ? 'O salário'
       : 'O ${income.displayName}';
+}
+
+class _ReserveQuestion extends StatelessWidget {
+  const _ReserveQuestion({super.key, required this.salary});
+
+  final IncomeDraft salary;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.read<OnboardingViewModel>();
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Quanto costuma gastar por mês fora das contas? (opcional)',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Mercado, transporte, lanches. Sai da previsão do salário.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        MoneyField(
+          initialValue: salary.monthlyReserve ?? 0,
+          label: 'Por mês',
+          onChanged: (value) => viewModel.edit(
+            () => salary.monthlyReserve = value > 0 ? value : null,
+          ),
+        ),
+      ],
+    );
+  }
 }

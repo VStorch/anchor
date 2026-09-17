@@ -12,8 +12,10 @@ import '../../expenses/views/widgets/expense_tile.dart';
 import '../../cards/views/payable_sheet.dart';
 import '../../wallets/views/wallet_form_page.dart';
 import '../../budget/models/month_summary.dart';
+import '../../wallets/models/wallet.dart';
 import '../viewmodels/dashboard_view_model.dart';
 import 'month_agenda_page.dart';
+import 'widgets/daily_spending_sheet.dart';
 import 'widgets/forecast_card.dart';
 import 'widgets/month_so_far_card.dart';
 import 'widgets/today_card.dart';
@@ -61,6 +63,25 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
+  Future<void> _editReserve(
+    BuildContext context,
+    DashboardViewModel viewModel,
+    Wallet? editing,
+  ) async {
+    final salaries = viewModel.salaries;
+    if (salaries.isEmpty) return;
+
+    final edit = await DailySpendingSheet.show(
+      context,
+      salaries: salaries,
+      averageOf: viewModel.outflowAverageOf,
+      initial: salaries.where((wallet) => wallet.id == editing?.id).firstOrNull,
+    );
+    if (edit == null) return;
+
+    await viewModel.saveReserve(edit.wallet, edit.amount);
+  }
+
   Widget _content(BuildContext context, DashboardViewModel viewModel) {
     final snapshot = viewModel.snapshot;
     final summary = viewModel.summary;
@@ -93,7 +114,11 @@ class DashboardPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (forecast != null) ...[
-            ForecastCard(forecast: forecast),
+            ForecastCard(
+              forecast: forecast,
+              onEditReserve: (wallet) =>
+                  _editReserve(context, viewModel, wallet),
+            ),
             const SizedBox(height: 12),
           ],
           if (showsMonthSoFar)

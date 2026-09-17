@@ -6,6 +6,7 @@ import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
 import 'package:anchor/features/wallets/models/balance_check.dart';
+import 'package:anchor/features/wallets/models/outflow.dart';
 import 'package:anchor/features/wallets/models/payout.dart';
 import 'package:anchor/features/wallets/models/payout_schedule.dart';
 import 'package:anchor/features/wallets/models/receipt.dart';
@@ -99,6 +100,7 @@ MonthForecast? forecastOf(
   List<Expense> expenses = const <Expense>[],
   List<BalanceCheck> checks = const <BalanceCheck>[],
   List<CreditCard> cards = const <CreditCard>[],
+  List<Outflow> outflows = const <Outflow>[],
 }) {
   final clock = now ?? today;
   MonthSummary summaryOf(Month month) => MonthSummary.build(
@@ -121,8 +123,10 @@ MonthForecast? forecastOf(
       payments: const [],
       occurrences: summary.occurrences,
       checks: checks,
+      outflows: outflows,
     ),
     receipts: receipts,
+    outflows: outflows,
     monthsAhead: [
       for (var ahead = Month.fromDate(clock); ahead < month; ahead = ahead.next)
         summaryOf(ahead),
@@ -278,6 +282,81 @@ void main() {
       expect(forecast.shortBenefits.single.wallet.name, 'Vale refeição');
       expect(forecast.benefits.endBalance, -50);
       expect(forecast.freeMoney.endBalance, 3200);
+    });
+
+    group('reserva do dia a dia', () {
+      final reserved = salary.copyWith(monthlyReserve: 500);
+
+      test('setembro desconta a reserva do dinheiro livre', () {
+        final forecast = forecastOf(
+          september,
+          wallets: [reserved, voucher],
+          receipts: [
+            receiptOf(reserved, september),
+            receiptOf(voucher, september),
+          ],
+          expenses: [bill(id: 1, amount: 1200, walletId: 1)],
+        )!;
+
+        expect(forecast.freeMoney.reserve, 500);
+        expect(forecast.freeMoney.endBalance, 1500);
+        expect(forecast.freeMoney.lacksReserve, isFalse);
+        expect(forecast.benefits.reserve, 0);
+        expect(forecast.benefits.endBalance, 600);
+      });
+
+      test('outubro soma a reserva de cada mês até a tela', () {
+        final forecast = forecastOf(
+          october,
+          wallets: [reserved],
+          receipts: [receiptOf(reserved, september)],
+          expenses: [bill(id: 1, amount: 1200, walletId: 1)],
+        )!;
+
+        expect(forecast.freeMoney.reserve, 1000);
+        expect(forecast.freeMoney.endBalance, 3200 + 3200 - 2400 - 1000);
+      });
+
+      test('os gastos do mês consomem a reserva até zerar', () {
+        Outflow spent(double amount) => Outflow(
+          walletId: 1,
+          description: 'Mercado',
+          amount: amount,
+          spentAt: DateTime(2026, 9, 10),
+        );
+
+        final partly = forecastOf(
+          september,
+          wallets: [reserved],
+          outflows: [spent(180)],
+        )!;
+        final beyond = forecastOf(
+          september,
+          wallets: [reserved],
+          outflows: [spent(420), spent(200)],
+        )!;
+
+        expect(partly.freeMoney.reserve, 320);
+        expect(beyond.freeMoney.reserve, 0);
+      });
+
+      test('sem reserva em nenhum salário, a previsão avisa que falta', () {
+        final forecast = forecastOf(september)!;
+
+        expect(forecast.freeMoney.lacksReserve, isTrue);
+        expect(forecast.freeMoney.reserve, 0);
+      });
+
+      test('o benefício nunca reserva, mesmo com o valor gravado', () {
+        final forecast = forecastOf(
+          september,
+          wallets: [voucher.copyWith(monthlyReserve: 300)],
+          receipts: [receiptOf(voucher, september)],
+        )!;
+
+        expect(forecast.benefits.reserve, 0);
+        expect(forecast.benefits.endBalance, 600);
+      });
     });
 
     test('o salário e o vale de setembro fecham a conta de hoje', () {

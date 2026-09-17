@@ -3,6 +3,7 @@ import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/widgets/anchor_logo.dart';
 import 'package:anchor/core/widgets/section_header.dart';
+import 'package:anchor/features/dashboard/views/widgets/daily_spending_sheet.dart';
 import 'package:anchor/features/dashboard/views/widgets/forecast_card.dart';
 import 'package:anchor/features/dashboard/views/widgets/month_so_far_card.dart';
 import 'package:anchor/features/dashboard/views/widgets/today_card.dart';
@@ -61,8 +62,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  bool focusOfField(WidgetTester tester) =>
-      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus;
+  bool focusOfField(WidgetTester tester) => tester
+      .widget<EditableText>(find.byType(EditableText).first)
+      .focusNode
+      .hasFocus;
 
   Future<void> tapTab(WidgetTester tester, IconData icon) async {
     await tester.tap(
@@ -191,6 +194,11 @@ void main() {
     );
 
     final month = find.byType(MonthSoFarCard);
+    await tester.scrollUntilVisible(
+      month,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.descendant(of: month, matching: find.textContaining('até agora')),
       findsOneWidget,
@@ -406,6 +414,72 @@ void main() {
     );
   });
 
+  testWidgets('reservar o gasto do dia a dia muda a previsão', (tester) async {
+    await seedSalaryAndExpense();
+    await pumpApp(tester);
+
+    final forecast = find.byType(ForecastCard);
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text(
+          'A previsão ainda não conta mercado, transporte e '
+          'lanches.',
+        ),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Reservar gasto do dia a dia'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DailySpendingSheet), findsOneWidget);
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(DailySpendingSheet),
+        matching: find.byType(TextField),
+      ),
+      '500',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Dinheiro livre vai sobrar ${formatMoney(2050)}'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Reservar gasto do dia a dia'), findsNothing);
+
+    await tester.tap(find.text('Como chegamos nisso'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Reserva do dia a dia'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.byTooltip('Editar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Editar reserva'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Não usar reserva'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Dinheiro livre vai sobrar ${formatMoney(2550)}'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a previsão abre o detalhe por carteira', (tester) async {
     await seedSalaryAndExpense();
     await pumpApp(tester);
@@ -528,7 +602,7 @@ void main() {
     await tester.tap(find.text('Cadastrar meu salário'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(TextField));
+    await tester.tap(find.widgetWithText(TextField, 'Nome da carteira'));
     await tester.pumpAndSettle();
     expect(focusOfField(tester), isTrue);
 
@@ -543,7 +617,7 @@ void main() {
     await tester.tap(find.text('Cadastrar meu salário'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(TextField));
+    await tester.tap(find.widgetWithText(TextField, 'Nome da carteira'));
     await tester.pumpAndSettle();
     expect(focusOfField(tester), isTrue);
 

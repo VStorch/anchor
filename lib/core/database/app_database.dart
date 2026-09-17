@@ -17,7 +17,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase();
 
-  static const int version = 12;
+  static const int version = 13;
 
   static const String walletsTable = 'wallets';
   static const String payoutsTable = 'payouts';
@@ -100,7 +100,8 @@ class AppDatabase {
       name TEXT NOT NULL,
       kind TEXT NOT NULL,
       color_index INTEGER NOT NULL,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      monthly_reserve REAL
     )
     ''',
     '''
@@ -301,5 +302,6 @@ class AppDatabase {
       "UPDATE $payoutsTable SET label = '' "
           "WHERE label IN ('Mensal', 'Recebimento')",
     ],
+    13: <String>['ALTER TABLE $walletsTable ADD COLUMN monthly_reserve REAL'],
   };
 }

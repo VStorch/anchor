@@ -590,6 +590,29 @@ void main() {
     expect(wallet.titleOf(wallet.payouts.first), 'Salário · dia 5');
   });
 
+  test('a migração deixa a carteira sem reserva do dia a dia', () async {
+    final v12 = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+      schemaVersion: 12,
+    );
+    await (await v12.database).query('wallets');
+    await v12.close();
+
+    final database = AppDatabase(
+      factory: databaseFactoryFfiNoIsolate,
+      filePath: path,
+    );
+    addTearDown(database.close);
+    final repository = WalletRepository(database, DataChanges());
+
+    final wallet = (await repository.fetchWallets()).single;
+    expect(wallet.monthlyReserve, isNull);
+
+    await repository.saveMonthlyReserve(wallet.id!, 500);
+    expect((await repository.fetchWallets()).single.monthlyReserve, 500);
+  });
+
   test('o banco migrado tem o mesmo esquema de uma instalação nova', () async {
     final migrated = AppDatabase(
       factory: databaseFactoryFfiNoIsolate,

@@ -4,13 +4,18 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/money_colors.dart';
 import '../../../../core/utils/money.dart';
 import '../../../budget/models/month_forecast.dart';
+import '../../../wallets/models/wallet.dart';
 
 /// A forecast, drawn apart from the real figures and holding none of them.
 /// Free money and benefits are told apart and never added up.
 class ForecastCard extends StatelessWidget {
-  const ForecastCard({super.key, required this.forecast});
+  const ForecastCard({super.key, required this.forecast, this.onEditReserve});
 
   final MonthForecast forecast;
+
+  /// Opens the everyday-spending reserve, on the salary given when there is
+  /// one to edit.
+  final ValueChanged<Wallet?>? onEditReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +83,31 @@ class ForecastCard extends StatelessWidget {
                   ),
                 ),
               ),
+          if (free.lacksReserve && onEditReserve != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => onEditReserve!(null),
+                    style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Reservar gasto do dia a dia'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      'A previsão ainda não conta mercado, transporte e '
+                      'lanches.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Theme(
             data: theme.copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
@@ -94,7 +124,11 @@ class ForecastCard extends StatelessWidget {
               ),
               children: [
                 if (!free.isEmpty)
-                  _GroupBlock(title: 'Dinheiro livre', group: free),
+                  _GroupBlock(
+                    title: 'Dinheiro livre',
+                    group: free,
+                    onEditReserve: onEditReserve,
+                  ),
                 if (!free.isEmpty && !benefits.isEmpty)
                   const SizedBox(height: 12),
                 if (!benefits.isEmpty)
@@ -139,10 +173,15 @@ class ForecastCard extends StatelessWidget {
 }
 
 class _GroupBlock extends StatelessWidget {
-  const _GroupBlock({required this.title, required this.group});
+  const _GroupBlock({
+    required this.title,
+    required this.group,
+    this.onEditReserve,
+  });
 
   final String title;
   final ForecastGroup group;
+  final ValueChanged<Wallet?>? onEditReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +199,26 @@ class _GroupBlock extends StatelessWidget {
         const SizedBox(height: 4),
         _Line(label: 'A receber', value: '+ ${formatMoney(group.toReceive)}'),
         _Line(label: 'Contas a pagar', value: '− ${formatMoney(group.toPay)}'),
+        for (final wallet in group.wallets)
+          if (wallet.wallet.monthlyReserve != null)
+            Row(
+              children: [
+                Expanded(
+                  child: _Line(
+                    label: group.wallets.length > 1
+                        ? 'Reserva do dia a dia (${wallet.wallet.name})'
+                        : 'Reserva do dia a dia',
+                    value: '− ${formatMoney(wallet.reserve)}',
+                  ),
+                ),
+                if (onEditReserve != null)
+                  IconButton(
+                    onPressed: () => onEditReserve!(wallet.wallet),
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    tooltip: 'Editar reserva',
+                  ),
+              ],
+            ),
         if (group.unassignedToPay > 0)
           _Line(
             label: 'Contas sem carteira',

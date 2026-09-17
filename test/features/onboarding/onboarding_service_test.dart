@@ -147,6 +147,25 @@ void main() {
     },
   );
 
+  test('a reserva do dia a dia fica no salário e nunca no benefício', () async {
+    await service.apply(
+      OnboardingDraft(
+        incomes: [
+          salary(balance: 850, arrived: true)..monthlyReserve = 500,
+          voucher(balance: 210, arrived: true)..monthlyReserve = 300,
+        ],
+      ),
+      now: now,
+    );
+
+    final saved = await wallets.fetchWallets();
+    expect(saved.map((wallet) => wallet.monthlyReserve), [500, null]);
+
+    final forecast = (await budget.loadSnapshot(september, now: now)).forecast!;
+    expect(forecast.freeMoney.reserve, 500);
+    expect(forecast.freeMoney.endBalance, 350);
+  });
+
   test('a parcela 4 de 10 projeta da 4 à 10', () async {
     await service.apply(OnboardingDraft(installments: [fridge()]), now: now);
 

@@ -13,6 +13,7 @@ class Wallet {
     required this.colorIndex,
     required this.createdAt,
     this.payouts = const <Payout>[],
+    this.monthlyReserve,
   });
 
   factory Wallet.fromMap(
@@ -25,6 +26,7 @@ class Wallet {
     colorIndex: map['color_index'] as int,
     createdAt: DateTime.parse(map['created_at'] as String),
     payouts: payouts,
+    monthlyReserve: (map['monthly_reserve'] as num?)?.toDouble(),
   );
 
   final int? id;
@@ -33,6 +35,10 @@ class Wallet {
   final int colorIndex;
   final DateTime createdAt;
   final List<Payout> payouts;
+
+  /// What a salary sets aside each month for everyday spending (groceries,
+  /// transport), outside any bill; null when the user never said.
+  final double? monthlyReserve;
 
   Color get color => AppPalette.walletColorAt(colorIndex);
 
@@ -76,6 +82,7 @@ class Wallet {
     'kind': kind.id,
     'color_index': colorIndex,
     'created_at': createdAt.toIso8601String(),
+    'monthly_reserve': monthlyReserve,
   };
 
   Wallet copyWith({
@@ -85,6 +92,8 @@ class Wallet {
     int? colorIndex,
     DateTime? createdAt,
     List<Payout>? payouts,
+    double? monthlyReserve,
+    bool clearMonthlyReserve = false,
   }) => Wallet(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -92,5 +101,8 @@ class Wallet {
     colorIndex: colorIndex ?? this.colorIndex,
     createdAt: createdAt ?? this.createdAt,
     payouts: payouts ?? this.payouts,
+    monthlyReserve: clearMonthlyReserve
+        ? null
+        : monthlyReserve ?? this.monthlyReserve,
   );
 }

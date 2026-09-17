@@ -64,6 +64,7 @@ class BudgetService {
         today: today,
         walletSummaries: walletSummaries,
         receipts: receipts,
+        outflows: outflows,
         monthsAhead: [
           for (var ahead = currentMonth; ahead < month; ahead = ahead.next)
             summaryOf(ahead),

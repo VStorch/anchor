@@ -1,6 +1,7 @@
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
+import '../../wallets/models/outflow.dart';
 import '../../wallets/models/payout.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
@@ -14,6 +15,7 @@ class WalletForecast {
     required this.startBalance,
     required this.toReceive,
     required this.toPay,
+    this.reserve = 0,
   });
 
   final Wallet wallet;
@@ -21,7 +23,11 @@ class WalletForecast {
   final double toReceive;
   final double toPay;
 
-  double get endBalance => roundCents(startBalance + toReceive - toPay);
+  /// The everyday spending set aside until the end of the month on screen.
+  final double reserve;
+
+  double get endBalance =>
+      roundCents(startBalance + toReceive - toPay - reserve);
 }
 
 /// The wallets of one kind of money, forecast together. Free money and
@@ -43,12 +49,22 @@ class ForecastGroup {
     wallets.fold<double>(0, (total, wallet) => total + wallet.toPay),
   );
 
+  double get reserve => roundCents(
+    wallets.fold<double>(0, (total, wallet) => total + wallet.reserve),
+  );
+
   double get endBalance => roundCents(
     wallets.fold<double>(0, (total, wallet) => total + wallet.endBalance) -
         unassignedToPay,
   );
 
   bool get isEmpty => wallets.isEmpty && unassignedToPay <= 0;
+
+  /// There are salaries and none of them says what the everyday spending
+  /// takes, so the forecast is more optimistic than it should be.
+  bool get lacksReserve =>
+      wallets.any((forecast) => forecast.wallet.kind == WalletKind.salary) &&
+      wallets.every((forecast) => forecast.wallet.monthlyReserve == null);
 }
 
 /// Where the money is headed from today to the end of [month]: what the
@@ -71,6 +87,7 @@ class MonthForecast {
     required List<WalletSummary> walletSummaries,
     required List<Receipt> receipts,
     required List<MonthSummary> monthsAhead,
+    required List<Outflow> outflows,
   }) {
     final currentMonth = Month.fromDate(today);
     if (month < currentMonth) return null;
@@ -102,6 +119,12 @@ class MonthForecast {
                       occurrence.plannedWalletId == summary.wallet.id,
                 )
                 .totalRemaining,
+            reserve: _reserveOf(
+              summary.wallet,
+              month: month,
+              currentMonth: currentMonth,
+              outflows: outflows,
+            ),
           ),
       ],
       unassignedToPay: occurrences
@@ -134,6 +157,29 @@ class MonthForecast {
         )
         .fold<double>(0, (total, payout) => total + payout.amount);
     return predicted + scheduled;
+  }
+
+  /// The current month keeps what the outflows already launched there have
+  /// not used up; every later month up to [month] takes the reserve whole.
+  /// Only a salary sets money aside: a benefit's balance already is what is
+  /// left to spend on food.
+  static double _reserveOf(
+    Wallet wallet, {
+    required Month month,
+    required Month currentMonth,
+    required List<Outflow> outflows,
+  }) {
+    final reserve = wallet.monthlyReserve;
+    if (reserve == null || wallet.kind != WalletKind.salary) return 0;
+
+    final spent = outflows
+        .where((outflow) => outflow.walletId == wallet.id)
+        .where((outflow) => outflow.month == currentMonth)
+        .fold<double>(0, (total, outflow) => total + outflow.amount);
+    final left = reserve - spent;
+    return roundCents(
+      (left > 0 ? left : 0) + reserve * month.monthsSince(currentMonth),
+    );
   }
 
   static bool _isActive(Payout payout, Wallet wallet, Month month) =>

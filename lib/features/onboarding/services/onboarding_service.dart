@@ -11,6 +11,7 @@ import '../../expenses/repositories/expense_repository.dart';
 import '../../wallets/models/balance_check.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
+import '../../wallets/models/wallet_kind.dart';
 import '../../wallets/repositories/wallet_repository.dart';
 import '../models/onboarding_draft.dart';
 
@@ -55,6 +56,9 @@ class OnboardingService {
               kind: income.kind,
               colorIndex: index,
               createdAt: now,
+              monthlyReserve: income.kind == WalletKind.salary
+                  ? income.monthlyReserve
+                  : null,
             ),
             payouts: [income.toPayout(createdAt: now)],
           );

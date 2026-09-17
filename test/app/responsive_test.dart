@@ -4,6 +4,7 @@ import 'package:anchor/core/state/data_changes.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/cards/repositories/card_repository.dart';
+import 'package:anchor/features/dashboard/views/widgets/daily_spending_sheet.dart';
 import 'package:anchor/features/expenses/models/expense.dart';
 import 'package:anchor/features/expenses/models/expense_payment.dart';
 import 'package:anchor/features/expenses/models/expense_type.dart';
@@ -291,7 +292,25 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final reserve = find.text('Reservar gasto do dia a dia');
+      await tester.scrollUntilVisible(
+        reserve,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(reserve);
+      await tester.pumpAndSettle();
+      expect(find.byType(DailySpendingSheet), findsOneWidget);
+      navigator.pop();
+      await tester.pumpAndSettle();
+
       final breakdown = find.text('De onde vem esse valor');
+      await tester.scrollUntilVisible(
+        breakdown,
+        -200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(breakdown);
       await tester.pumpAndSettle();
       await tester.tap(breakdown);
@@ -331,6 +350,15 @@ void main() {
           database: database,
         ),
       );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Reservar gasto do dia a dia'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DailySpendingSheet), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('De onde vem esse valor'));

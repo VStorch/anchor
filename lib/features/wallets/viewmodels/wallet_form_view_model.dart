@@ -17,6 +17,7 @@ class WalletFormViewModel extends ChangeNotifier {
        _name = wallet?.name ?? '',
        _kind = wallet?.kind ?? initialKind ?? WalletKind.salary,
        _colorIndex = wallet?.colorIndex ?? suggestedColorIndex,
+       _monthlyReserve = wallet?.monthlyReserve,
        _payouts = List<Payout>.of(wallet?.payouts ?? const <Payout>[]);
 
   final WalletRepository _repository;
@@ -26,6 +27,7 @@ class WalletFormViewModel extends ChangeNotifier {
   String _name;
   WalletKind _kind;
   int _colorIndex;
+  double? _monthlyReserve;
   List<Payout> _payouts;
   bool _isSaving = false;
 
@@ -36,6 +38,11 @@ class WalletFormViewModel extends ChangeNotifier {
   WalletKind get kind => _kind;
 
   int get colorIndex => _colorIndex;
+
+  double? get monthlyReserve => _monthlyReserve;
+
+  /// Only a salary sets everyday spending aside.
+  bool get takesReserve => _kind == WalletKind.salary;
 
   List<Payout> get payouts => List<Payout>.unmodifiable(_payouts);
 
@@ -53,6 +60,12 @@ class WalletFormViewModel extends ChangeNotifier {
 
   void setKind(WalletKind value) {
     _kind = value;
+    notifyListeners();
+  }
+
+  /// Zero is "no reserve", the same as never saying one.
+  void setMonthlyReserve(double value) {
+    _monthlyReserve = value > 0 ? value : null;
     notifyListeners();
   }
 
@@ -128,6 +141,7 @@ class WalletFormViewModel extends ChangeNotifier {
         kind: _kind,
         colorIndex: _colorIndex,
         createdAt: _wallet?.createdAt ?? DateTime.now(),
+        monthlyReserve: takesReserve ? _monthlyReserve : null,
       ),
       payouts: _payouts,
       removedPayoutIds: _removedPayoutIds,

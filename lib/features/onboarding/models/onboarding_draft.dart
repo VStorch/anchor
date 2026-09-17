@@ -21,6 +21,10 @@ class IncomeDraft {
   /// when its date has come.
   bool? arrived;
 
+  /// The everyday spending a salary sets aside each month; optional, and
+  /// never asked of a benefit.
+  double? monthlyReserve;
+
   String get displayName => name.trim().isEmpty ? kind.label : name.trim();
 
   int get dayCount => schedule.isBusinessDay ? Payout.maxBusinessDay : 31;

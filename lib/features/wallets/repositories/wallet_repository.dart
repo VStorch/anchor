@@ -68,6 +68,19 @@ class WalletRepository {
     return id;
   }
 
+  /// Only the reserve column: the rest of the wallet and its payouts stay as
+  /// they are.
+  Future<void> saveMonthlyReserve(int walletId, double? amount) async {
+    final db = await _database.database;
+    await db.update(
+      AppDatabase.walletsTable,
+      <String, Object?>{'monthly_reserve': amount},
+      where: 'id = ?',
+      whereArgs: <Object?>[walletId],
+    );
+    _changes.publish();
+  }
+
   /// The form's save is one user action: the wallet, its payouts and the
   /// removed ones land together, so a reload never sees a payout half-deleted.
   Future<int> saveWalletWithPayouts(

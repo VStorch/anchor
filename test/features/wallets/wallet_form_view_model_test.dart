@@ -48,6 +48,28 @@ void main() {
     return (await repository.fetchWallets()).single;
   }
 
+  test(
+    'editar a carteira mantém a reserva, e o benefício não guarda uma',
+    () async {
+      final wallet = await seedSalaryWithTwoPayouts();
+      await repository.saveMonthlyReserve(wallet.id!, 500);
+      final saved = (await repository.fetchWallets()).single;
+
+      await (WalletFormViewModel(
+        repository: repository,
+        wallet: saved,
+      )..setName('Salário da empresa')).save();
+      expect((await repository.fetchWallets()).single.monthlyReserve, 500);
+
+      final edited = (await repository.fetchWallets()).single;
+      await (WalletFormViewModel(
+        repository: repository,
+        wallet: edited,
+      )..setKind(WalletKind.benefit)).save();
+      expect((await repository.fetchWallets()).single.monthlyReserve, isNull);
+    },
+  );
+
   test('salvar a carteira editada avisa as outras telas uma vez', () async {
     final wallet = await seedSalaryWithTwoPayouts();
     final form = WalletFormViewModel(repository: repository, wallet: wallet)

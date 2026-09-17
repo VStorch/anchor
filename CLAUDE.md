@@ -60,6 +60,19 @@ confirmed money only. `MonthSummary` carries no planned income; the payout calen
 on `Wallet.monthlyIncome` and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
 real one in the same block.**
 
+A salary may set aside a **reserve for everyday spending** (`wallets.monthly_reserve`, schema v13,
+null by default and never read for a benefit, whose balance already is what is left for food). It is
+`WalletForecast.reserve`, subtracted from `endBalance`: in the current month
+`max(0, reserve − that wallet's outflows of the month)` — the "gasto" the user launches uses it up —
+plus the whole reserve for every later month up to the one on screen. While no salary has one,
+`ForecastGroup.lacksReserve` shows "Reservar gasto do dia a dia" under the headline; the
+`DailySpendingSheet` saves it through `WalletRepository.saveMonthlyReserve` (one UPDATE, one publish;
+"Sai de" with two or more salaries, "Não usar reserva" clears it) and suggests "Usar a média" from
+`OutflowAverage` (`BudgetSnapshot.outflowAverageOf`): the last three full months after the wallet's
+creation month with at least one outflow. The wallet form and the onboarding's "Quanto tem hoje?"
+step ask it too, both optional. The wallet form carries the stored value, so editing a wallet never
+wipes it.
+
 The two real blocks reconcile with the balance instead of contradicting it. `TodayCard` opens
 "De onde vem esse valor" and reads each wallet's balance as
 `checkAmount + receivedSinceCheck - spentSinceCheck` (`WalletSummary`, the same folds that build

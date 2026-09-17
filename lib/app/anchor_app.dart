@@ -87,6 +87,7 @@ class AnchorApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (context) => DashboardViewModel(
             budgetService: context.read<BudgetService>(),
+            walletRepository: context.read<WalletRepository>(),
             monthSelection: context.read<MonthSelection>(),
             changes: context.read<DataChanges>(),
           )..initialize(),

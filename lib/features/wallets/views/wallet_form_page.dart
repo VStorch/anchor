@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/app_palette.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/money_field.dart';
 import '../../../core/widgets/section_header.dart';
 import '../models/payout.dart';
 import '../models/wallet.dart';
@@ -98,6 +99,22 @@ class _WalletFormView extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _ColorSelector(viewModel: viewModel),
+          if (viewModel.takesReserve) ...[
+            const SizedBox(height: 20),
+            MoneyField(
+              initialValue: viewModel.monthlyReserve ?? 0,
+              label: 'Reserva do dia a dia por mês',
+              onChanged: viewModel.setMonthlyReserve,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Mercado, transporte e lanches. Sai da previsão do dinheiro '
+              'livre. Deixe vazio para não reservar.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           SectionHeader(
             title: 'Calendário de recebimento',

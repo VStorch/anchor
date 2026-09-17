@@ -1067,7 +1067,10 @@ Future<void> _createSalaryWallet(WidgetTester tester) async {
   await tester.tap(find.text('Cadastrar meu salário'));
   await tester.pumpAndSettle();
 
-  await tester.enterText(find.byType(TextFormField), 'Salário');
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Nome da carteira'),
+    'Salário',
+  );
   await tester.pumpAndSettle();
 
   await tester.tap(find.byTooltip('Adicionar data'));
@@ -1174,12 +1177,15 @@ Future<void> _payFirstExpense(WidgetTester tester) async {
   expect(find.text('Pagar'), findsNothing);
 }
 
+/// A sheet opens over the form, so its field is the last one built.
 Future<void> _typeMoney(WidgetTester tester, String amount) async {
   await tester.enterText(
-    find.descendant(
-      of: find.byType(MoneyField),
-      matching: find.byType(TextField),
-    ),
+    find
+        .descendant(
+          of: find.byType(MoneyField),
+          matching: find.byType(TextField),
+        )
+        .last,
     amount,
   );
   await tester.pumpAndSettle();
