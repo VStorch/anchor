@@ -185,7 +185,7 @@ void main() {
     expect(
       find.descendant(
         of: forecast,
-        matching: find.text('Vai sobrar ${formatMoney(2550)}'),
+        matching: find.text('Dinheiro livre vai sobrar ${formatMoney(2550)}'),
       ),
       findsOneWidget,
     );
@@ -354,6 +354,31 @@ void main() {
     expect(inCard('VR'), findsOneWidget);
     expect(inCard(formatMoney(162.70)), findsOneWidget);
     expect(inCard('− ${formatMoney(47.30)}'), findsOneWidget);
+
+    final forecast = find.byType(ForecastCard);
+    await tester.scrollUntilVisible(
+      forecast,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Dinheiro livre vai sobrar ${formatMoney(750.10)}'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text('Nos benefícios: ${formatMoney(162.70)} para usar'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text("Dinheiro livre vai sobrar ${formatMoney(912.80)}"),
+      findsNothing,
+    );
 
     final month = find.byType(MonthSoFarCard);
     await tester.scrollUntilVisible(

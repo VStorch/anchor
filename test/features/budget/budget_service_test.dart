@@ -130,8 +130,9 @@ void main() {
       expect(snapshot.walletsBalance, 1012.70);
       expect(snapshot.awaitingConfirmation, 0);
       expect(snapshot.summary.difference, 3800);
-      expect(snapshot.forecast!.toPay, 464.90);
-      expect(snapshot.forecast!.endBalance, 547.80);
+      expect(snapshot.forecast!.freeMoney.toPay, 464.90);
+      expect(snapshot.forecast!.freeMoney.endBalance, 385.10);
+      expect(snapshot.forecast!.benefits.endBalance, 162.70);
     });
 
     test(
@@ -143,11 +144,13 @@ void main() {
         final forecast = snapshot.forecast!;
 
         expect(snapshot.walletsBalance, 1012.70);
-        expect(forecast.toReceive, 3800);
-        expect(forecast.toPay, 1229.80);
+        expect(forecast.freeMoney.toReceive, 3200);
+        expect(forecast.benefits.toReceive, 600);
+        expect(forecast.freeMoney.toPay, 929.80);
         expect(forecast.unassignedToPay, 300);
         expect(forecast.wallets.first.endBalance, 850 + 3200 - 929.80);
-        expect(forecast.endBalance, 3582.90);
+        expect(forecast.freeMoney.endBalance, 2820.20);
+        expect(forecast.benefits.endBalance, 762.70);
       },
     );
 
@@ -179,7 +182,7 @@ void main() {
 
       expect(snapshot.summaryFor(id)!.balance, 0);
       expect(snapshot.awaitingConfirmation, 3000);
-      expect(snapshot.forecast!.toReceive, 6000);
+      expect(snapshot.forecast!.freeMoney.toReceive, 6000);
     });
   });
 

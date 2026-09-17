@@ -6,6 +6,7 @@ import '../../../../core/utils/money.dart';
 import '../../../budget/models/month_forecast.dart';
 
 /// A forecast, drawn apart from the real figures and holding none of them.
+/// Free money and benefits are told apart and never added up.
 class ForecastCard extends StatelessWidget {
   const ForecastCard({super.key, required this.forecast});
 
@@ -16,8 +17,10 @@ class ForecastCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = MoneyColors.of(context);
     final monthName = DateFormat.MMMM('pt_BR').format(forecast.month.firstDay);
-    final endBalance = forecast.endBalance;
-    final falls = endBalance < 0;
+    final free = forecast.freeMoney;
+    final benefits = forecast.benefits;
+    final headlineGroup = free.isEmpty ? benefits : free;
+    final headlineBalance = headlineGroup.endBalance;
 
     return Card(
       color: theme.colorScheme.surface,
@@ -53,20 +56,34 @@ class ForecastCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
             child: Text(
-              falls
-                  ? 'Vai faltar ${formatMoney(-endBalance)}'
-                  : 'Vai sobrar ${formatMoney(endBalance)}',
+              _headline(free.isEmpty, headlineBalance),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: falls ? theme.colorScheme.error : colors.predicted,
+                color: headlineBalance < 0
+                    ? theme.colorScheme.error
+                    : colors.predicted,
               ),
             ),
           ),
+          if (!free.isEmpty && !benefits.isEmpty)
+            for (final line in _benefitLines())
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Text(
+                  line.text,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: line.short
+                        ? theme.colorScheme.error
+                        : colors.predicted,
+                  ),
+                ),
+              ),
           Theme(
             data: theme.copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
               tilePadding: const EdgeInsets.symmetric(horizontal: 20),
               childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              expandedCrossAxisAlignment: CrossAxisAlignment.start,
               iconColor: colors.predicted,
               collapsedIconColor: colors.predicted,
               title: Text(
@@ -76,25 +93,12 @@ class ForecastCard extends StatelessWidget {
                 ),
               ),
               children: [
-                _Line(
-                  label: 'A receber',
-                  value: '+ ${formatMoney(forecast.toReceive)}',
-                ),
-                _Line(
-                  label: 'A pagar',
-                  value: '− ${formatMoney(forecast.toPay)}',
-                ),
-                const Divider(height: 20),
-                for (final wallet in forecast.wallets)
-                  _Line(
-                    label: wallet.wallet.name,
-                    value: formatMoney(wallet.endBalance),
-                  ),
-                if (forecast.unassignedToPay > 0)
-                  _Line(
-                    label: 'Sem carteira definida',
-                    value: '− ${formatMoney(forecast.unassignedToPay)}',
-                  ),
+                if (!free.isEmpty)
+                  _GroupBlock(title: 'Dinheiro livre', group: free),
+                if (!free.isEmpty && !benefits.isEmpty)
+                  const SizedBox(height: 12),
+                if (!benefits.isEmpty)
+                  _GroupBlock(title: 'Benefícios', group: benefits),
               ],
             ),
           ),
@@ -102,17 +106,96 @@ class ForecastCard extends StatelessWidget {
       ),
     );
   }
+
+  String _headline(bool onlyBenefits, double balance) {
+    final subject = onlyBenefits ? 'Nos benefícios' : 'Dinheiro livre';
+    return balance < 0
+        ? '$subject vai faltar ${formatMoney(-balance)}'
+        : '$subject vai sobrar ${formatMoney(balance)}';
+  }
+
+  List<({String text, bool short})> _benefitLines() {
+    final short = forecast.shortBenefits;
+    if (short.isEmpty) {
+      return [
+        (
+          text:
+              'Nos benefícios: ${formatMoney(forecast.benefits.endBalance)} '
+              'para usar',
+          short: false,
+        ),
+      ];
+    }
+    return [
+      for (final wallet in short)
+        (
+          text:
+              'No ${wallet.wallet.name} vai faltar '
+              '${formatMoney(-wallet.endBalance)}',
+          short: true,
+        ),
+    ];
+  }
 }
 
-class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value});
+class _GroupBlock extends StatelessWidget {
+  const _GroupBlock({required this.title, required this.group});
 
-  final String label;
-  final String value;
+  final String title;
+  final ForecastGroup group;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        _Line(label: 'A receber', value: '+ ${formatMoney(group.toReceive)}'),
+        _Line(label: 'Contas a pagar', value: '− ${formatMoney(group.toPay)}'),
+        if (group.unassignedToPay > 0)
+          _Line(
+            label: 'Contas sem carteira',
+            value: '− ${formatMoney(group.unassignedToPay)}',
+          ),
+        for (final wallet in group.wallets)
+          _Line(
+            label: wallet.wallet.name,
+            value: formatMoney(wallet.endBalance),
+            emphasized: true,
+            short: wallet.endBalance < 0,
+          ),
+      ],
+    );
+  }
+}
+
+class _Line extends StatelessWidget {
+  const _Line({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+    this.short = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasized;
+  final bool short;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = short
+        ? theme.colorScheme.error
+        : MoneyColors.of(context).predicted;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -133,8 +216,8 @@ class _Line extends StatelessWidget {
               value,
               textAlign: TextAlign.end,
               style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: MoneyColors.of(context).predicted,
+                fontWeight: emphasized ? FontWeight.w700 : FontWeight.w600,
+                color: color,
               ),
             ),
           ),

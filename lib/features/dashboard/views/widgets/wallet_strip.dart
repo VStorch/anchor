@@ -11,11 +11,8 @@ class WalletStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPending = summaries.any((summary) => summary.pendingInMonth > 0);
-    final scaler = MediaQuery.textScalerOf(context);
-
     return SizedBox(
-      height: scaler.scale(hasPending ? 122 : 100),
+      height: MediaQuery.textScalerOf(context).scale(100),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -80,15 +77,6 @@ class _WalletChip extends StatelessWidget {
                     : theme.colorScheme.onSurface,
               ),
             ),
-            if (summary.pendingInMonth > 0)
-              Text(
-                '${formatMoney(summary.pendingInMonth)} a pagar',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
           ],
         ),
       ),

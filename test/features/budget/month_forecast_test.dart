@@ -140,9 +140,9 @@ void main() {
         expenses: [bill(id: 1, amount: 1200, walletId: 1)],
       )!;
 
-      expect(forecast.toReceive, 3200);
-      expect(forecast.toPay, 1200);
-      expect(forecast.endBalance, 2000);
+      expect(forecast.freeMoney.toReceive, 3200);
+      expect(forecast.freeMoney.toPay, 1200);
+      expect(forecast.freeMoney.endBalance, 2000);
     });
 
     test(
@@ -155,7 +155,7 @@ void main() {
           ],
         )!;
 
-        expect(forecast.toReceive, 3200);
+        expect(forecast.freeMoney.toReceive, 3200);
         expect(forecast.wallets.single.startBalance, 0);
       },
     );
@@ -170,10 +170,10 @@ void main() {
         receipts: [receiptOf(salary, september, status: ReceiptStatus.skipped)],
       )!;
 
-      expect(confirmed.toReceive, 0);
-      expect(confirmed.endBalance, 3200);
-      expect(skipped.toReceive, 0);
-      expect(skipped.endBalance, 0);
+      expect(confirmed.freeMoney.toReceive, 0);
+      expect(confirmed.freeMoney.endBalance, 3200);
+      expect(skipped.freeMoney.toReceive, 0);
+      expect(skipped.freeMoney.endBalance, 0);
     });
 
     test('um mês futuro soma o que falta deste mês e do seguinte', () {
@@ -193,9 +193,9 @@ void main() {
       )!;
 
       expect(forecast.month, october);
-      expect(forecast.toReceive, 3200);
-      expect(forecast.toPay, 2150);
-      expect(forecast.endBalance, 4250);
+      expect(forecast.freeMoney.toReceive, 3200);
+      expect(forecast.freeMoney.toPay, 2150);
+      expect(forecast.freeMoney.endBalance, 4250);
     });
 
     test('um mês passado não tem previsão', () {
@@ -215,8 +215,8 @@ void main() {
 
       expect(forecast.wallets.single.toPay, 400);
       expect(forecast.unassignedToPay, 100.5);
-      expect(forecast.toPay, 500.5);
-      expect(forecast.endBalance, 2699.5);
+      expect(forecast.freeMoney.toPay, 400);
+      expect(forecast.freeMoney.endBalance, 2699.5);
     });
 
     test('a fatura do cartão conta pela carteira que paga o cartão', () {
@@ -250,6 +250,36 @@ void main() {
       expect(forecast.unassignedToPay, 0);
     });
 
+    test(
+      'sem salário, a conta sem carteira deixa o dinheiro livre negativo',
+      () {
+        final forecast = forecastOf(
+          september,
+          wallets: [voucher],
+          receipts: [receiptOf(voucher, september)],
+          expenses: [bill(id: 1, amount: 300)],
+        )!;
+
+        expect(forecast.freeMoney.wallets, isEmpty);
+        expect(forecast.freeMoney.isEmpty, isFalse);
+        expect(forecast.freeMoney.endBalance, -300);
+        expect(forecast.benefits.endBalance, 600);
+      },
+    );
+
+    test('o benefício com mais contas do que saldo vai faltar', () {
+      final forecast = forecastOf(
+        september,
+        wallets: [salary, voucher],
+        receipts: [receiptOf(salary, september), receiptOf(voucher, september)],
+        expenses: [bill(id: 1, amount: 650, walletId: 2)],
+      )!;
+
+      expect(forecast.shortBenefits.single.wallet.name, 'Vale refeição');
+      expect(forecast.benefits.endBalance, -50);
+      expect(forecast.freeMoney.endBalance, 3200);
+    });
+
     test('o salário e o vale de setembro fecham a conta de hoje', () {
       final forecast = forecastOf(
         september,
@@ -262,8 +292,9 @@ void main() {
         expenses: [bill(id: 1, amount: 464.90, walletId: 1)],
       )!;
 
-      expect(forecast.toReceive, 0);
-      expect(forecast.endBalance, 547.80);
+      expect(forecast.freeMoney.toReceive, 0);
+      expect(forecast.freeMoney.endBalance, 385.10);
+      expect(forecast.benefits.endBalance, 162.70);
     });
   });
 }

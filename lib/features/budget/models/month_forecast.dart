@@ -4,6 +4,7 @@ import '../../expenses/models/expense_occurrence.dart';
 import '../../wallets/models/payout.dart';
 import '../../wallets/models/receipt.dart';
 import '../../wallets/models/wallet.dart';
+import '../../wallets/models/wallet_kind.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
 
@@ -21,6 +22,33 @@ class WalletForecast {
   final double toPay;
 
   double get endBalance => roundCents(startBalance + toReceive - toPay);
+}
+
+/// The wallets of one kind of money, forecast together. Free money and
+/// benefit money are two groups because a meal voucher never pays the rent:
+/// no screen adds them up.
+class ForecastGroup {
+  const ForecastGroup({required this.wallets, this.unassignedToPay = 0});
+
+  final List<WalletForecast> wallets;
+
+  /// Bills with no wallet behind them; only free money can pay those.
+  final double unassignedToPay;
+
+  double get toReceive => roundCents(
+    wallets.fold<double>(0, (total, wallet) => total + wallet.toReceive),
+  );
+
+  double get toPay => roundCents(
+    wallets.fold<double>(0, (total, wallet) => total + wallet.toPay),
+  );
+
+  double get endBalance => roundCents(
+    wallets.fold<double>(0, (total, wallet) => total + wallet.endBalance) -
+        unassignedToPay,
+  );
+
+  bool get isEmpty => wallets.isEmpty && unassignedToPay <= 0;
 }
 
 /// Where the money is headed from today to the end of [month]: what the
@@ -111,17 +139,18 @@ class MonthForecast {
   static bool _isActive(Payout payout, Wallet wallet, Month month) =>
       month >= payout.startMonth && month >= Month.fromDate(wallet.createdAt);
 
-  double get toReceive => roundCents(
-    wallets.fold<double>(0, (total, wallet) => total + wallet.toReceive),
+  ForecastGroup get freeMoney => ForecastGroup(
+    wallets: _ofKind(WalletKind.salary),
+    unassignedToPay: unassignedToPay,
   );
 
-  double get toPay => roundCents(
-    wallets.fold<double>(0, (total, wallet) => total + wallet.toPay) +
-        unassignedToPay,
-  );
+  ForecastGroup get benefits =>
+      ForecastGroup(wallets: _ofKind(WalletKind.benefit));
 
-  double get endBalance => roundCents(
-    wallets.fold<double>(0, (total, wallet) => total + wallet.endBalance) -
-        unassignedToPay,
-  );
+  /// Benefits whose planned bills are more than they will hold.
+  List<WalletForecast> get shortBenefits =>
+      benefits.wallets.where((wallet) => wallet.endBalance < 0).toList();
+
+  List<WalletForecast> _ofKind(WalletKind kind) =>
+      wallets.where((forecast) => forecast.wallet.kind == kind).toList();
 }

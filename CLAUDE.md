@@ -47,8 +47,14 @@ leads to Carteiras. **Previsão até o fim de <mês>** (`ForecastCard`) renders 
 a `MonthForecast` built in `features/budget` only for the current month or a later one: per wallet,
 today's balance plus what is still expected in (`predicted` receipts, overdue or not, and active
 payouts with no receipt yet) minus the `remaining` of the occurrences planned on it, over every month
-from the current one to the one on screen; bills with no wallet go to `unassignedToPay`. It is
-outlined and coloured `MoneyColors.predicted`, and holds no real number. **<Mês> até agora** (current
+from the current one to the one on screen; bills with no wallet go to `unassignedToPay`. The
+wallets are split by `WalletKind` into two `ForecastGroup`s — `freeMoney` (salaries, which also carry
+`unassignedToPay`) and `benefits` — and **the two groups are never added up on screen**: a meal
+voucher does not pay the rent. The headline is "Dinheiro livre vai sobrar/faltar R$ X" ("Nos
+benefícios vai sobrar" when there is no salary), the line under it "Nos benefícios: R$ X para usar"
+or "No VR vai faltar R$ X" (`shortBenefits`), and "Como chegamos nisso" opens one block per group. It
+is outlined and coloured `MoneyColors.predicted`, and holds no real number. The Resumo's wallet strip
+shows balances only — no "a pagar" beside them. **<Mês> até agora** (current
 month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou` and `Saiu`,
 confirmed money only. `MonthSummary` carries no planned income; the payout calendar's total lives
 on `Wallet.monthlyIncome` and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
