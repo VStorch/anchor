@@ -55,6 +55,42 @@ void main() {
         payments: payments,
       );
 
+  test('a parcelada nova não supõe o total de parcelas', () {
+    final form =
+        ExpenseFormViewModel(repository: repository, referenceMonth: august)
+          ..setName('Tênis')
+          ..setAmount(100)
+          ..setDueDay(10)
+          ..setType(ExpenseType.installment);
+
+    expect(form.totalInstallments, isNull);
+    expect(form.needsInstallmentCount, isTrue);
+    expect(form.isValid, isFalse);
+
+    form.setTotalInstallments(3);
+    expect(form.isValid, isTrue);
+    expect(form.installmentPlan, 'Faltam 3 parcelas até outubro de 2026');
+  });
+
+  test('uma compra nova no cartão vem à vista e se chama compra', () {
+    final card = CreditCard(
+      id: 7,
+      name: 'Nubank',
+      closingDay: 3,
+      dueDay: 10,
+      createdAt: DateTime(2026, 8),
+    );
+    final form = ExpenseFormViewModel(
+      repository: repository,
+      referenceMonth: august,
+      cards: [card],
+      card: card,
+    );
+
+    expect(form.type, ExpenseType.single);
+    expect(form.isNewPurchase, isTrue);
+  });
+
   group('prévia da parcela', () {
     ExpenseFormViewModel installment({required Month reference}) =>
         ExpenseFormViewModel(

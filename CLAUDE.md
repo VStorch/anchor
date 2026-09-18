@@ -143,6 +143,11 @@ An **expense** is a rule, not a row per month. `Expense.occurrenceIn(Month)` pro
 | `installment` | Parcelada | `settledInstallments + monthsSince(startMonth) + 1`, while ≤ `totalInstallments` |
 | `single` | Só uma vez | only `startMonth` |
 
+A new installment expense assumes no count: "Total de parcelas" is a number field, empty until the
+user types it, and the save button reads "Informe o total de parcelas" meanwhile. A new expense on a
+card is a purchase: it starts as "Só uma vez", the form is titled "Nova compra no Nubank" and saves
+with "Salvar compra" (`ExpenseFormViewModel.isNewPurchase`).
+
 `settledInstallments` is what makes "12x, 5 already paid" work: `startMonth` is the month of the *next*
 unpaid parcel, so the projection resumes at number 6 and stops after 12. The form names that month
 by type ("Começa em", "Próxima parcela", "Vence em") and previews the parcel the month on screen gets

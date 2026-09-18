@@ -1234,7 +1234,10 @@ Future<void> _createInstallmentExpense(WidgetTester tester) async {
   await tester.tap(find.text('Nova despesa'));
   await tester.pumpAndSettle();
 
-  await tester.enterText(find.byType(TextFormField), 'Geladeira');
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Nome da despesa'),
+    'Geladeira',
+  );
   await tester.pumpAndSettle();
 
   await tester.tap(find.byType(DropdownButtonFormField<ExpenseType>));
@@ -1243,6 +1246,12 @@ Future<void> _createInstallmentExpense(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   await _typeMoney(tester, '250');
+
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Total de parcelas'),
+    '12',
+  );
+  await tester.pumpAndSettle();
 
   final settledStepper = find.ancestor(
     of: find.text('Parcelas já pagas'),

@@ -37,7 +37,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
        _endMonth = expense?.type == ExpenseType.recurring
            ? expense?.endMonth
            : null,
-       _totalInstallments = expense?.totalInstallments ?? 12,
+       _totalInstallments = expense?.totalInstallments,
        _settledInstallments = expense?.settledInstallments ?? 0,
        _walletId = expense == null ? likelyWalletId : expense.walletId,
        _cardId = expense?.cardId ?? card?.id {
@@ -58,7 +58,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   int? _dueDay;
   Month _startMonth;
   Month? _endMonth;
-  int _totalInstallments;
+  int? _totalInstallments;
   int _settledInstallments;
   int? _walletId;
   int? _cardId;
@@ -110,7 +110,8 @@ class ExpenseFormViewModel extends ChangeNotifier {
       _endMonth != null &&
       _endMonth! < startMonth;
 
-  int get totalInstallments => _totalInstallments;
+  /// Null until the user says how many: no count is assumed for them.
+  int? get totalInstallments => _totalInstallments;
 
   int get settledInstallments => _settledInstallments;
 
@@ -128,7 +129,8 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   bool get isInstallment => _type == ExpenseType.installment;
 
-  int get remainingInstallments => _totalInstallments - _settledInstallments;
+  int get remainingInstallments =>
+      (_totalInstallments ?? 0) - _settledInstallments;
 
   double get totalCommitted =>
       isInstallment ? _amount * remainingInstallments : _amount;
@@ -157,7 +159,8 @@ class ExpenseFormViewModel extends ChangeNotifier {
   }
 
   String? get installmentPlan => isInstallment
-      ? 'Faltam $remainingInstallments parcelas até ${lastMonth.label}'
+      ? 'Faltam $remainingInstallments parcelas até '
+            '${lastMonth.label.toLowerCase()}'
       : null;
 
   /// Which parcel the month on screen gets, or when the first one to pay is
@@ -219,18 +222,26 @@ class ExpenseFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setTotalInstallments(int value) {
-    _totalInstallments = value.clamp(1, 480);
-    if (_settledInstallments >= _totalInstallments) {
-      _settledInstallments = _totalInstallments - 1;
+  void setTotalInstallments(int? value) {
+    final total = value?.clamp(1, 480);
+    _totalInstallments = total;
+    if (total != null && _settledInstallments >= total) {
+      _settledInstallments = total - 1;
     }
     notifyListeners();
   }
 
   void setSettledInstallments(int value) {
-    _settledInstallments = value.clamp(0, _totalInstallments - 1);
+    final total = _totalInstallments;
+    _settledInstallments = total == null ? 0 : value.clamp(0, total - 1);
     notifyListeners();
   }
+
+  /// A card purchase started from the card itself, not an edit.
+  bool get isNewPurchase => !isEditing && card != null;
+
+  /// What the disabled save button asks for.
+  bool get needsInstallmentCount => isInstallment && _totalInstallments == null;
 
   void setSource(PaymentSource value) {
     _walletId = value.walletId;

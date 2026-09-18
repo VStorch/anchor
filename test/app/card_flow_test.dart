@@ -222,12 +222,13 @@ void main() {
 
     expect(find.text('Dia do vencimento'), findsNothing);
 
+    expect(find.text('Nova compra no Nubank'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Cadastrar despesa'),
+      find.text('Salvar compra'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    await tester.tap(find.text('Cadastrar despesa'));
+    await tester.tap(find.text('Salvar compra'));
     await tester.pumpAndSettle();
 
     final saved = (await ExpenseRepository(
@@ -289,12 +290,14 @@ void main() {
       '50',
     );
     await tester.pumpAndSettle();
+    expect(find.text('Nova compra no Nubank'), findsOneWidget);
+    expect(find.text(ExpenseType.single.label), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Cadastrar despesa'),
+      find.text('Salvar compra'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    await tester.tap(find.text('Cadastrar despesa'));
+    await tester.tap(find.text('Salvar compra'));
     await tester.pumpAndSettle();
 
     final saved = (await ExpenseRepository(
@@ -306,6 +309,7 @@ void main() {
       DataChanges(),
     ).fetchCards()).single;
     expect(saved.startMonth, card.invoiceMonthFor(today));
+    expect(saved.type, ExpenseType.single);
     expect(
       find.descendant(of: tile, matching: find.text(formatMoney(500))),
       findsOneWidget,

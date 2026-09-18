@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -114,7 +115,13 @@ class _ExpenseFormView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(viewModel.isEditing ? 'Editar despesa' : 'Nova despesa'),
+        title: Text(
+          viewModel.isEditing
+              ? 'Editar despesa'
+              : viewModel.isNewPurchase
+              ? 'Nova compra no ${viewModel.card!.name}'
+              : 'Nova despesa',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -151,10 +158,19 @@ class _ExpenseFormView extends StatelessWidget {
           if (viewModel.isInstallment) ...[
             const SizedBox(height: 24),
             const SectionHeader(title: 'Parcelamento'),
-            _InstallmentStepper(
-              label: 'Total de parcelas',
-              value: viewModel.totalInstallments,
-              onChanged: viewModel.setTotalInstallments,
+            TextFormField(
+              initialValue: viewModel.totalInstallments?.toString() ?? '',
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(3),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Total de parcelas',
+                hintText: 'Em quantas vezes',
+              ),
+              onChanged: (text) =>
+                  viewModel.setTotalInstallments(int.tryParse(text)),
             ),
             const SizedBox(height: 12),
             _InstallmentStepper(
@@ -222,10 +238,14 @@ class _ExpenseFormView extends StatelessWidget {
             child: Text(
               viewModel.needsDueDay
                   ? 'Escolha o dia do vencimento'
+                  : viewModel.needsInstallmentCount
+                  ? 'Informe o total de parcelas'
                   : viewModel.leavesOpenedInvoice
                   ? 'Adicionar à fatura de ${_monthName(viewModel.invoiceMonth!)}'
                   : viewModel.isEditing
                   ? 'Salvar alterações'
+                  : viewModel.isNewPurchase
+                  ? 'Salvar compra'
                   : 'Cadastrar despesa',
             ),
           ),
