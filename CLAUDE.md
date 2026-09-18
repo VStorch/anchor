@@ -75,9 +75,13 @@ A salary may set aside a **reserve for everyday spending** (`wallets.monthly_res
 null by default and never read for a benefit, whose balance already is what is left for food). It is
 `WalletForecast.reserve`, subtracted from `endBalance` and kept as `reserveShares`, one per month so
 the screen can say where it comes from: in the current month
-`max(0, min(reserve − everyday spending of the month, reserve × daysLeft / daysInMonth))` — a reserve
-set on the 16th only takes the days still ahead (`daysLeft` counts today) — plus the whole reserve
-for every later month up to the one on screen. Everyday spending is `EverydaySpending.collect`: the wallet's
+`max(0, min(reserve − everyday spending of the month, reserve × daysLeft / daysInMonth − spent today))`
+— a reserve set on the 16th only takes the days still ahead (`daysLeft` counts today), and a spending
+launched today comes out of today's part instead of being counted on top of it — plus the whole
+reserve for every later month up to the one on screen. The explanation says where the current share
+comes from with `daysLeftInCurrentMonth`/`daysInCurrentMonth` ("Reserva do dia a dia · 13 dias de
+30", or "R$ 235 em setembro (13 dias de 30) + R$ 600 em outubro"), and `ForecastGroup.spentToday`
+adds "(hoje já saiu R$ 25,00)" to the salary's part of the daily line. Everyday spending is `EverydaySpending.collect`: the wallet's
 outflows and the one-off (`single`) card purchases whose card is paid by that wallet, on their
 `purchased_at` day — a purchase in parcels was planned, so it stays a bill. While no salary has one,
 `ForecastGroup.lacksReserve` shows "Reservar gasto do dia a dia" under the headline; the

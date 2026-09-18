@@ -1,3 +1,4 @@
+import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/budget/models/everyday_spending.dart';
 import 'package:anchor/features/budget/models/month_forecast.dart';
@@ -371,6 +372,41 @@ void main() {
 
         expect(partly.freeMoney.reserve, 320);
         expect(beyond.freeMoney.reserve, 0);
+      });
+
+      test('o Uber de hoje sai da parte de hoje da reserva', () {
+        final day18 = DateTime(2026, 9, 18, 20);
+        final mariana = salary.copyWith(monthlyReserve: 600);
+        Outflow spent(double amount, DateTime at) => Outflow(
+          walletId: 1,
+          description: 'Gasto',
+          amount: amount,
+          spentAt: at,
+        );
+
+        final before = forecastOf(
+          september,
+          now: day18,
+          wallets: [mariana],
+          outflows: [spent(30, DateTime(2026, 9, 16, 12))],
+        )!;
+        final after = forecastOf(
+          september,
+          now: day18,
+          wallets: [mariana],
+          outflows: [
+            spent(30, DateTime(2026, 9, 16, 12)),
+            spent(25, DateTime(2026, 9, 18, 19)),
+          ],
+        )!;
+
+        expect(before.freeMoney.reserve, 260);
+        expect(after.freeMoney.reserve, 235);
+        expect(after.freeMoney.spentToday, 25);
+        expect(before.freeMoney.spentToday, 0);
+        expect(after.freeMoney.daysLeftInCurrentMonth, 13);
+        expect(after.freeMoney.daysInCurrentMonth, 30);
+        expect(after.freeMoney.dailyAllowance, roundCents(235 / 13));
       });
 
       test('o gasto não mexe na parte proporcional enquanto cabe nela', () {

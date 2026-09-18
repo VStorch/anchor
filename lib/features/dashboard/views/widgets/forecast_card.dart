@@ -160,16 +160,21 @@ class ForecastCard extends StatelessWidget {
     );
   }
 
+  /// " (hoje já saiu R$ 25,00)", so a spending launched today is seen
+  /// inside the day's figure rather than on top of it.
+  static String _spentTodayNote(ForecastGroup group) => group.spentToday > 0
+      ? ' (hoje já saiu ${formatMoney(group.spentToday)})'
+      : '';
+
   /// "Por dia até 30/09: R$ 20,00 do salário · R$ 7,35 no VR"; only for
   /// the current month, where "today" means something.
   String? _dailyLine() {
     final parts = [
       if (forecast.freeMoney.dailyAllowance case final free?)
-        forecast.freeMoney.reserveUsedUp
-            ? 'Reserva de '
-                  '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} '
-                  'já usada'
-            : '${formatMoney(free)} do salário',
+        '${forecast.freeMoney.reserveUsedUp ? 'Reserva de '
+                      '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} '
+                      'já usada' : '${formatMoney(free)} do salário'}'
+            '${_spentTodayNote(forecast.freeMoney)}',
       if (forecast.benefits.dailyAllowance case final benefit?)
         '${formatMoney(benefit)} ${_benefitPlace()}',
     ];
@@ -259,8 +264,8 @@ class _GroupBlock extends StatelessWidget {
         if (group.hasReserve)
           _Line(
             label: shares.length > 1
-                ? 'Reserva do dia a dia · ${_sharesLabel(shares)}'
-                : 'Reserva do dia a dia',
+                ? 'Reserva do dia a dia · ${_sharesLabel(group, shares)}'
+                : 'Reserva do dia a dia · ${_daysLabel(group)}',
             value: '− ${formatMoney(group.reserve)}',
           ),
         if (group.unassignedToPay > 0)
@@ -286,14 +291,18 @@ class _GroupBlock extends StatelessWidget {
     );
   }
 
-  /// "R$ 300,00 em setembro + R$ 600,00 em outubro".
-  static String _sharesLabel(List<ReserveShare> shares) => shares
-      .map(
-        (share) =>
-            '${formatMoney(share.amount)} em '
-            '${DateFormat.MMMM('pt_BR').format(share.month.firstDay)}',
-      )
-      .join(' + ');
+  /// "13 dias de 30": where this month's share of the reserve comes from.
+  static String _daysLabel(ForecastGroup group) =>
+      '${group.daysLeftInCurrentMonth} dias de ${group.daysInCurrentMonth}';
+
+  /// "R$ 235,00 em setembro (13 dias de 30) + R$ 600,00 em outubro".
+  static String _sharesLabel(ForecastGroup group, List<ReserveShare> shares) =>
+      [
+        for (final (index, share) in shares.indexed)
+          '${formatMoney(share.amount)} em '
+              '${DateFormat.MMMM('pt_BR').format(share.month.firstDay)}'
+              '${index == 0 ? ' (${_daysLabel(group)})' : ''}',
+      ].join(' + ');
 }
 
 class _Line extends StatelessWidget {

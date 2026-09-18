@@ -1,3 +1,4 @@
+import '../../../core/utils/moment.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../expenses/models/expense_occurrence.dart';
@@ -24,12 +25,16 @@ class WalletForecast {
     required this.toReceive,
     required this.toPay,
     this.reserveShares = const <ReserveShare>[],
+    this.spentToday = 0,
   });
 
   final Wallet wallet;
   final double startBalance;
   final double toReceive;
   final double toPay;
+
+  /// Everyday spending dated today, which today's part of the reserve pays.
+  final double spentToday;
 
   /// The everyday spending set aside, month by month, up to the month on
   /// screen: what is left of this month's, then each later month whole.
@@ -51,6 +56,8 @@ class ForecastGroup {
     required this.wallets,
     this.unassignedToPay = 0,
     this.daysLeft,
+    this.daysLeftInCurrentMonth = 0,
+    this.daysInCurrentMonth = 0,
   });
 
   final List<WalletForecast> wallets;
@@ -61,6 +68,16 @@ class ForecastGroup {
   /// Days from today to the end of the month, today included; null when the
   /// forecast is of a later month.
   final int? daysLeft;
+
+  /// Today to the end of the current month, today included, and its length:
+  /// the "13 dias de 30" that explain this month's share of the reserve,
+  /// whatever month is on screen.
+  final int daysLeftInCurrentMonth;
+  final int daysInCurrentMonth;
+
+  double get spentToday => roundCents(
+    wallets.fold<double>(0, (total, wallet) => total + wallet.spentToday),
+  );
 
   /// What the group's wallets hold today, where the forecast starts.
   double get startBalance => roundCents(
@@ -141,6 +158,8 @@ class MonthForecast {
     required this.wallets,
     required this.unassignedToPay,
     this.daysLeft,
+    this.daysLeftInCurrentMonth = 0,
+    this.daysInCurrentMonth = 0,
   });
 
   final Month month;
@@ -149,6 +168,8 @@ class MonthForecast {
 
   /// Days left in the current month, today included; null for a later one.
   final int? daysLeft;
+  final int daysLeftInCurrentMonth;
+  final int daysInCurrentMonth;
 
   static MonthForecast? build({
     required Month month,
@@ -172,6 +193,8 @@ class MonthForecast {
     return MonthForecast(
       month: month,
       daysLeft: month == currentMonth ? daysLeft : null,
+      daysLeftInCurrentMonth: daysLeft,
+      daysInCurrentMonth: currentMonth.lengthInDays,
       wallets: [
         for (final summary in walletSummaries)
           WalletForecast(
@@ -193,10 +216,11 @@ class MonthForecast {
             reserveShares: _reserveOf(
               summary.wallet,
               month: month,
-              currentMonth: currentMonth,
+              today: today,
               daysLeft: daysLeft,
               spending: spending,
             ),
+            spentToday: _spentOn(summary.wallet, today, spending),
           ),
       ],
       unassignedToPay: occurrences
@@ -232,14 +256,15 @@ class MonthForecast {
   }
 
   /// The current month keeps its share of the reserve for the days still
-  /// ahead — a reserve set on the 16th does not take the whole month — and
-  /// never more than what the month's everyday spending left of it. Every
+  /// ahead, today included — a reserve set on the 16th does not take the whole
+  /// month — less what was already spent today, which today's part pays for,
+  /// and never more than what the month's everyday spending left of it. Every
   /// later month up to [month] takes the reserve whole. Only a salary sets
   /// money aside: a benefit's balance already is what is left for food.
   static List<ReserveShare> _reserveOf(
     Wallet wallet, {
     required Month month,
-    required Month currentMonth,
+    required DateTime today,
     required int daysLeft,
     required List<EverydaySpending> spending,
   }) {
@@ -248,12 +273,15 @@ class MonthForecast {
       return const <ReserveShare>[];
     }
 
-    final spent = spending
+    final currentMonth = Month.fromDate(today);
+    final spentThisMonth = spending
         .where((item) => item.walletId == wallet.id)
         .where((item) => item.month == currentMonth)
         .fold<double>(0, (total, item) => total + item.amount);
-    final unspent = reserve - spent;
-    final ahead = reserve * daysLeft / currentMonth.lengthInDays;
+    final unspent = reserve - spentThisMonth;
+    final ahead =
+        reserve * daysLeft / currentMonth.lengthInDays -
+        _spentOn(wallet, today, spending);
     final current = unspent < ahead ? unspent : ahead;
 
     return [
@@ -266,6 +294,17 @@ class MonthForecast {
     ];
   }
 
+  static double _spentOn(
+    Wallet wallet,
+    DateTime day,
+    List<EverydaySpending> spending,
+  ) => roundCents(
+    spending
+        .where((item) => item.walletId == wallet.id)
+        .where((item) => isSameDay(item.at, day))
+        .fold<double>(0, (total, item) => total + item.amount),
+  );
+
   static bool _isActive(Payout payout, Wallet wallet, Month month) =>
       month >= payout.startMonth && month >= Month.fromDate(wallet.createdAt);
 
@@ -273,10 +312,16 @@ class MonthForecast {
     wallets: _ofKind(WalletKind.salary),
     unassignedToPay: unassignedToPay,
     daysLeft: daysLeft,
+    daysLeftInCurrentMonth: daysLeftInCurrentMonth,
+    daysInCurrentMonth: daysInCurrentMonth,
   );
 
-  ForecastGroup get benefits =>
-      ForecastGroup(wallets: _ofKind(WalletKind.benefit), daysLeft: daysLeft);
+  ForecastGroup get benefits => ForecastGroup(
+    wallets: _ofKind(WalletKind.benefit),
+    daysLeft: daysLeft,
+    daysLeftInCurrentMonth: daysLeftInCurrentMonth,
+    daysInCurrentMonth: daysInCurrentMonth,
+  );
 
   /// Benefits whose planned bills are more than they will hold.
   List<WalletForecast> get shortBenefits =>

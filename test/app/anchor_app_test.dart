@@ -510,7 +510,7 @@ void main() {
     await tester.pumpAndSettle();
     for (final line in [
       'Você tem hoje',
-      'Reserva do dia a dia',
+      'Reserva do dia a dia · $daysLeft dias de ${month.lengthInDays}',
       'Vai sobrar',
     ]) {
       expect(

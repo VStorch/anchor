@@ -14,9 +14,14 @@ void main() {
 
   setUpAll(() => initializeDateFormatting('pt_BR'));
 
-  MonthForecast forecastWith({required double reserveLeft}) => MonthForecast(
+  MonthForecast forecastWith({
+    required double reserveLeft,
+    double spentToday = 0,
+  }) => MonthForecast(
     month: september,
     daysLeft: 13,
+    daysLeftInCurrentMonth: 13,
+    daysInCurrentMonth: 30,
     unassignedToPay: 0,
     wallets: [
       WalletForecast(
@@ -32,6 +37,7 @@ void main() {
         toReceive: 0,
         toPay: 200,
         reserveShares: [ReserveShare(month: september, amount: reserveLeft)],
+        spentToday: spentToday,
       ),
     ],
   );
@@ -71,4 +77,23 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'o gasto de hoje aparece dentro do dia, e a reserva diz os dias',
+    (tester) async {
+      await pump(tester, forecastWith(reserveLeft: 235, spentToday: 25));
+
+      expect(
+        find.text(
+          'Por dia até 30/09: ${formatMoney(18.08)} do salário '
+          '(hoje já saiu ${formatMoney(25)})',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Como chegamos nisso'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reserva do dia a dia · 13 dias de 30'), findsOneWidget);
+    },
+  );
 }
