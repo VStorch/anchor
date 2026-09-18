@@ -416,6 +416,10 @@ void main() {
   });
 
   testWidgets('reservar o gasto do dia a dia muda a previsão', (tester) async {
+    final month = Month.current();
+    final daysLeft = month.lengthInDays - DateTime.now().day + 1;
+    final reserveShare = roundCents(500 * daysLeft / month.lengthInDays);
+
     await seedSalaryAndExpense();
     await pumpApp(tester);
 
@@ -453,7 +457,9 @@ void main() {
     expect(
       find.descendant(
         of: forecast,
-        matching: find.text('Dinheiro livre vai sobrar ${formatMoney(2050)}'),
+        matching: find.text(
+          'Dinheiro livre vai sobrar ${formatMoney(2550 - reserveShare)}',
+        ),
       ),
       findsOneWidget,
     );

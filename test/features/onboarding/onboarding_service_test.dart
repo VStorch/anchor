@@ -162,8 +162,8 @@ void main() {
     expect(saved.map((wallet) => wallet.monthlyReserve), [500, null]);
 
     final forecast = (await budget.loadSnapshot(september, now: now)).forecast!;
-    expect(forecast.freeMoney.reserve, 500);
-    expect(forecast.freeMoney.endBalance, 350);
+    expect(forecast.freeMoney.reserve, 266.67);
+    expect(forecast.freeMoney.endBalance, 583.33);
   });
 
   test('a parcela 4 de 10 projeta da 4 à 10', () async {

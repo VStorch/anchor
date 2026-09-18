@@ -62,9 +62,11 @@ real one in the same block.**
 
 A salary may set aside a **reserve for everyday spending** (`wallets.monthly_reserve`, schema v13,
 null by default and never read for a benefit, whose balance already is what is left for food). It is
-`WalletForecast.reserve`, subtracted from `endBalance`: in the current month
-`max(0, reserve − that wallet's everyday spending of the month)` plus the whole reserve for every
-later month up to the one on screen. Everyday spending is `EverydaySpending.collect`: the wallet's
+`WalletForecast.reserve`, subtracted from `endBalance` and kept as `reserveShares`, one per month so
+the screen can say where it comes from: in the current month
+`max(0, min(reserve − everyday spending of the month, reserve × daysLeft / daysInMonth))` — a reserve
+set on the 16th only takes the days still ahead (`daysLeft` counts today) — plus the whole reserve
+for every later month up to the one on screen. Everyday spending is `EverydaySpending.collect`: the wallet's
 outflows and the one-off (`single`) card purchases whose card is paid by that wallet, on their
 `purchased_at` day — a purchase in parcels was planned, so it stays a bill. While no salary has one,
 `ForecastGroup.lacksReserve` shows "Reservar gasto do dia a dia" under the headline; the
@@ -74,6 +76,12 @@ outflows and the one-off (`single`) card purchases whose card is paid by that wa
 current one with any everyday spending, months before the wallet was created included. The wallet form and the onboarding's "Quanto tem hoje?"
 step ask it too, both optional. The wallet form carries the stored value, so editing a wallet never
 wipes it.
+
+`ForecastGroup.dailyAllowance` answers "how much can I spend per day": only for the current month
+(`MonthForecast.daysLeft` is null for a later one), it takes what the month leaves before the reserve
+(`endBalance + reserve`, bills with no wallet included for free money) and, when the group has a
+reserve, caps it at what is left of the reserve — the plan is to live on the reserve and keep the
+leftover — then divides by `daysLeft`; never below zero.
 
 The two real blocks reconcile with the balance instead of contradicting it. `TodayCard` opens
 "De onde vem esse valor" and reads each wallet's balance as

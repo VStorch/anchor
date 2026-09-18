@@ -292,9 +292,13 @@ void main() {
     group('reserva do dia a dia', () {
       final reserved = salary.copyWith(monthlyReserve: 500);
 
-      test('setembro desconta a reserva do dinheiro livre', () {
+      /// On the 1st the whole month is ahead, so the share is the reserve.
+      final firstDay = DateTime(2026, 9, 1, 10);
+
+      test('no dia 1 setembro desconta a reserva inteira', () {
         final forecast = forecastOf(
           september,
+          now: firstDay,
           wallets: [reserved, voucher],
           receipts: [
             receiptOf(reserved, september),
@@ -310,7 +314,21 @@ void main() {
         expect(forecast.benefits.endBalance, 600);
       });
 
-      test('outubro soma a reserva de cada mês até a tela', () {
+      test('no meio do mês só reserva os dias que faltam', () {
+        final mariana = salary.copyWith(monthlyReserve: 600);
+        final forecast = forecastOf(
+          september,
+          now: DateTime(2026, 9, 16, 23),
+          wallets: [mariana],
+          receipts: [receiptOf(mariana, september)],
+        )!;
+
+        expect(forecast.daysLeft, 15);
+        expect(forecast.freeMoney.reserve, 300);
+        expect(forecast.freeMoney.endBalance, 2900);
+      });
+
+      test('outubro soma a parte de setembro e o mês cheio, mês a mês', () {
         final forecast = forecastOf(
           october,
           wallets: [reserved],
@@ -318,8 +336,16 @@ void main() {
           expenses: [bill(id: 1, amount: 1200, walletId: 1)],
         )!;
 
-        expect(forecast.freeMoney.reserve, 1000);
-        expect(forecast.freeMoney.endBalance, 3200 + 3200 - 2400 - 1000);
+        expect(
+          forecast.freeMoney.reserveShares.map(
+            (share) => (share.month, share.amount),
+          ),
+          [(september, 300.0), (october, 500.0)],
+        );
+        expect(forecast.freeMoney.reserve, 800);
+        expect(forecast.freeMoney.endBalance, 3200 + 3200 - 2400 - 800);
+        expect(forecast.daysLeft, isNull);
+        expect(forecast.freeMoney.dailyAllowance, isNull);
       });
 
       test('os gastos do mês consomem a reserva até zerar', () {
@@ -327,22 +353,41 @@ void main() {
           walletId: 1,
           description: 'Mercado',
           amount: amount,
-          spentAt: DateTime(2026, 9, 10),
+          spentAt: DateTime(2026, 9, 1, 9),
         );
 
         final partly = forecastOf(
           september,
+          now: firstDay,
           wallets: [reserved],
           outflows: [spent(180)],
         )!;
         final beyond = forecastOf(
           september,
+          now: firstDay,
           wallets: [reserved],
           outflows: [spent(420), spent(200)],
         )!;
 
         expect(partly.freeMoney.reserve, 320);
         expect(beyond.freeMoney.reserve, 0);
+      });
+
+      test('o gasto não mexe na parte proporcional enquanto cabe nela', () {
+        final forecast = forecastOf(
+          september,
+          wallets: [reserved],
+          outflows: [
+            Outflow(
+              walletId: 1,
+              description: 'Lanche',
+              amount: 150,
+              spentAt: DateTime(2026, 9, 12),
+            ),
+          ],
+        )!;
+
+        expect(forecast.freeMoney.reserve, 300);
       });
 
       group('compra no cartão pago pelo salário', () {
@@ -369,13 +414,14 @@ void main() {
           totalInstallments: type == ExpenseType.installment ? 3 : null,
           walletId: 1,
           cardId: 7,
-          purchasedAt: purchasedAt ?? DateTime(2026, 9, 12),
+          purchasedAt: purchasedAt ?? DateTime(2026, 9, 1, 9),
           createdAt: DateTime(2026, 9),
         );
 
         test('a compra à vista deste mês consome a reserva', () {
           final forecast = forecastOf(
             september,
+            now: firstDay,
             wallets: [reserved],
             cards: [card],
             expenses: [purchase(id: 1)],
@@ -387,6 +433,7 @@ void main() {
         test('a parcelada e a de outro mês não consomem', () {
           final forecast = forecastOf(
             september,
+            now: firstDay,
             wallets: [reserved],
             cards: [card],
             expenses: [
@@ -415,6 +462,70 @@ void main() {
 
         expect(forecast.benefits.reserve, 0);
         expect(forecast.benefits.endBalance, 600);
+      });
+    });
+
+    group('quanto dá para gastar por dia', () {
+      final day16 = DateTime(2026, 9, 16, 23);
+
+      test('com reserva, o dia é a parte da reserva que resta', () {
+        final mariana = salary.copyWith(monthlyReserve: 600);
+        final forecast = forecastOf(
+          september,
+          now: day16,
+          wallets: [mariana, voucher],
+          receipts: [
+            receiptOf(mariana, september),
+            receiptOf(voucher, september),
+          ],
+          checks: [
+            BalanceCheck(walletId: 1, amount: 900, checkedAt: day16),
+            BalanceCheck(walletId: 2, amount: 110.30, checkedAt: day16),
+          ],
+        )!;
+
+        expect(forecast.freeMoney.dailyAllowance, 20);
+        expect(forecast.benefits.dailyAllowance, 7.35);
+      });
+
+      test('sem reserva, o dia divide tudo o que o mês deixa', () {
+        final forecast = forecastOf(
+          september,
+          now: day16,
+          receipts: [receiptOf(salary, september)],
+          checks: [BalanceCheck(walletId: 1, amount: 600, checkedAt: day16)],
+          expenses: [
+            bill(id: 1, amount: 150, walletId: 1),
+            bill(id: 2, amount: 0.5),
+          ],
+        )!;
+
+        expect(forecast.freeMoney.dailyAllowance, 29.97);
+      });
+
+      test('a reserva que não cabe no que sobra divide só o que sobra', () {
+        final forecast = forecastOf(
+          september,
+          now: day16,
+          wallets: [salary.copyWith(monthlyReserve: 3000)],
+          receipts: [receiptOf(salary, september)],
+          checks: [BalanceCheck(walletId: 1, amount: 300, checkedAt: day16)],
+        )!;
+
+        expect(forecast.freeMoney.dailyAllowance, 20);
+      });
+
+      test('no vermelho não sobra nada por dia', () {
+        final forecast = forecastOf(
+          september,
+          now: day16,
+          receipts: [receiptOf(salary, september)],
+          checks: [BalanceCheck(walletId: 1, amount: 100, checkedAt: day16)],
+          expenses: [bill(id: 1, amount: 400, walletId: 1)],
+        )!;
+
+        expect(forecast.freeMoney.endBalance, -300);
+        expect(forecast.freeMoney.dailyAllowance, 0);
       });
     });
 
