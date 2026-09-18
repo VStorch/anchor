@@ -6,7 +6,12 @@ final NumberFormat _currency = NumberFormat.currency(
   symbol: r'R$',
 );
 
+final NumberFormat _amount = NumberFormat('#,##0.00', 'pt_BR');
+
 String formatMoney(double value) => _currency.format(value);
+
+/// "1.100,00": for columns whose header already says they are in reais.
+String formatAmount(double value) => _amount.format(value);
 
 double parseMoney(String text) {
   final negative = text.trimLeft().startsWith('-');

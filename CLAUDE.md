@@ -454,8 +454,9 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   changes (month, filter, layout, a reload — an empty state has nothing to scroll back up), shrinks
   to its icon once the list leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
   collapsed button has no label. The month table keeps "Total" as a fixed footer inside the same
-  horizontal scroll, and its cells are typed with no "R$" (`MoneyInputFormatter(symbol: false)`,
-  headers "Valor (R$)"/"Pago (R$)").
+  horizontal scroll. Its headers say "Valor (R$)", "Pago (R$)" and "Falta (R$)", so no cell repeats
+  the symbol: values and the Total go through `formatAmount`, and a cell is typed with
+  `MoneyInputFormatter(symbol: false)`.
 - Every day, date or month picker calls `releaseFocus()` (`core/widgets/dismiss_focus.dart`) before
   opening: a closing route gives the focus back to the field focused before it, and the keyboard
   would cover the answer. `DayButton` takes a `placeholder` that names which day it asks ("Dia em que

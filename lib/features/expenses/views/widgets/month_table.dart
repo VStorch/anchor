@@ -131,7 +131,7 @@ class _MonthTableState extends State<MonthTable> {
         _pad(Text('Despesa', style: style)),
         _pad(Text('Valor (R\$)', style: style, textAlign: TextAlign.end)),
         _pad(Text('Pago (R\$)', style: style, textAlign: TextAlign.end)),
-        _pad(Text('Falta', style: style, textAlign: TextAlign.end)),
+        _pad(Text('Falta (R\$)', style: style, textAlign: TextAlign.end)),
       ],
     );
   }
@@ -184,7 +184,9 @@ class _MonthTableState extends State<MonthTable> {
         ),
         _pad(
           Text(
-            occurrence.remaining <= 0 ? '—' : formatMoney(occurrence.remaining),
+            occurrence.remaining <= 0
+                ? '—'
+                : formatAmount(occurrence.remaining),
             textAlign: TextAlign.end,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: occurrence.remaining <= 0
@@ -212,21 +214,21 @@ class _MonthTableState extends State<MonthTable> {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
-            child: Text(formatMoney(occurrences.totalAmount), style: style),
+            child: Text(formatAmount(occurrences.totalAmount), style: style),
           ),
         ),
         _pad(
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
-            child: Text(formatMoney(occurrences.totalPaid), style: style),
+            child: Text(formatAmount(occurrences.totalPaid), style: style),
           ),
         ),
         _pad(
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
-            child: Text(formatMoney(occurrences.totalRemaining), style: style),
+            child: Text(formatAmount(occurrences.totalRemaining), style: style),
           ),
         ),
       ],
@@ -267,7 +269,7 @@ class _MonthTableState extends State<MonthTable> {
       InkWell(
         onTap: () => _startEditing(occurrence, cell),
         child: Text(
-          value <= 0 ? '—' : formatMoney(value),
+          value <= 0 ? '—' : formatAmount(value),
           textAlign: TextAlign.end,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: value <= 0 ? theme.colorScheme.onSurfaceVariant : color,

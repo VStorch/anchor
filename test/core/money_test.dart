@@ -19,6 +19,11 @@ void main() {
   });
 
   group('sem o símbolo', () {
+    test('a coluna em reais mostra o valor sem símbolo', () {
+      expect(formatAmount(1938.9), '1.938,90');
+      expect(formatAmount(0), '0,00');
+    });
+
     test('a célula da tabela mostra só o número', () {
       expect(formatMoneyInput(1100, symbol: false), '1.100,00');
     });

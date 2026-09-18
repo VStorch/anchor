@@ -292,12 +292,20 @@ void main() {
 
     expect(find.byType(MonthTable), findsOneWidget);
     expect(find.text('Total'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(MonthTable),
+        matching: find.textContaining('R\$ '),
+      ),
+      findsNothing,
+      reason: 'o cabeçalho já diz que as colunas estão em reais',
+    );
     expect(find.byTooltip('Ver como lista'), findsOneWidget);
 
     final screenWidth =
         tester.view.physicalSize.width / tester.view.devicePixelRatio;
     expect(
-      tester.getRect(find.text('Falta')).right,
+      tester.getRect(find.text('Falta (R\$)')).right,
       lessThanOrEqualTo(screenWidth),
       reason: 'a coluna Falta precisa caber na largura do celular',
     );
