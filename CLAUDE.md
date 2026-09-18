@@ -52,7 +52,13 @@ wallets are split by `WalletKind` into two `ForecastGroup`s — `freeMoney` (sal
 `unassignedToPay`) and `benefits` — and **the two groups are never added up on screen**: a meal
 voucher does not pay the rent. The headline is "Dinheiro livre vai sobrar/faltar R$ X" ("Nos
 benefícios vai sobrar" when there is no salary), the line under it "Nos benefícios: R$ X para usar"
-or "No VR vai faltar R$ X" (`shortBenefits`), and "Como chegamos nisso" opens one block per group. It
+or "No VR vai faltar R$ X" (`shortBenefits`), then, for the current month only, "Por dia até 30/09:
+R$ X do salário · R$ Y no VR" (`dailyAllowance`). "Como chegamos nisso" opens one block per group
+that has something to show, and each block reads as a sum: "Você tem hoje" (`startBalance`), "A
+receber", "Contas a pagar", "Reserva do dia a dia" (split by month from `reserveShares` when the month
+on screen is a later one: "R$ 300 em setembro + R$ 600 em outubro"), "Contas sem carteira", and ends
+on "Vai sobrar/Vai faltar" with the figure the title shows. Once a reserve exists, "Reserva: R$ 600/mês"
+under the headline edits it. It
 is outlined and coloured `MoneyColors.predicted`, and holds no real number. The Resumo's wallet strip
 shows balances only — no "a pagar" beside them. **<Mês> até agora** (current
 month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou` and `Saiu`,

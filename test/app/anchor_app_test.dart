@@ -385,6 +385,16 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.descendant(
+        of: forecast,
+        matching: find.text(
+          'Por dia até 30/09: ${formatMoney(46.88)} do salário · '
+          '${formatMoney(10.17)} no VR',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
       find.text("Dinheiro livre vai sobrar ${formatMoney(912.80)}"),
       findsNothing,
     );
@@ -465,19 +475,54 @@ void main() {
     );
     expect(find.text('Reservar gasto do dia a dia'), findsNothing);
 
-    await tester.tap(find.text('Como chegamos nisso'));
-    await tester.pumpAndSettle();
+    final lastDay = DateFormat('dd/MM').format(month.dayOf(month.lengthInDays));
     expect(
       find.descendant(
         of: forecast,
-        matching: find.text('Reserva do dia a dia'),
+        matching: find.text(
+          'Por dia até $lastDay: '
+          '${formatMoney(roundCents(reserveShare / daysLeft))} do salário',
+        ),
       ),
       findsOneWidget,
     );
 
-    await tester.ensureVisible(find.byTooltip('Editar reserva'));
+    await tester.tap(find.text('Como chegamos nisso'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Editar reserva'));
+    for (final line in [
+      'Você tem hoje',
+      'Reserva do dia a dia',
+      'Vai sobrar',
+    ]) {
+      expect(
+        find.descendant(of: forecast, matching: find.text(line)),
+        findsOneWidget,
+      );
+    }
+    expect(
+      find.descendant(of: forecast, matching: find.byTooltip('Editar reserva')),
+      findsNothing,
+      reason: 'a linha da reserva fica alinhada com as outras',
+    );
+
+    await tester.tap(find.byTooltip('Próximo mês'));
+    await tester.pumpAndSettle();
+    final nextName = DateFormat.MMMM('pt_BR').format(month.next.firstDay);
+    expect(
+      find.descendant(
+        of: forecast,
+        matching: find.textContaining('+ ${formatMoney(500)} em $nextName'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Por dia até'), findsNothing);
+    await tester.tap(find.byTooltip('Mês anterior'));
+    await tester.pumpAndSettle();
+
+    final edit = find.text('Reserva: ${formatMoney(500)}/mês');
+    await tester.ensureVisible(edit);
+    await tester.pumpAndSettle();
+    await tester.tap(edit);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Não usar reserva'));
     await tester.pumpAndSettle();

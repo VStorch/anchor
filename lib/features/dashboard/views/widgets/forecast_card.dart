@@ -83,6 +83,29 @@ class ForecastCard extends StatelessWidget {
                   ),
                 ),
               ),
+          if (_dailyLine() case final daily?)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: Text(
+                daily,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.predicted,
+                ),
+              ),
+            ),
+          if (free.hasReserve && onEditReserve != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 20, 0),
+              child: TextButton.icon(
+                onPressed: () => onEditReserve!(_reservedWallet(free)),
+                style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: Text(
+                  'Reserva: ${formatMoney(_monthlyReserve(free))}/mês',
+                ),
+              ),
+            ),
           if (free.lacksReserve && onEditReserve != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
@@ -124,11 +147,7 @@ class ForecastCard extends StatelessWidget {
               ),
               children: [
                 if (!free.isEmpty)
-                  _GroupBlock(
-                    title: 'Dinheiro livre',
-                    group: free,
-                    onEditReserve: onEditReserve,
-                  ),
+                  _GroupBlock(title: 'Dinheiro livre', group: free),
                 if (!free.isEmpty && !benefits.isEmpty)
                   const SizedBox(height: 12),
                 if (!benefits.isEmpty)
@@ -140,6 +159,38 @@ class ForecastCard extends StatelessWidget {
       ),
     );
   }
+
+  /// "Por dia até 30/09: R$ 20,00 do salário · R$ 7,35 no VR"; only for
+  /// the current month, where "today" means something.
+  String? _dailyLine() {
+    final parts = [
+      if (forecast.freeMoney.dailyAllowance case final free?)
+        '${formatMoney(free)} do salário',
+      if (forecast.benefits.dailyAllowance case final benefit?)
+        '${formatMoney(benefit)} ${_benefitPlace()}',
+    ];
+    if (parts.isEmpty) return null;
+    final lastDay = forecast.month.dayOf(forecast.month.lengthInDays);
+    return 'Por dia até ${DateFormat('dd/MM').format(lastDay)}: '
+        '${parts.join(' · ')}';
+  }
+
+  String _benefitPlace() {
+    final wallets = forecast.benefits.wallets;
+    return wallets.length == 1
+        ? 'no ${wallets.single.wallet.name}'
+        : 'nos benefícios';
+  }
+
+  static Wallet? _reservedWallet(ForecastGroup group) => group.wallets
+      .map((forecast) => forecast.wallet)
+      .where((wallet) => wallet.monthlyReserve != null)
+      .firstOrNull;
+
+  static double _monthlyReserve(ForecastGroup group) => group.wallets.fold(
+    0,
+    (total, forecast) => total + (forecast.wallet.monthlyReserve ?? 0),
+  );
 
   String _headline(bool onlyBenefits, double balance) {
     final subject = onlyBenefits ? 'Nos benefícios' : 'Dinheiro livre';
@@ -173,19 +224,15 @@ class ForecastCard extends StatelessWidget {
 }
 
 class _GroupBlock extends StatelessWidget {
-  const _GroupBlock({
-    required this.title,
-    required this.group,
-    this.onEditReserve,
-  });
+  const _GroupBlock({required this.title, required this.group});
 
   final String title;
   final ForecastGroup group;
-  final ValueChanged<Wallet?>? onEditReserve;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shares = group.reserveShares;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,32 +245,20 @@ class _GroupBlock extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         if (group.wallets.isNotEmpty) ...[
+          _Line(label: 'Você tem hoje', value: formatMoney(group.startBalance)),
           _Line(label: 'A receber', value: '+ ${formatMoney(group.toReceive)}'),
           _Line(
             label: 'Contas a pagar',
             value: '− ${formatMoney(group.toPay)}',
           ),
         ],
-        for (final wallet in group.wallets)
-          if (wallet.wallet.monthlyReserve != null)
-            Row(
-              children: [
-                Expanded(
-                  child: _Line(
-                    label: group.wallets.length > 1
-                        ? 'Reserva do dia a dia (${wallet.wallet.name})'
-                        : 'Reserva do dia a dia',
-                    value: '− ${formatMoney(wallet.reserve)}',
-                  ),
-                ),
-                if (onEditReserve != null)
-                  IconButton(
-                    onPressed: () => onEditReserve!(wallet.wallet),
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    tooltip: 'Editar reserva',
-                  ),
-              ],
-            ),
+        if (group.hasReserve)
+          _Line(
+            label: shares.length > 1
+                ? 'Reserva do dia a dia · ${_sharesLabel(shares)}'
+                : 'Reserva do dia a dia',
+            value: '− ${formatMoney(group.reserve)}',
+          ),
         if (group.unassignedToPay > 0)
           _Line(
             label: 'Contas sem carteira',
@@ -246,6 +281,15 @@ class _GroupBlock extends StatelessWidget {
       ],
     );
   }
+
+  /// "R$ 300,00 em setembro + R$ 600,00 em outubro".
+  static String _sharesLabel(List<ReserveShare> shares) => shares
+      .map(
+        (share) =>
+            '${formatMoney(share.amount)} em '
+            '${DateFormat.MMMM('pt_BR').format(share.month.firstDay)}',
+      )
+      .join(' + ');
 }
 
 class _Line extends StatelessWidget {
