@@ -8,6 +8,8 @@ import '../../../../core/widgets/movement_sheet_title.dart';
 import '../../../../core/widgets/movement_date_picker.dart';
 import '../../../wallets/models/balance_check.dart';
 import '../../../wallets/models/wallet.dart';
+import '../../../../core/utils/money.dart';
+import '../../models/expense_occurrence.dart';
 import '../../models/expense_payment.dart';
 import '../../models/payable.dart';
 import '../../viewmodels/expenses_view_model.dart';
@@ -17,11 +19,16 @@ class PayEdit {
     required this.origin,
     required this.amount,
     required this.paidAt,
+    this.closesMonth = false,
   });
 
   final PaymentOrigin origin;
   final double amount;
   final DateTime paidAt;
+
+  /// Less than the bill was paid because the bill itself was smaller: the
+  /// month amount becomes what was paid in all.
+  final bool closesMonth;
 }
 
 /// Where the money came from, how much and when. Without [amount] the sheet
@@ -98,6 +105,7 @@ class _PaySheetState extends State<PaySheet> {
   bool _dayPicked = false;
   bool _sidePicked = false;
   bool? _alreadyOut;
+  bool _closesMonth = true;
   late CheckSide _side = _initialSide;
 
   CheckSide get _initialSide {
@@ -119,6 +127,15 @@ class _PaySheetState extends State<PaySheet> {
   }
 
   bool get _asksAmount => widget.amount != null;
+
+  /// A loose bill paid with less than it owes: was the bill smaller, or is
+  /// this a part? Only a new payment asks; an invoice pays per purchase.
+  ExpenseOccurrence? get _partlyPaid {
+    if (widget.isEdit || !_asksAmount || _amount <= 0) return null;
+    final payable = widget.payable;
+    if (payable is! ExpenseOccurrence || payable.offRule) return null;
+    return coversAmount(_amount, payable.remaining) ? null : payable;
+  }
 
   bool get _isOutside => _origin.outside || _origin.walletId == null;
 
@@ -181,6 +198,21 @@ class _PaySheetState extends State<PaySheet> {
                 initialValue: _amount,
                 label: 'Valor pago',
                 onChanged: (value) => setState(() => _amount = value),
+              ),
+            ],
+            if (_partlyPaid case final occurrence?) ...[
+              const SizedBox(height: 12),
+              RadioGroupChoice(
+                value: _closesMonth,
+                onChanged: (value) => setState(() => _closesMonth = value),
+                options: {
+                  true:
+                      'A conta deste mês foi '
+                      '${formatMoney(roundCents(occurrence.paidAmount + _amount))}',
+                  false:
+                      'Paguei só uma parte (falta '
+                      '${formatMoney(roundCents(occurrence.remaining - _amount))})',
+                },
               ),
             ],
             const SizedBox(height: 16),
@@ -268,6 +300,7 @@ class _PaySheetState extends State<PaySheet> {
       origin: _isOutside ? (walletId: null, outside: true) : _origin,
       amount: _amount,
       paidAt: _moment,
+      closesMonth: _partlyPaid != null && _closesMonth,
     ),
   );
 
@@ -291,6 +324,38 @@ class _PaySheetState extends State<PaySheet> {
       _paidAt = stampFor(date);
       _dayPicked = true;
     });
+  }
+}
+
+/// Two answers, one of them picked, each a full-width 48dp row.
+class RadioGroupChoice extends StatelessWidget {
+  const RadioGroupChoice({
+    super.key,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final Map<bool, String> options;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (final entry in options.entries)
+          RadioListTile<bool>(
+            contentPadding: EdgeInsets.zero,
+            value: entry.key,
+            groupValue: value,
+            onChanged: (picked) {
+              if (picked != null) onChanged(picked);
+            },
+            title: Text(entry.value),
+          ),
+      ],
+    );
   }
 }
 

@@ -125,6 +125,28 @@ class ExpensesViewModel extends ReactiveViewModel {
     ),
   );
 
+  /// "A conta deste mês foi R$ X": the payment settles the occurrence by
+  /// making the month cost what was paid in all.
+  Future<void> payClosingMonth(
+    ExpenseOccurrence occurrence, {
+    required PaymentOrigin origin,
+    required double amount,
+    required DateTime paidAt,
+  }) => _expenseRepository.savePaymentClosingMonth(
+    ExpensePayment.fromOrigin(
+      expenseId: occurrence.expense.id!,
+      origin: origin,
+      month: occurrence.month,
+      amount: amount,
+      paidAt: paidAt,
+    ),
+    ExpenseMonth(
+      expenseId: occurrence.expense.id!,
+      month: occurrence.month,
+      amount: roundCents(occurrence.paidAmount + amount),
+    ),
+  );
+
   Future<void> settle(
     ExpenseOccurrence occurrence, {
     required PaymentOrigin origin,

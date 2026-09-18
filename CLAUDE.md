@@ -183,6 +183,11 @@ mutated:
   (`Payable.paidBefore`), so the informed balance does not move.
 - **`expense_months`** holds the amount this particular month really cost (light bill, groceries). A
   missing row means "use the rule's amount"; deleting the row is the "back to the rule" action.
+  When `PaySheet` records less than a loose occurrence still owes (not an invoice, not off-rule), it
+  asks "A conta deste mês foi R$ X" (the default: the light bill was just smaller) or "Paguei só uma
+  parte (falta R$ Y)"; the first saves the payment and sets the month amount to everything paid, in
+  one transaction (`ExpenseRepository.savePaymentClosingMonth`). The one tap pays the whole
+  remainder, and the table's "Pago" cell stays partial — the "Valor" cell is right beside it.
 
 `MonthSummary.build` drops a projection that falls before the month the expense was registered
 (`Expense.projectsBackIntoPast`) unless that month already has a payment or a month amount. Without

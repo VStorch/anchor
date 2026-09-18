@@ -281,6 +281,15 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
     );
     if (edit == null) return;
 
+    if (edit.closesMonth) {
+      await viewModel.payClosingMonth(
+        occurrence,
+        origin: edit.origin,
+        amount: edit.amount,
+        paidAt: edit.paidAt,
+      );
+      return;
+    }
     await viewModel.savePaymentLine(
       occurrence,
       origin: edit.origin,

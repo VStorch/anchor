@@ -73,6 +73,24 @@ class ExpenseRepository {
     _changes.publish();
   }
 
+  /// A payment that tells what the month's bill really was: the payment and
+  /// the month amount land together, with a single reload.
+  Future<void> savePaymentClosingMonth(
+    ExpensePayment payment,
+    ExpenseMonth monthAmount,
+  ) async {
+    final db = await _database.database;
+    await db.transaction((txn) async {
+      await txn.insert(AppDatabase.expensePaymentsTable, payment.toMap());
+      await txn.insert(
+        AppDatabase.expenseMonthsTable,
+        monthAmount.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+    _changes.publish();
+  }
+
   Future<void> savePayments(List<ExpensePayment> payments) async {
     if (payments.isEmpty) return;
     final db = await _database.database;

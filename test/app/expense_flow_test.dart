@@ -101,7 +101,12 @@ void main() {
     expect(_inSheet('Falta'), findsOneWidget);
     expect(_inSheet('600,00'), findsWidgets);
 
-    await _addLedgerPayment(tester, wallet: 'Vale mercado', amount: '400');
+    await _addLedgerPayment(
+      tester,
+      wallet: 'Vale mercado',
+      amount: '400',
+      onlyAPart: true,
+    );
     expect(_inSheet('Falta'), findsOneWidget);
     expect(_inSheet('200,00'), findsWidgets);
 
@@ -115,6 +120,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Paga'), findsOneWidget);
+  });
+
+  testWidgets('pagar menos dizendo que a conta foi esse valor já quita', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await _seedMarketExpense(database);
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tapTab(tester, Icons.receipt_long_outlined);
+
+    await tester.tap(find.text('Pagar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Outro valor ou data'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(MoneyField),
+        matching: find.byType(TextField),
+      ),
+      '587,52',
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('A conta deste mês foi ${formatMoney(587.52)}'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Paguei só uma parte (falta ${formatMoney(12.48)})'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Lançar'));
+    await tester.pumpAndSettle();
+
+    expect(_inSheet('Quitada'), findsOneWidget);
+    final months = await database.database.then(
+      (db) => db.query('expense_months'),
+    );
+    expect(months.single['amount'], 587.52);
   });
 
   Future<void> openExpensesTab(WidgetTester tester) async {
@@ -1168,6 +1223,7 @@ Future<void> _addLedgerPayment(
   WidgetTester tester, {
   required String wallet,
   required String amount,
+  bool onlyAPart = false,
 }) async {
   await tester.tap(find.text('Outro valor ou data'));
   await tester.pumpAndSettle();
@@ -1186,6 +1242,10 @@ Future<void> _addLedgerPayment(
   );
   await tester.pumpAndSettle();
 
+  if (onlyAPart) {
+    await tester.tap(find.textContaining('Paguei só uma parte'));
+    await tester.pumpAndSettle();
+  }
   await tester.tap(find.text('Lançar'));
   await tester.pumpAndSettle();
 }

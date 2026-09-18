@@ -78,6 +78,34 @@ void main() {
     },
   );
 
+  test(
+    'pagar fechando o mês grava pagamento e valor do mês de uma vez',
+    () async {
+      final changes = DataChanges();
+      final repository = ExpenseRepository(database, changes);
+      final expense = await saveInstallment();
+      var notified = 0;
+      changes.addListener(() => notified++);
+      final month = expense.startMonth;
+
+      await repository.savePaymentClosingMonth(
+        ExpensePayment(
+          expenseId: expense.id!,
+          walletId: null,
+          settledOutside: true,
+          month: month,
+          amount: 237.52,
+          paidAt: month.dayOf(12),
+        ),
+        ExpenseMonth(expenseId: expense.id!, month: month, amount: 237.52),
+      );
+
+      expect(notified, 1);
+      expect((await repository.fetchPayments()).single.amount, 237.52);
+      expect((await repository.fetchMonthAmounts()).single.amount, 237.52);
+    },
+  );
+
   test('editar um pagamento existente não cria linha nova', () async {
     final expense = await saveInstallment();
     await repository.savePayment(
