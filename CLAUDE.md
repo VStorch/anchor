@@ -58,13 +58,18 @@ that has something to show, and each block reads as a sum: "Você tem hoje" (`st
 receber", "Contas a pagar", "Reserva do dia a dia" (split by month from `reserveShares` when the month
 on screen is a later one: "R$ 300 em setembro + R$ 600 em outubro"), "Contas sem carteira", and ends
 on "Vai sobrar/Vai faltar" with the figure the title shows. Once a reserve exists, "Reserva: R$ 600/mês"
-under the headline edits it. It
-is outlined and coloured `MoneyColors.predicted`, and holds no real number. The Resumo's wallet strip
+under the headline edits it. When a group has a reserve and this month's share of it is gone
+(`ForecastGroup.reserveUsedUp`), its part of the daily line reads "Reserva de setembro já usada"
+instead of "R$ 0,00 do salário". The card is outlined and coloured `MoneyColors.predicted`, and its
+headline and summary lines hold no real figure; "Como chegamos nisso" may start from "Você tem hoje"
+because today's balance is the base of the sum being explained, not a figure set beside a planned
+one. The Resumo's wallet strip
 shows balances only — no "a pagar" beside them. **<Mês> até agora** (current
 month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou` and `Saiu`,
 confirmed money only. `MonthSummary` carries no planned income; the payout calendar's total lives
 on `Wallet.monthlyIncome` and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
-real one in the same block.**
+real one in the same block** — the only real figure a forecast shows is the starting term of its own
+explanation.
 
 A salary may set aside a **reserve for everyday spending** (`wallets.monthly_reserve`, schema v13,
 null by default and never read for a benefit, whose balance already is what is left for food). It is

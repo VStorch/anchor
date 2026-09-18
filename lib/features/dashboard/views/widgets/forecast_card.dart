@@ -165,7 +165,11 @@ class ForecastCard extends StatelessWidget {
   String? _dailyLine() {
     final parts = [
       if (forecast.freeMoney.dailyAllowance case final free?)
-        '${formatMoney(free)} do salário',
+        forecast.freeMoney.reserveUsedUp
+            ? 'Reserva de '
+                  '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} '
+                  'já usada'
+            : '${formatMoney(free)} do salário',
       if (forecast.benefits.dailyAllowance case final benefit?)
         '${formatMoney(benefit)} ${_benefitPlace()}',
     ];

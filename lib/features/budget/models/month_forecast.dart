@@ -119,6 +119,10 @@ class ForecastGroup {
     return roundCents(spendable / days);
   }
 
+  /// This month's share of the reserve is gone: the day's figure is zero
+  /// because the plan for the month is spent, not because money ran out.
+  bool get reserveUsedUp => daysLeft != null && hasReserve && reserve <= 0;
+
   bool get isEmpty => wallets.isEmpty && unassignedToPay <= 0;
 
   /// There are salaries and none of them says what the everyday spending
