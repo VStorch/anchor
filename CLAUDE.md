@@ -500,7 +500,8 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
 - Anything tappable is at least 48dp and says what it is to TalkBack (the colour dots are labelled
   buttons, the month title is a header). `responsive_test.dart` runs `androidTapTargetGuideline` and
   `textContrastGuideline` on every tab in light and dark, `labeledTapTargetGuideline` on the wallet
-  form, and checks the FAB never covers the last item at 320dp and 1.3x font.
+  form and the month table (whose name, Valor and Pago cells are 48dp and read "Pago de Luz: R$
+  137,52" / "Pago de Luz: nada"), and checks the FAB never covers the last item at 320dp and 1.3x font.
 - `FilledButton` is themed full-width (`minimumSize: Size.fromHeight(52)`), so it only goes inside a
   `Row` wrapped in `Expanded` — loose in a row it asks for infinite width and the layout throws.
 - Nothing gets a hardcoded width or height that holds text: scale it with

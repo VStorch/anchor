@@ -137,29 +137,31 @@ class _MonthTableState extends State<MonthTable> {
 
     return TableRow(
       children: [
-        _pad(
-          InkWell(
-            onTap: () => widget.onOpen(occurrence),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  occurrence.expense.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+        _tappable(
+          label:
+              'Despesa: ${occurrence.expense.name}, dia '
+              '${occurrence.dueDate.day}',
+          alignment: Alignment.centerLeft,
+          onTap: () => widget.onOpen(occurrence),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                occurrence.expense.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-                Text(
-                  'dia ${occurrence.dueDate.day}'
-                  '${occurrence.installmentLabel != null ? ' · ${occurrence.installmentLabel}' : ''}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+              ),
+              Text(
+                'dia ${occurrence.dueDate.day}'
+                '${occurrence.installmentLabel != null ? ' · ${occurrence.installmentLabel}' : ''}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         _valueCell(
@@ -264,19 +266,42 @@ class _MonthTableState extends State<MonthTable> {
       );
     }
 
-    return _pad(
-      InkWell(
-        onTap: () => _startEditing(occurrence, cell),
-        child: Text(
-          value <= 0 ? '—' : formatAmount(value),
-          textAlign: TextAlign.end,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: value <= 0 ? theme.colorScheme.onSurfaceVariant : color,
-          ),
+    final column = cell == MonthTableCell.amount ? 'Valor' : 'Pago';
+    return _tappable(
+      label:
+          '$column de ${occurrence.expense.name}: '
+          '${value <= 0 ? 'nada' : formatMoney(value)}',
+      alignment: Alignment.centerRight,
+      onTap: () => _startEditing(occurrence, cell),
+      child: Text(
+        value <= 0 ? '—' : formatAmount(value),
+        textAlign: TextAlign.end,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: value <= 0 ? theme.colorScheme.onSurfaceVariant : color,
         ),
       ),
     );
   }
+
+  /// A cell that opens or edits something: 48dp tall at least, and read by
+  /// TalkBack as the bill and the column, not as a bare number.
+  Widget _tappable({
+    required String label,
+    required Alignment alignment,
+    required VoidCallback onTap,
+    required Widget child,
+  }) => MergeSemantics(
+    child: InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Align(
+          alignment: alignment,
+          child: Semantics(label: label, excludeSemantics: true, child: child),
+        ),
+      ),
+    ),
+  );
 
   void _startEditing(ExpenseOccurrence occurrence, MonthTableCell cell) {
     if (cell == MonthTableCell.paid && occurrence.payments.length > 1) {

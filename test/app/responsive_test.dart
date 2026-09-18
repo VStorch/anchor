@@ -406,6 +406,21 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.receipt_long_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Ver como tabela'));
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      await tester.tap(find.byTooltip('Ver como lista'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
           matching: find.byIcon(Icons.account_balance_wallet_outlined),
         ),
       );

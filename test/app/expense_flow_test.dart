@@ -486,6 +486,30 @@ void main() {
       expect(fabHidden(tester), isFalse);
     });
 
+    testWidgets('as células tocáveis da tabela têm 48dp e dizem o que são', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await openManyBills(tester);
+      await tester.tap(find.byTooltip('Ver como tabela'));
+      await tester.pumpAndSettle();
+
+      for (final label in [
+        'Despesa: Conta 1, dia 1',
+        'Valor de Conta 1: ${formatMoney(100)}',
+        'Pago de Conta 1: nada',
+      ]) {
+        final cell = find.bySemanticsLabel(label);
+        expect(cell, findsOneWidget, reason: label);
+        expect(
+          tester.getSemantics(cell).rect.height,
+          greaterThanOrEqualTo(48),
+          reason: label,
+        );
+      }
+      semantics.dispose();
+    });
+
     testWidgets(
       'a tabela rola inteira com os títulos presos e o total alinhado',
       (tester) async {
