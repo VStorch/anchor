@@ -107,31 +107,116 @@ void main() {
       createdAt: DateTime(2026, 8),
     );
 
-    test('a parcelada guarda o total dividido pelas parcelas, ao centavo', () {
+    ExpenseFormViewModel purchase({Expense? expense}) => ExpenseFormViewModel(
+      repository: repository,
+      referenceMonth: august,
+      cards: [card],
+      card: expense == null ? card : null,
+      expense: expense,
+    );
+
+    test(
+      'a compra oferece à vista, parcelado e todo mês, e começa à vista',
+      () {
+        final form = purchase();
+
+        expect(form.type, ExpenseType.single);
+        expect(form.typeOptions, [
+          ExpenseType.single,
+          ExpenseType.installment,
+          ExpenseType.recurring,
+        ]);
+        expect(form.typeLabel(ExpenseType.recurring), 'Todo mês');
+      },
+    );
+
+    test('a despesa de todo mês que passa para o cartão continua todo mês', () {
       final form =
           ExpenseFormViewModel(
               repository: repository,
               referenceMonth: august,
               cards: [card],
-              card: card,
             )
-            ..setName('Presente')
-            ..setAmount(160)
-            ..setType(ExpenseType.installment);
+            ..setType(ExpenseType.recurring)
+            ..setSource((walletId: null, cardId: 7));
 
-      expect(form.typeOptions, [ExpenseType.single, ExpenseType.installment]);
-      expect(form.entersPurchaseTotal, isTrue);
-      expect(form.purchaseTotal, 160, reason: 'o preço digitado vira o total');
-
-      form.setTotalInstallments(3);
-      expect(form.amount, 53.33);
-      expect(form.parcelPreview, '3x de ${formatMoney(53.33)}');
-
-      form.setEntersPurchaseTotal(false);
-      form.setAmount(80);
-      form.setTotalInstallments(2);
-      expect(form.amount, 80);
+      expect(form.isPurchase, isTrue);
+      expect(form.type, ExpenseType.recurring);
     });
+
+    test('o total que não divide mostra o que as parcelas somam', () {
+      final form = purchase()
+        ..setName('Geladeira')
+        ..setType(ExpenseType.installment)
+        ..setPurchaseTotal(1000)
+        ..setTotalInstallments(3);
+
+      expect(form.amount, 333.33);
+      expect(form.storedTotal, 999.99);
+      expect(
+        form.parcelPreview,
+        '3x de ${formatMoney(333.33)} (total ${formatMoney(999.99)})',
+      );
+      expect(form.totalCommitted, 999.99);
+
+      form.setPurchaseTotal(1200);
+      expect(form.parcelPreview, '3x de ${formatMoney(400)}');
+    });
+
+    test('trocar entre parcela e total converte o valor', () {
+      final form = purchase()
+        ..setType(ExpenseType.installment)
+        ..setTotalInstallments(10)
+        ..setEntersPurchaseTotal(false)
+        ..setAmount(120)
+        ..setEntersPurchaseTotal(true);
+
+      expect(form.purchaseTotal, 1200);
+      expect(form.amount, 120);
+
+      form
+        ..setPurchaseTotal(1000)
+        ..setEntersPurchaseTotal(false);
+      expect(form.amount, 100);
+    });
+
+    test('à vista virando parcelado leva o valor para o total, e volta', () {
+      final form = purchase()
+        ..setAmount(1200)
+        ..setType(ExpenseType.installment)
+        ..setTotalInstallments(10);
+
+      expect(form.entersPurchaseTotal, isTrue);
+      expect(form.purchaseTotal, 1200);
+      expect(form.parcelPreview, '10x de ${formatMoney(120)}');
+
+      form.setType(ExpenseType.single);
+      expect(form.amount, 1200);
+    });
+
+    test(
+      'ao editar, a compra à vista que vira parcelada também usa o total',
+      () {
+        final form = purchase(
+          expense: Expense(
+            id: 3,
+            name: 'Tênis',
+            type: ExpenseType.single,
+            amount: 1200,
+            dueDay: 10,
+            startMonth: august,
+            cardId: 7,
+            createdAt: DateTime(2026, 8),
+          ),
+        )..setType(ExpenseType.installment);
+
+        expect(form.entersPurchaseTotal, isTrue);
+        expect(form.purchaseTotal, 1200);
+
+        form.setTotalInstallments(10);
+        expect(form.parcelPreview, '10x de ${formatMoney(120)}');
+      },
+    );
 
     test('uma despesa de cartão que já repete continua podendo repetir', () {
       final form = ExpenseFormViewModel(

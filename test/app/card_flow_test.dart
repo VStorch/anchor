@@ -335,7 +335,7 @@ void main() {
     );
     await tester.tap(find.byType(DropdownButtonFormField<ExpenseType>));
     await tester.pumpAndSettle();
-    expect(find.text('Todo mês'), findsNothing);
+    expect(find.text('Todo mês'), findsWidgets);
     await tester.tap(find.text('Parcelado').last);
     await tester.pumpAndSettle();
 
@@ -351,7 +351,10 @@ void main() {
       '3',
     );
     await tester.pumpAndSettle();
-    expect(find.text('3x de ${formatMoney(333.33)}'), findsOneWidget);
+    expect(
+      find.text('3x de ${formatMoney(333.33)} (total ${formatMoney(999.99)})'),
+      findsOneWidget,
+    );
 
     await tester.scrollUntilVisible(
       find.text('Salvar compra'),
@@ -363,6 +366,8 @@ void main() {
           )
           .first,
     );
+    await tester.ensureVisible(find.text('Salvar compra'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar compra'));
     await tester.pumpAndSettle();
 

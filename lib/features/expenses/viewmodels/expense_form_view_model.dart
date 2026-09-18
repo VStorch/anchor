@@ -188,13 +188,18 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   void setType(ExpenseType value) {
     if (_type == value) return;
-    final wasEnteringTotal = entersPurchaseTotal;
-    final price = wasEnteringTotal ? _purchaseTotal : _amount;
+    final wasInstallment = isInstallment;
+    final price = !wasInstallment
+        ? _amount
+        : entersPurchaseTotal
+        ? _purchaseTotal
+        : (storedTotal ?? _amount);
     _type = value;
-    if (entersPurchaseTotal) {
+    if (isPurchase && isInstallment) {
+      _entersTotal = true;
       _purchaseTotal = price;
       _amount = _parcelOfTotal();
-    } else if (wasEnteringTotal) {
+    } else if (isPurchase && wasInstallment) {
       _amount = price;
     }
     if (value != ExpenseType.installment) {
@@ -275,14 +280,13 @@ class ExpenseFormViewModel extends ChangeNotifier {
   /// "À vista" or "Parcelado".
   bool get isPurchase => card != null;
 
-  /// A purchase is paid once or in parcels; "Todo mês" stays offered only
-  /// to an existing card expense that already repeats, so an edit never
-  /// silently changes what it is.
+  /// A purchase is paid à vista, in parcels, or every month (a streaming
+  /// subscription on the card).
   List<ExpenseType> get typeOptions => isPurchase
-      ? [
-          if (_expense?.type == ExpenseType.recurring) ExpenseType.recurring,
+      ? const [
           ExpenseType.single,
           ExpenseType.installment,
+          ExpenseType.recurring,
         ]
       : ExpenseType.values;
 
@@ -299,23 +303,33 @@ class ExpenseFormViewModel extends ChangeNotifier {
       : switch (type) {
           ExpenseType.single => 'Entra inteira numa fatura',
           ExpenseType.installment => 'Dividida em parcelas nas faturas',
-          ExpenseType.recurring => type.description,
+          ExpenseType.recurring => 'Assinaturas, como streaming',
         };
 
-  /// A new purchase in parcels is typed by its total price, as the receipt
-  /// shows it; the parcel stored is the total over the count, to the cent.
-  bool _entersTotal = true;
+  /// A purchase in parcels is typed by its total price, as the receipt shows
+  /// it; the parcel stored is the total over the count, to the cent. An
+  /// existing purchase already in parcels opens on its parcel value.
+  late bool _entersTotal = _expense?.type != ExpenseType.installment;
   double _purchaseTotal = 0;
 
-  bool get entersPurchaseTotal =>
-      isPurchase && isInstallment && !isEditing && _entersTotal;
+  bool get entersPurchaseTotal => isPurchase && isInstallment && _entersTotal;
 
   double get purchaseTotal => _purchaseTotal;
 
+  /// Switching between total and parcel converts what was typed: the total
+  /// is the parcel times the count, the parcel the total over it. Without a
+  /// valid count the number carries over as it is.
   void setEntersPurchaseTotal(bool value) {
-    _entersTotal = value;
-    if (value) _purchaseTotal = 0;
-    _amount = value ? _parcelOfTotal() : _amount;
+    if (value == _entersTotal) return;
+    final count = validTotalInstallments;
+    if (value) {
+      _purchaseTotal = count == null ? _amount : roundCents(_amount * count);
+      _entersTotal = true;
+      _amount = count == null ? _amount : _parcelOfTotal();
+    } else {
+      _entersTotal = false;
+      _amount = count == null ? _purchaseTotal : _parcelOfTotal();
+    }
     notifyListeners();
   }
 
@@ -331,10 +345,25 @@ class ExpenseFormViewModel extends ChangeNotifier {
     return roundCents(_purchaseTotal / count);
   }
 
-  /// "10x de R$ 83,33", under the total price.
+  /// What the parcels add up to once stored: the parcel times the count,
+  /// which is what the invoices will charge.
+  double? get storedTotal {
+    final count = validTotalInstallments;
+    if (count == null || _amount <= 0) return null;
+    return roundCents(_amount * count);
+  }
+
+  /// "10x de R$ 83,33", under the total price — and, when the total does
+  /// not divide to the cent, the total the parcels really add up to:
+  /// "3x de R$ 333,33 (total R$ 999,99)". The typed total is never shown as
+  /// if it were stored.
   String? get parcelPreview {
-    if (!entersPurchaseTotal || _amount <= 0) return null;
-    return '${validTotalInstallments}x de ${formatMoney(_amount)}';
+    final stored = storedTotal;
+    if (!entersPurchaseTotal || stored == null) return null;
+    final parcels = '${validTotalInstallments}x de ${formatMoney(_amount)}';
+    return sameAmount(stored, _purchaseTotal)
+        ? parcels
+        : '$parcels (total ${formatMoney(stored)})';
   }
 
   /// What the disabled save button asks for.
@@ -351,7 +380,6 @@ class ExpenseFormViewModel extends ChangeNotifier {
     if (card != null && !isEditing) {
       _startMonth = card.invoiceMonthFor(_purchasedAt ?? _now);
     }
-    if (!typeOptions.contains(_type)) _type = ExpenseType.single;
     notifyListeners();
   }
 

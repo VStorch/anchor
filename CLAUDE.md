@@ -158,12 +158,16 @@ anything else stays exactly as typed, with a field error and the button saying w
 clamped into another number. "Parcelas já pagas" and the total preview only show once the count is
 valid (`ExpenseFormViewModel.showsInstallmentPlan`). An expense on a
 card is a purchase (`ExpenseFormViewModel.isPurchase`): the fields read "O que comprou" and "Como
-pagou", the types "À vista" (`single`) and "Parcelado" (`installment`) — "Todo mês" only stays for a
-card expense that already repeats, so an edit never changes what it is — and a new one starts à vista,
-titled "Nova compra no Nubank" and saved with "Salvar compra" (`isNewPurchase`). A new purchase in
-parcels is typed by its total price ("Valor total da compra", with "10x de R$ 83,33" under it); the
-parcel stored is the total over the count rounded to the cent, and "Informar valor da parcela"
-switches to typing the parcel. Loose expenses keep their wording.
+pagou", the types "À vista" (`single`), "Parcelado" (`installment`) and "Todo mês" (`recurring`, a
+subscription on the card); a new one starts à vista, titled "Nova compra no Nubank" and saved with
+"Salvar compra" (`isNewPurchase`), and picking a card for a new "Todo mês" expense keeps it
+recurring. A purchase in parcels is typed by its total price ("Valor total da compra"); the parcel
+stored is the total over the count rounded to the cent, and the preview is honest about it: "3x de
+R$ 333,33 (total R$ 999,99)" whenever the parcels do not add back to the typed total
+(`storedTotal`), which is also what `_TotalPreview` shows. "Informar valor da parcela" switches to
+typing the parcel and converts the value (parcel × n one way, total / n the other); switching a
+purchase, new or existing, from à vista to Parcelado carries the amount into the total, and back.
+Loose expenses keep their wording.
 
 `settledInstallments` is what makes "12x, 5 already paid" work: `startMonth` is the month of the *next*
 unpaid parcel, so the projection resumes at number 6 and stops after 12. The form names that month

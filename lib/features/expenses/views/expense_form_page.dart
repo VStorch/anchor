@@ -178,9 +178,7 @@ class _ExpenseFormView extends StatelessWidget {
                 ),
               ),
             ),
-          if (viewModel.isPurchase &&
-              viewModel.isInstallment &&
-              !viewModel.isEditing)
+          if (viewModel.isPurchase && viewModel.isInstallment)
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
