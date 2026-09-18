@@ -72,6 +72,31 @@ void main() {
     expect(form.installmentPlan, 'Faltam 3 parcelas até outubro de 2026');
   });
 
+  test('o total de parcelas fora de 2 a 480 fica como digitado e bloqueia', () {
+    final form =
+        ExpenseFormViewModel(repository: repository, referenceMonth: august)
+          ..setName('Tênis')
+          ..setAmount(100)
+          ..setDueDay(10)
+          ..setType(ExpenseType.installment);
+
+    expect(form.showsInstallmentPlan, isFalse);
+    expect(form.totalInstallmentsError, isNull);
+
+    for (final total in [1, 481]) {
+      form.setTotalInstallments(total);
+      expect(form.totalInstallments, total);
+      expect(form.totalInstallmentsError, 'De 2 a 480 parcelas');
+      expect(form.showsInstallmentPlan, isFalse);
+      expect(form.isValid, isFalse);
+    }
+
+    form.setTotalInstallments(480);
+    expect(form.totalInstallmentsError, isNull);
+    expect(form.showsInstallmentPlan, isTrue);
+    expect(form.isValid, isTrue);
+  });
+
   test('uma compra nova no cartão vem à vista e se chama compra', () {
     final card = CreditCard(
       id: 7,

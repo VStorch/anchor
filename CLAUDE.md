@@ -144,7 +144,10 @@ An **expense** is a rule, not a row per month. `Expense.occurrenceIn(Month)` pro
 | `single` | Só uma vez | only `startMonth` |
 
 A new installment expense assumes no count: "Total de parcelas" is a number field, empty until the
-user types it, and the save button reads "Informe o total de parcelas" meanwhile. A new expense on a
+user types it, and the save button reads "Informe o total de parcelas" meanwhile. It takes 2 to 480;
+anything else stays exactly as typed, with a field error and the button saying what is wrong, never
+clamped into another number. "Parcelas já pagas" and the total preview only show once the count is
+valid (`ExpenseFormViewModel.showsInstallmentPlan`). A new expense on a
 card is a purchase: it starts as "Só uma vez", the form is titled "Nova compra no Nubank" and saves
 with "Salvar compra" (`ExpenseFormViewModel.isNewPurchase`).
 

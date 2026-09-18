@@ -165,19 +165,28 @@ class _ExpenseFormView extends StatelessWidget {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(3),
               ],
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Total de parcelas',
                 hintText: 'Em quantas vezes',
+                errorText: viewModel.totalInstallmentsError,
               ),
               onChanged: (text) =>
                   viewModel.setTotalInstallments(int.tryParse(text)),
             ),
             const SizedBox(height: 12),
-            _InstallmentStepper(
-              label: 'Parcelas já pagas',
-              value: viewModel.settledInstallments,
-              onChanged: viewModel.setSettledInstallments,
-            ),
+            if (!viewModel.showsInstallmentPlan)
+              Text(
+                'Com o total, aparecem as parcelas já pagas e quanto falta.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              _InstallmentStepper(
+                label: 'Parcelas já pagas',
+                value: viewModel.settledInstallments,
+                onChanged: viewModel.setSettledInstallments,
+              ),
             if (viewModel.installmentPreview != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -228,15 +237,20 @@ class _ExpenseFormView extends StatelessWidget {
               onDaySelected: viewModel.setDueDay,
             ),
           ],
-          const SizedBox(height: 28),
-          _TotalPreview(viewModel: viewModel),
+          if (viewModel.showsInstallmentPlan) ...[
+            const SizedBox(height: 28),
+            _TotalPreview(viewModel: viewModel),
+          ],
           const SizedBox(height: 20),
           FilledButton(
             onPressed: viewModel.isValid && !viewModel.isSaving
                 ? () => _save(context, viewModel)
                 : null,
             child: Text(
-              viewModel.needsDueDay
+              viewModel.totalInstallmentsError != null
+                  ? 'Total de parcelas: '
+                        '${viewModel.totalInstallmentsError!.toLowerCase()}'
+                  : viewModel.needsDueDay
                   ? 'Escolha o dia do vencimento'
                   : viewModel.needsInstallmentCount
                   ? 'Informe o total de parcelas'

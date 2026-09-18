@@ -130,7 +130,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   bool get isInstallment => _type == ExpenseType.installment;
 
   int get remainingInstallments =>
-      (_totalInstallments ?? 0) - _settledInstallments;
+      (validTotalInstallments ?? 0) - _settledInstallments;
 
   double get totalCommitted =>
       isInstallment ? _amount * remainingInstallments : _amount;
@@ -222,9 +222,14 @@ class ExpenseFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const int minInstallments = 2;
+  static const int maxInstallments = 480;
+
+  /// Kept exactly as typed: an out-of-range count is shown as an error, never
+  /// silently changed into another number.
   void setTotalInstallments(int? value) {
-    final total = value?.clamp(1, 480);
-    _totalInstallments = total;
+    _totalInstallments = value;
+    final total = validTotalInstallments;
     if (total != null && _settledInstallments >= total) {
       _settledInstallments = total - 1;
     }
@@ -232,9 +237,25 @@ class ExpenseFormViewModel extends ChangeNotifier {
   }
 
   void setSettledInstallments(int value) {
-    final total = _totalInstallments;
+    final total = validTotalInstallments;
     _settledInstallments = total == null ? 0 : value.clamp(0, total - 1);
     notifyListeners();
+  }
+
+  int? get validTotalInstallments {
+    final total = _totalInstallments;
+    if (total == null || total < minInstallments || total > maxInstallments) {
+      return null;
+    }
+    return total;
+  }
+
+  /// What the total field says is wrong, or null.
+  String? get totalInstallmentsError {
+    if (!isInstallment || _totalInstallments == null) return null;
+    return validTotalInstallments == null
+        ? 'De $minInstallments a $maxInstallments parcelas'
+        : null;
   }
 
   /// A card purchase started from the card itself, not an edit.
@@ -242,6 +263,10 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   /// What the disabled save button asks for.
   bool get needsInstallmentCount => isInstallment && _totalInstallments == null;
+
+  /// The installment details only make sense once the count is valid.
+  bool get showsInstallmentPlan =>
+      !isInstallment || validTotalInstallments != null;
 
   void setSource(PaymentSource value) {
     _walletId = value.walletId;

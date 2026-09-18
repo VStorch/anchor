@@ -536,6 +536,77 @@ void main() {
     );
   });
 
+  testWidgets('a parcelada só mostra o plano depois de um total válido', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: FakeReminderNotifications(),
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tapTab(tester, Icons.receipt_long_outlined);
+    await tester.tap(find.text('Cadastrar despesa'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<ExpenseType>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Parcelada').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parcelas já pagas'), findsNothing);
+    expect(find.byType(Scrollable).last, findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Escolha o dia do vencimento'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Ainda falta pagar'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'Total de parcelas'),
+      -200,
+      scrollable: find.byType(Scrollable).last,
+    );
+
+    final total = find.widgetWithText(TextFormField, 'Total de parcelas');
+    await tester.enterText(total, '1');
+    await tester.pumpAndSettle();
+    expect(find.text('De 2 a 480 parcelas'), findsOneWidget);
+    expect(
+      find.descendant(of: total, matching: find.text('1')),
+      findsOneWidget,
+      reason: 'o campo mostra o que foi digitado',
+    );
+    final button = find.text('Total de parcelas: de 2 a 480 parcelas');
+    await tester.scrollUntilVisible(
+      button,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(button, findsOneWidget);
+    await tester.scrollUntilVisible(
+      total,
+      -200,
+      scrollable: find.byType(Scrollable).last,
+    );
+
+    await tester.enterText(total, '10');
+    await tester.pumpAndSettle();
+    expect(find.text('Parcelas já pagas'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Ainda falta pagar'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Ainda falta pagar'), findsOneWidget);
+  });
+
   testWidgets('tocar na célula da tabela e sair sem editar não fixa o mês', (
     tester,
   ) async {
