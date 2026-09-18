@@ -62,7 +62,10 @@ class CardOverviewTile extends StatelessWidget {
               ],
             ),
             if (overview.pending.isNotEmpty)
-              _InvoiceLine(invoice: overview.pending.first, label: null),
+              _InvoiceLine(
+                invoice: overview.pending.first,
+                label: _monthLabel(overview.pending.first),
+              ),
             if (older > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -104,10 +107,11 @@ class CardOverviewTile extends StatelessWidget {
   }
 
   /// Outside the current month the line says which invoice it is showing.
-  String? get _shownLabel => overview.isOpenInvoice
-      ? null
-      : 'Fatura de '
-            '${DateFormat.MMMM('pt_BR').format(overview.shown.month.firstDay)}';
+  String? get _shownLabel =>
+      overview.isOpenInvoice ? null : _monthLabel(overview.shown);
+
+  static String _monthLabel(CardInvoice invoice) =>
+      'Fatura de ${DateFormat.MMMM('pt_BR').format(invoice.month.firstDay)}';
 }
 
 class _InvoiceLine extends StatelessWidget {
@@ -131,29 +135,32 @@ class _InvoiceLine extends StatelessWidget {
           cardId: invoice.card.id!,
           month: invoice.month,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  status,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: invoice.isOverdue
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onSurfaceVariant,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    status,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: invoice.isOverdue
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              if (invoice.items.isNotEmpty)
-                Text(
-                  formatMoney(invoice.amount),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: 8),
+                if (invoice.items.isNotEmpty)
+                  Text(
+                    formatMoney(invoice.amount),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

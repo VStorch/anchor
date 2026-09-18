@@ -346,10 +346,14 @@ void main() {
       final tile = find.byType(CardOverviewTile);
       final pending = find.descendant(
         of: tile,
-        matching: find.text('Atrasada'),
+        matching: find.text('Fatura de setembro · Atrasada'),
       );
       await bringIntoReach(tester, pending, find.byType(Scrollable).first);
       expect(pending, findsOneWidget);
+      for (final line in [pending, find.text('Sem compras · fecha 03/10')]) {
+        final row = find.ancestor(of: line, matching: find.byType(InkWell));
+        expect(tester.getSize(row.first).height, greaterThanOrEqualTo(48));
+      }
       expect(
         find.descendant(
           of: tile,

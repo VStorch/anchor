@@ -247,7 +247,7 @@ void main() {
           .first;
       final invoice = find.descendant(
         of: find.byType(CardOverviewTile),
-        matching: find.text('Atrasada'),
+        matching: find.textContaining('Atrasada'),
       );
       await bringIntoReach(tester, invoice, walletsList);
       await tester.tap(invoice);
@@ -408,6 +408,27 @@ void main() {
           of: find.byType(NavigationBar),
           matching: find.byIcon(Icons.account_balance_wallet_outlined),
         ),
+      );
+      await tester.pumpAndSettle();
+
+      final walletsList = find
+          .descendant(
+            of: find.byType(WalletsPage),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final cardTile = find.byType(CardOverviewTile);
+      await tester.scrollUntilVisible(cardTile, 200, scrollable: walletsList);
+      await tester.ensureVisible(cardTile);
+      await tester.pumpAndSettle();
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await tester.scrollUntilVisible(
+        find.descendant(
+          of: find.byType(WalletCard),
+          matching: find.text('Salário da empresa'),
+        ),
+        -200,
+        scrollable: walletsList,
       );
       await tester.pumpAndSettle();
 
