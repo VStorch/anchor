@@ -279,7 +279,7 @@ void main() {
     expect(find.textContaining('vai para a fatura de'), findsNothing);
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nome da despesa'),
+      find.widgetWithText(TextFormField, 'O que comprou'),
       'Tênis',
     );
     await tester.enterText(
@@ -291,7 +291,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Nova compra no Nubank'), findsOneWidget);
-    expect(find.text(ExpenseType.single.label), findsOneWidget);
+    expect(find.text('À vista'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Salvar compra'),
       200,
@@ -314,6 +314,65 @@ void main() {
       find.descendant(of: tile, matching: find.text(formatMoney(500))),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a compra parcelada é digitada pelo preço total', (tester) async {
+    await seed();
+    await pumpApp(tester);
+    await tapTab(tester, Icons.account_balance_wallet_outlined);
+
+    final tile = find.byType(CardOverviewTile);
+    final purchase = find.descendant(of: tile, matching: find.text('Compra'));
+    await bringIntoReach(tester, purchase, find.byType(Scrollable).first);
+    await tester.tap(purchase);
+    await tester.pumpAndSettle();
+
+    expect(find.text('O que comprou'), findsOneWidget);
+    expect(find.text('Como pagou'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'O que comprou'),
+      'Presente',
+    );
+    await tester.tap(find.byType(DropdownButtonFormField<ExpenseType>));
+    await tester.pumpAndSettle();
+    expect(find.text('Todo mês'), findsNothing);
+    await tester.tap(find.text('Parcelado').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.widgetWithText(MoneyField, 'Valor total da compra'),
+        matching: find.byType(TextField),
+      ),
+      '1000',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Total de parcelas'),
+      '3',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('3x de ${formatMoney(333.33)}'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Salvar compra'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(ExpenseFormPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.text('Salvar compra'));
+    await tester.pumpAndSettle();
+
+    final saved = (await ExpenseRepository(
+      database,
+      DataChanges(),
+    ).fetchExpenses()).firstWhere((expense) => expense.name == 'Presente');
+    expect(saved.type, ExpenseType.installment);
+    expect(saved.amount, 333.33);
+    expect(saved.totalInstallments, 3);
   });
 
   testWidgets(
@@ -381,7 +440,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Nome da despesa'),
+        find.widgetWithText(TextFormField, 'O que comprou'),
         'Tênis',
       );
       await tester.enterText(

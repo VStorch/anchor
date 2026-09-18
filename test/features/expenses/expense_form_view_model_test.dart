@@ -1,5 +1,6 @@
 import 'package:anchor/core/database/app_database.dart';
 import 'package:anchor/core/state/data_changes.dart';
+import 'package:anchor/core/utils/money.dart';
 import 'package:anchor/core/utils/month.dart';
 import 'package:anchor/features/cards/models/credit_card.dart';
 import 'package:anchor/features/cards/repositories/card_repository.dart';
@@ -95,6 +96,54 @@ void main() {
     expect(form.totalInstallmentsError, isNull);
     expect(form.showsInstallmentPlan, isTrue);
     expect(form.isValid, isTrue);
+  });
+
+  group('compra no cartão', () {
+    final card = CreditCard(
+      id: 7,
+      name: 'Nubank',
+      closingDay: 3,
+      dueDay: 10,
+      createdAt: DateTime(2026, 8),
+    );
+
+    test('a parcelada guarda o total dividido pelas parcelas, ao centavo', () {
+      final form =
+          ExpenseFormViewModel(
+              repository: repository,
+              referenceMonth: august,
+              cards: [card],
+              card: card,
+            )
+            ..setName('Presente')
+            ..setAmount(160)
+            ..setType(ExpenseType.installment);
+
+      expect(form.typeOptions, [ExpenseType.single, ExpenseType.installment]);
+      expect(form.entersPurchaseTotal, isTrue);
+      expect(form.purchaseTotal, 160, reason: 'o preço digitado vira o total');
+
+      form.setTotalInstallments(3);
+      expect(form.amount, 53.33);
+      expect(form.parcelPreview, '3x de ${formatMoney(53.33)}');
+
+      form.setEntersPurchaseTotal(false);
+      form.setAmount(80);
+      form.setTotalInstallments(2);
+      expect(form.amount, 80);
+    });
+
+    test('uma despesa de cartão que já repete continua podendo repetir', () {
+      final form = ExpenseFormViewModel(
+        repository: repository,
+        referenceMonth: august,
+        cards: [card],
+        expense: gym.copyWith(cardId: 7),
+      );
+
+      expect(form.typeOptions, contains(ExpenseType.recurring));
+      expect(form.typeLabel(ExpenseType.single), 'À vista');
+    });
   });
 
   test('uma compra nova no cartão vem à vista e se chama compra', () {

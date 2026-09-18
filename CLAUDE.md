@@ -156,9 +156,14 @@ A new installment expense assumes no count: "Total de parcelas" is a number fiel
 user types it, and the save button reads "Informe o total de parcelas" meanwhile. It takes 2 to 480;
 anything else stays exactly as typed, with a field error and the button saying what is wrong, never
 clamped into another number. "Parcelas já pagas" and the total preview only show once the count is
-valid (`ExpenseFormViewModel.showsInstallmentPlan`). A new expense on a
-card is a purchase: it starts as "Só uma vez", the form is titled "Nova compra no Nubank" and saves
-with "Salvar compra" (`ExpenseFormViewModel.isNewPurchase`).
+valid (`ExpenseFormViewModel.showsInstallmentPlan`). An expense on a
+card is a purchase (`ExpenseFormViewModel.isPurchase`): the fields read "O que comprou" and "Como
+pagou", the types "À vista" (`single`) and "Parcelado" (`installment`) — "Todo mês" only stays for a
+card expense that already repeats, so an edit never changes what it is — and a new one starts à vista,
+titled "Nova compra no Nubank" and saved with "Salvar compra" (`isNewPurchase`). A new purchase in
+parcels is typed by its total price ("Valor total da compra", with "10x de R$ 83,33" under it); the
+parcel stored is the total over the count rounded to the cent, and "Informar valor da parcela"
+switches to typing the parcel. Loose expenses keep their wording.
 
 `settledInstallments` is what makes "12x, 5 already paid" work: `startMonth` is the month of the *next*
 unpaid parcel, so the projection resumes at number 6 and stops after 12. The form names that month

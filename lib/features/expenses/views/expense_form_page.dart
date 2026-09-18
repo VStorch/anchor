@@ -129,9 +129,13 @@ class _ExpenseFormView extends StatelessWidget {
           TextFormField(
             initialValue: viewModel.name,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Nome da despesa',
-              hintText: 'Plano de saúde, geladeira, mercado...',
+            decoration: InputDecoration(
+              labelText: viewModel.isPurchase
+                  ? 'O que comprou'
+                  : 'Nome da despesa',
+              hintText: viewModel.isPurchase
+                  ? 'Tênis, restaurante, presente...'
+                  : 'Plano de saúde, geladeira, mercado...',
             ),
             onChanged: viewModel.setName,
           ),
@@ -146,15 +150,51 @@ class _ExpenseFormView extends StatelessWidget {
           const SizedBox(height: 16),
           _TypeDropdown(viewModel: viewModel),
           const SizedBox(height: 16),
-          MoneyField(
-            initialValue: viewModel.amount,
-            label: switch (viewModel.type) {
-              ExpenseType.installment => 'Valor da parcela',
-              ExpenseType.recurring => 'Valor mensal',
-              ExpenseType.single => 'Valor',
-            },
-            onChanged: viewModel.setAmount,
-          ),
+          if (viewModel.entersPurchaseTotal)
+            MoneyField(
+              key: const ValueKey<String>('purchase-total'),
+              initialValue: viewModel.purchaseTotal,
+              label: 'Valor total da compra',
+              onChanged: viewModel.setPurchaseTotal,
+            )
+          else
+            MoneyField(
+              key: const ValueKey<String>('amount'),
+              initialValue: viewModel.amount,
+              label: switch (viewModel.type) {
+                ExpenseType.installment => 'Valor da parcela',
+                ExpenseType.recurring => 'Valor mensal',
+                ExpenseType.single => 'Valor',
+              },
+              onChanged: viewModel.setAmount,
+            ),
+          if (viewModel.parcelPreview case final preview?)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 12),
+              child: Text(
+                preview,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          if (viewModel.isPurchase &&
+              viewModel.isInstallment &&
+              !viewModel.isEditing)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => viewModel.setEntersPurchaseTotal(
+                  !viewModel.entersPurchaseTotal,
+                ),
+                style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                child: Text(
+                  viewModel.entersPurchaseTotal
+                      ? 'Informar valor da parcela'
+                      : 'Informar valor total',
+                ),
+              ),
+            ),
           if (viewModel.isInstallment) ...[
             const SizedBox(height: 24),
             const SectionHeader(title: 'Parcelamento'),
@@ -421,14 +461,18 @@ class _TypeDropdown extends StatelessWidget {
     return DropdownButtonFormField<ExpenseType>(
       value: viewModel.type,
       isExpanded: true,
-      decoration: const InputDecoration(labelText: 'Tipo da despesa'),
-      selectedItemBuilder: (context) => ExpenseType.values
+      decoration: InputDecoration(
+        labelText: viewModel.isPurchase ? 'Como pagou' : 'Tipo da despesa',
+      ),
+      selectedItemBuilder: (context) => viewModel.typeOptions
           .map(
-            (type) =>
-                Align(alignment: Alignment.centerLeft, child: Text(type.label)),
+            (type) => Align(
+              alignment: Alignment.centerLeft,
+              child: Text(viewModel.typeLabel(type)),
+            ),
           )
           .toList(),
-      items: ExpenseType.values
+      items: viewModel.typeOptions
           .map(
             (type) => DropdownMenuItem(
               value: type,
@@ -436,9 +480,9 @@ class _TypeDropdown extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(type.label),
+                  Text(viewModel.typeLabel(type)),
                   Text(
-                    type.description,
+                    viewModel.typeDescription(type),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

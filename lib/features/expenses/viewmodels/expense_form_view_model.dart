@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../cards/models/credit_card.dart';
 import '../models/expense.dart';
@@ -187,7 +188,15 @@ class ExpenseFormViewModel extends ChangeNotifier {
 
   void setType(ExpenseType value) {
     if (_type == value) return;
+    final wasEnteringTotal = entersPurchaseTotal;
+    final price = wasEnteringTotal ? _purchaseTotal : _amount;
     _type = value;
+    if (entersPurchaseTotal) {
+      _purchaseTotal = price;
+      _amount = _parcelOfTotal();
+    } else if (wasEnteringTotal) {
+      _amount = price;
+    }
     if (value != ExpenseType.installment) {
       _settledInstallments = 0;
     }
@@ -229,6 +238,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
   /// silently changed into another number.
   void setTotalInstallments(int? value) {
     _totalInstallments = value;
+    if (entersPurchaseTotal) _amount = _parcelOfTotal();
     final total = validTotalInstallments;
     if (total != null && _settledInstallments >= total) {
       _settledInstallments = total - 1;
@@ -261,6 +271,72 @@ class ExpenseFormViewModel extends ChangeNotifier {
   /// A card purchase started from the card itself, not an edit.
   bool get isNewPurchase => !isEditing && card != null;
 
+  /// Anything charged to a card reads as a purchase: "O que comprou",
+  /// "À vista" or "Parcelado".
+  bool get isPurchase => card != null;
+
+  /// A purchase is paid once or in parcels; "Todo mês" stays offered only
+  /// to an existing card expense that already repeats, so an edit never
+  /// silently changes what it is.
+  List<ExpenseType> get typeOptions => isPurchase
+      ? [
+          if (_expense?.type == ExpenseType.recurring) ExpenseType.recurring,
+          ExpenseType.single,
+          ExpenseType.installment,
+        ]
+      : ExpenseType.values;
+
+  String typeLabel(ExpenseType type) => !isPurchase
+      ? type.label
+      : switch (type) {
+          ExpenseType.single => 'À vista',
+          ExpenseType.installment => 'Parcelado',
+          ExpenseType.recurring => type.label,
+        };
+
+  String typeDescription(ExpenseType type) => !isPurchase
+      ? type.description
+      : switch (type) {
+          ExpenseType.single => 'Entra inteira numa fatura',
+          ExpenseType.installment => 'Dividida em parcelas nas faturas',
+          ExpenseType.recurring => type.description,
+        };
+
+  /// A new purchase in parcels is typed by its total price, as the receipt
+  /// shows it; the parcel stored is the total over the count, to the cent.
+  bool _entersTotal = true;
+  double _purchaseTotal = 0;
+
+  bool get entersPurchaseTotal =>
+      isPurchase && isInstallment && !isEditing && _entersTotal;
+
+  double get purchaseTotal => _purchaseTotal;
+
+  void setEntersPurchaseTotal(bool value) {
+    _entersTotal = value;
+    if (value) _purchaseTotal = 0;
+    _amount = value ? _parcelOfTotal() : _amount;
+    notifyListeners();
+  }
+
+  void setPurchaseTotal(double value) {
+    _purchaseTotal = value;
+    _amount = _parcelOfTotal();
+    notifyListeners();
+  }
+
+  double _parcelOfTotal() {
+    final count = validTotalInstallments;
+    if (count == null || _purchaseTotal <= 0) return 0;
+    return roundCents(_purchaseTotal / count);
+  }
+
+  /// "10x de R$ 83,33", under the total price.
+  String? get parcelPreview {
+    if (!entersPurchaseTotal || _amount <= 0) return null;
+    return '${validTotalInstallments}x de ${formatMoney(_amount)}';
+  }
+
   /// What the disabled save button asks for.
   bool get needsInstallmentCount => isInstallment && _totalInstallments == null;
 
@@ -275,6 +351,7 @@ class ExpenseFormViewModel extends ChangeNotifier {
     if (card != null && !isEditing) {
       _startMonth = card.invoiceMonthFor(_purchasedAt ?? _now);
     }
+    if (!typeOptions.contains(_type)) _type = ExpenseType.single;
     notifyListeners();
   }
 
