@@ -100,6 +100,18 @@ class _MonthTableState extends State<MonthTable> {
                   ]),
                 ),
               ),
+              if (widget.occurrences.any((o) => o.hasCustomAmount))
+                SliverPadding(
+                  padding: _sidePadding.copyWith(top: 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      'Valor em verde: mudou só neste mês',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
               SliverToBoxAdapter(
                 child: SizedBox(height: fabClearance(context)),
               ),

@@ -504,7 +504,9 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   collapsed button has no label. Scroll metrics arrive during layout, so it applies their changes
   after the frame. The month table is one vertical scroll —
   a `CustomScrollView` with the column titles in a `PinnedHeaderSliver`, every row, the Total as the
-  last row and `fabClearance` below — so no row hides in a smaller inner scroll; the three columns of
+  last row, the legend "Valor em verde: mudou só neste mês" when a month amount (`expense_months`,
+  painted `primary`) is on screen, and `fabClearance` below — so no row hides in a smaller inner
+  scroll; the three columns of
   amounts scale with the font and scroll sideways together when the table is wider than the screen. Its headers say "Valor (R$)", "Pago (R$)" and "Falta (R$)", so no cell repeats
   the symbol: values and the Total go through `formatAmount`, and a cell is typed with
   `MoneyInputFormatter(symbol: false)`.

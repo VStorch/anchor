@@ -347,6 +347,7 @@ void main() {
 
     expect(find.byType(MonthTable), findsOneWidget);
     expect(find.text('Total'), findsOneWidget);
+    expect(find.text('Valor em verde: mudou só neste mês'), findsNothing);
     expect(
       find.descendant(
         of: find.byType(MonthTable),
@@ -387,6 +388,7 @@ void main() {
 
     expect(find.textContaining('143,20'), findsWidgets);
     expect(find.textContaining('600,00'), findsNothing);
+    expect(find.text('Valor em verde: mudou só neste mês'), findsOneWidget);
   });
 
   group('botão de nova despesa e total da tabela', () {
