@@ -22,6 +22,8 @@ class WalletSummary {
     this.receivedInMonthBeforeCheck = 0,
     this.spentInMonthBeforeCheck = 0,
     this.latestCheck,
+    this.currentMonth,
+    this.spentInCurrentMonth = 0,
   });
 
   static List<WalletSummary> buildAll({
@@ -32,7 +34,9 @@ class WalletSummary {
     required List<ExpenseOccurrence> occurrences,
     required List<BalanceCheck> checks,
     List<Outflow> outflows = const <Outflow>[],
+    DateTime? today,
   }) {
+    final currentMonth = Month.fromDate(today ?? DateTime.now());
     return wallets.map((wallet) {
       final latestCheck = _latestOf(
         checks.where((check) => check.walletId == wallet.id),
@@ -64,6 +68,13 @@ class WalletSummary {
         (outflow) => outflow.month == month,
       );
       final spentInMonth = _paid(paidInMonth) + _spent(outInMonth);
+      final spentInCurrentMonth =
+          _paid(
+            walletPayments.where((payment) => payment.month == currentMonth),
+          ) +
+          _spent(
+            walletOutflows.where((outflow) => outflow.month == currentMonth),
+          );
 
       final plannedRemainder = occurrences
           .where((occurrence) => occurrence.plannedWalletId == wallet.id)
@@ -105,6 +116,8 @@ class WalletSummary {
               _spent(outInMonth.where((outflow) => !counts(outflow.spentAt))),
         ),
         latestCheck: latestCheck,
+        currentMonth: currentMonth,
+        spentInCurrentMonth: roundCents(spentInCurrentMonth),
       );
     }).toList();
   }
@@ -155,6 +168,11 @@ class WalletSummary {
   final double spentInMonthBeforeCheck;
   final BalanceCheck? latestCheck;
 
+  /// The month of the snapshot's today, whatever month is on screen: the
+  /// benefit bar always speaks of it.
+  final Month? currentMonth;
+  final double spentInCurrentMonth;
+
   /// Whatever is dated up to the latest check is already inside its amount.
   bool countsInBalance(DateTime at) => _countsAfter(latestCheck, at);
 
@@ -168,13 +186,11 @@ class WalletSummary {
 
   double get pendingInMonth => roundCents(committedInMonth - spentInMonth);
 
-  /// How much of the money the wallet had is still there: the balance over
-  /// the balance plus what left since the latest check (or since the wallet
-  /// was created). It reads the balance, so the bar never says there is more
-  /// than there is.
+  /// How much of this month's money is still there: the balance over the
+  /// balance plus what left in the current month. Read against today, not
+  /// the month on screen, and never above the balance: 0 when there is none.
   double get leftRatio {
-    final had = balance + spentSinceCheck;
-    if (balance <= 0 || had <= 0) return 0;
-    return (balance / had).clamp(0, 1);
+    if (balance <= 0) return 0;
+    return (balance / (balance + spentInCurrentMonth)).clamp(0, 1);
   }
 }

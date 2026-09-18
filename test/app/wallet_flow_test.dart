@@ -790,7 +790,7 @@ void main() {
     });
   });
 
-  testWidgets('o benefício mostra o que resta, não o que veio no mês', (
+  testWidgets('a barra do benefício fala do mês de hoje e do saldo', (
     tester,
   ) async {
     await seedSalary();
@@ -818,17 +818,16 @@ void main() {
       of: find.text('VR'),
       matching: find.byType(WalletCard),
     );
+    final monthName = DateFormat.MMMM('pt_BR').format(now);
     expect(
-      find.descendant(
-        of: card,
-        matching: find.text('Resta ${formatMoney(110.30)}'),
-      ),
-      findsOneWidget,
+      find.descendant(of: card, matching: find.textContaining('Resta')),
+      findsNothing,
+      reason: 'o saldo já está no topo do card',
     );
     expect(
       find.descendant(
         of: card,
-        matching: find.text('Saiu ${formatMoney(99.70)} neste mês'),
+        matching: find.text('Saiu ${formatMoney(99.70)} em $monthName'),
       ),
       findsOneWidget,
     );
@@ -836,6 +835,17 @@ void main() {
       find.descendant(of: card, matching: find.byType(LinearProgressIndicator)),
     );
     expect(bar.value, closeTo(110.30 / 210, 0.001));
+
+    await tester.tap(find.byTooltip('Mês anterior').first);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Saiu ${formatMoney(99.70)} em $monthName'),
+      ),
+      findsOneWidget,
+      reason: 'a barra fala do mês de hoje, não do mês na tela',
+    );
 
     final labels = tester
         .widgetList<Text>(

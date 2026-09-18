@@ -270,9 +270,10 @@ what `WalletSummary.countsInBalance` leaves out shows faded as "antes do saldo i
 Each wallet card carries the actions instead of hiding them: `WalletBalanceHeader` (the balance, then
 "R$ 850,00 informado em 15/09 · −R$ 99,90 depois" and "Setembro: entrou … · saiu …", both built from
 `WalletSummary`), `WalletActionButtons` (Gasto, Entrada, Informar saldo in a `Wrap`, in that order
-on every wallet) and, for a benefit only, "Resta R$ 110,30" over a bar of
-`WalletSummary.leftRatio` (balance over balance plus what left since the check) and "Saiu R$ 99,70
-neste mês" — the bar reads the balance, so it never shows more than there is. Tapping the
+on every wallet) and, for a benefit only, a bar of `WalletSummary.leftRatio` — the balance over the
+balance plus `spentInCurrentMonth`, 0 with no balance — captioned "Saiu R$ 99,70 em setembro". Both
+speak of the month of the snapshot's `today` (`WalletSummary.currentMonth`), whatever month is on
+screen, so the bar neither repeats the balance the header shows nor drains with months long gone. Tapping the
 card opens `WalletDetailPage` — the same header and buttons plus `MonthSwitcher` and the statement of
 the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
 `WalletFormPage`; deleting the wallet leaves `summaryFor` null and the page pops itself.

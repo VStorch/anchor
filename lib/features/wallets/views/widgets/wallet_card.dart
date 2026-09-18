@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/utils/money.dart';
 import '../../../../core/utils/month.dart';
@@ -94,13 +95,6 @@ class WalletCard extends StatelessWidget {
                 ],
                 if (wallet.kind == WalletKind.benefit) ...[
                   const SizedBox(height: 14),
-                  Text(
-                    'Resta ${formatMoney(summary.balance)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: LinearProgressIndicator(
@@ -114,7 +108,8 @@ class WalletCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Saiu ${formatMoney(summary.spentInMonth)} neste mês',
+                    'Saiu ${formatMoney(summary.spentInCurrentMonth)} em '
+                    '${DateFormat.MMMM('pt_BR').format((summary.currentMonth ?? month).firstDay)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

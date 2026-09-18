@@ -54,6 +54,7 @@ class BudgetService {
       occurrences: summary.occurrences,
       checks: checks,
       outflows: outflows,
+      today: today,
     );
 
     final currentMonth = Month.fromDate(today);
