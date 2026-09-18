@@ -197,8 +197,13 @@ class _GroupBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        _Line(label: 'A receber', value: '+ ${formatMoney(group.toReceive)}'),
-        _Line(label: 'Contas a pagar', value: '− ${formatMoney(group.toPay)}'),
+        if (group.wallets.isNotEmpty) ...[
+          _Line(label: 'A receber', value: '+ ${formatMoney(group.toReceive)}'),
+          _Line(
+            label: 'Contas a pagar',
+            value: '− ${formatMoney(group.toPay)}',
+          ),
+        ],
         for (final wallet in group.wallets)
           if (wallet.wallet.monthlyReserve != null)
             Row(
@@ -224,13 +229,20 @@ class _GroupBlock extends StatelessWidget {
             label: 'Contas sem carteira',
             value: '− ${formatMoney(group.unassignedToPay)}',
           ),
-        for (final wallet in group.wallets)
-          _Line(
-            label: wallet.wallet.name,
-            value: formatMoney(wallet.endBalance),
-            emphasized: true,
-            short: wallet.endBalance < 0,
-          ),
+        if (group.wallets.length > 1)
+          for (final wallet in group.wallets)
+            _Line(
+              label: wallet.wallet.name,
+              value: formatMoney(wallet.endBalance),
+              short: wallet.endBalance < 0,
+            ),
+        const Divider(height: 12),
+        _Line(
+          label: group.endBalance < 0 ? 'Vai faltar' : 'Vai sobrar',
+          value: formatMoney(group.endBalance.abs()),
+          emphasized: true,
+          short: group.endBalance < 0,
+        ),
       ],
     );
   }

@@ -506,9 +506,58 @@ void main() {
       ),
       findsOneWidget,
     );
+    final total = find.descendant(
+      of: forecast,
+      matching: find.text(formatMoney(2550)),
+    );
+    expect(total, findsOneWidget);
     expect(
-      find.descendant(of: forecast, matching: find.text('Salário')),
+      find.descendant(of: forecast, matching: find.text('Vai sobrar')),
       findsOneWidget,
+      reason: 'o bloco fecha no mesmo valor do título',
+    );
+    expect(
+      find.descendant(of: forecast, matching: find.text('Benefícios')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('a conta sem carteira aparece antes do total do dinheiro livre', (
+    tester,
+  ) async {
+    await seedSalaryAndExpense();
+    await ExpenseRepository(database, DataChanges()).saveExpense(
+      Expense(
+        name: 'IPTU',
+        type: ExpenseType.single,
+        amount: 50,
+        dueDay: 28,
+        startMonth: Month.current(),
+        createdAt: DateTime.now(),
+      ),
+    );
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Como chegamos nisso'));
+    await tester.pumpAndSettle();
+
+    final forecast = find.byType(ForecastCard);
+    final unassigned = find.descendant(
+      of: forecast,
+      matching: find.text('Contas sem carteira'),
+    );
+    final total = find.descendant(
+      of: forecast,
+      matching: find.text('Vai sobrar'),
+    );
+    expect(unassigned, findsOneWidget);
+    expect(
+      tester.getTopLeft(unassigned).dy,
+      lessThan(tester.getTopLeft(total).dy),
+    );
+    expect(
+      find.descendant(of: forecast, matching: find.text(formatMoney(2500))),
+      findsWidgets,
     );
   });
 
