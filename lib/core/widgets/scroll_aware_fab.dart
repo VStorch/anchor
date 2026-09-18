@@ -47,17 +47,37 @@ class _ScrollAwareFabState extends State<ScrollAwareFab> {
   bool _hidden = false;
   bool _scrolled = false;
 
+  /// The list the last notification came from, to read where it stands
+  /// after the content changes: a reload over a scrolled list keeps the
+  /// button round, and a list that is gone (an empty state) lets it extend.
+  BuildContext? _list;
+
   @override
   void didUpdateWidget(ScrollAwareFab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.contentKey != widget.contentKey ||
-        oldWidget.visible != widget.visible) {
-      _hidden = false;
-      _scrolled = false;
+    if (oldWidget.contentKey == widget.contentKey &&
+        oldWidget.visible == widget.visible) {
+      return;
     }
+    _hidden = false;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final list = _list;
+      final position = list != null && list.mounted
+          ? Scrollable.maybeOf(list)?.position
+          : null;
+      final scrolled =
+          position != null &&
+          position.hasPixels &&
+          position.pixels > _collapseAfter;
+      if (scrolled != _scrolled) setState(() => _scrolled = scrolled);
+    });
   }
 
   bool _onScroll(ScrollNotification notification) {
+    if (notification.metrics.axis == Axis.vertical) {
+      _list = notification.context;
+    }
     _follow(
       notification.metrics,
       direction: notification is UserScrollNotification
@@ -68,6 +88,9 @@ class _ScrollAwareFabState extends State<ScrollAwareFab> {
   }
 
   bool _onMetrics(ScrollMetricsNotification notification) {
+    if (notification.metrics.axis == Axis.vertical) {
+      _list = notification.context;
+    }
     _follow(notification.metrics);
     return false;
   }

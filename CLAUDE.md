@@ -485,7 +485,8 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   snackbars. At rest the button sits over the right column, so it slides away while the list scrolls
   down, comes back on scrolling up, at the end, when the list cannot scroll or when `contentKey`
   changes (month, filter, layout, a reload — an empty state has nothing to scroll back up), shrinks
-  to its icon once the list leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
+  to its icon once the list leaves the top (after a content change it rereads where the list it last
+  heard from stands, so a reload over a scrolled list keeps it round), and is round from the start over the table. Tests find it by `heroTag`, since a
   collapsed button has no label. Scroll metrics arrive during layout, so it applies their changes
   after the frame. The month table is one vertical scroll —
   a `CustomScrollView` with the column titles in a `PinnedHeaderSliver`, every row, the Total as the

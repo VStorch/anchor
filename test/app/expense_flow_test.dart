@@ -468,6 +468,30 @@ void main() {
       expect(tester.widget<FloatingActionButton>(fab()).isExtended, isTrue);
     });
 
+    testWidgets(
+      'trocar o filtro sobre a lista rolada traz o botão ainda redondo',
+      (tester) async {
+        await openManyBills(tester);
+
+        await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+        await tester.pumpAndSettle();
+        expect(fabHidden(tester), isTrue);
+
+        final pending = find.widgetWithText(ChoiceChip, 'A pagar');
+        await tester.ensureVisible(pending);
+        await tester.pumpAndSettle();
+        await tester.tap(pending);
+        await tester.pumpAndSettle();
+
+        expect(fabHidden(tester), isFalse);
+        expect(
+          tester.widget<FloatingActionButton>(fab()).isExtended,
+          isFalse,
+          reason: 'a lista continua rolada',
+        );
+      },
+    );
+
     testWidgets('o botão volta quando o filtro esvazia a lista', (
       tester,
     ) async {
