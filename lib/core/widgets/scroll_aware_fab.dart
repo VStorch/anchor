@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 
 /// A page with an add button that steps aside while its list scrolls down —
 /// at rest the button sits over the right column, where amounts and statuses
@@ -82,11 +83,21 @@ class _ScrollAwareFabState extends State<ScrollAwareFab> {
     }
     final scrolled = metrics.pixels > _collapseAfter;
 
-    if (hidden != _hidden || scrolled != _scrolled) {
+    if (hidden == _hidden && scrolled == _scrolled) return;
+    void apply() {
+      if (!mounted) return;
       setState(() {
         _hidden = hidden;
         _scrolled = scrolled;
       });
+    }
+
+    // Metrics arrive during layout, when no rebuild may be scheduled.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => apply());
+    } else {
+      apply();
     }
   }
 

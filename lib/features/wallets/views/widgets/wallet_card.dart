@@ -92,12 +92,10 @@ class WalletCard extends StatelessWidget {
                     ],
                   ),
                 ],
-                if (wallet.kind == WalletKind.benefit &&
-                    summary.receivedInMonth > 0) ...[
+                if (wallet.kind == WalletKind.benefit) ...[
                   const SizedBox(height: 14),
                   Text(
-                    'Usou ${formatMoney(summary.spentInMonth)} '
-                    'de ${formatMoney(summary.receivedInMonth)}',
+                    'Resta ${formatMoney(summary.balance)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -106,13 +104,19 @@ class WalletCard extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: LinearProgressIndicator(
-                      value: summary.usageRatio,
+                      value: summary.leftRatio,
                       minHeight: 6,
-                      semanticsLabel:
-                          'Parte do recebido no mês que já foi gasta',
-                      semanticsValue: '${(summary.usageRatio * 100).round()}%',
+                      semanticsLabel: 'Parte do saldo que ainda resta',
+                      semanticsValue: '${(summary.leftRatio * 100).round()}%',
                       color: wallet.color,
                       backgroundColor: wallet.color.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Saiu ${formatMoney(summary.spentInMonth)} neste mês',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

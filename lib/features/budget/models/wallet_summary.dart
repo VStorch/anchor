@@ -168,6 +168,13 @@ class WalletSummary {
 
   double get pendingInMonth => roundCents(committedInMonth - spentInMonth);
 
-  double get usageRatio =>
-      receivedInMonth <= 0 ? 0 : (spentInMonth / receivedInMonth).clamp(0, 1);
+  /// How much of the money the wallet had is still there: the balance over
+  /// the balance plus what left since the latest check (or since the wallet
+  /// was created). It reads the balance, so the bar never says there is more
+  /// than there is.
+  double get leftRatio {
+    final had = balance + spentSinceCheck;
+    if (balance <= 0 || had <= 0) return 0;
+    return (balance / had).clamp(0, 1);
+  }
 }

@@ -761,19 +761,92 @@ void main() {
       expect(find.text('Gasto em Salário'), findsOneWidget);
     });
 
-    testWidgets('o cabeçalho de cada seção cadastra a fonte daquele tipo', (
+    testWidgets('cada seção termina com a linha que cadastra o seu tipo', (
       tester,
     ) async {
-      await seedSalary();
+      await seedVoucher();
       await pumpApp(tester);
 
-      expect(find.text('Adicionar VR, VA ou outro benefício'), findsOneWidget);
-      await tester.tap(find.byTooltip('Adicionar salário'));
+      expect(find.text('Salário'), findsOneWidget);
+      expect(find.byTooltip('Adicionar salário'), findsNothing);
+
+      final salaryRow = find.text('Adicionar salário');
+      await tester.ensureVisible(salaryRow);
+      await tester.pumpAndSettle();
+      await tester.tap(salaryRow);
+      await tester.pumpAndSettle();
+      expect(find.text('Nova carteira'), findsOneWidget);
+      expect(find.text('Salário, freela...'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Voltar'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Nova carteira'), findsOneWidget);
-      expect(find.text('Criar carteira'), findsOneWidget);
+      final benefitRow = find.text('Adicionar benefício');
+      await tester.ensureVisible(benefitRow);
+      await tester.pumpAndSettle();
+      await tester.tap(benefitRow);
+      await tester.pumpAndSettle();
+      expect(find.text('Vale refeição, vale mercado...'), findsOneWidget);
     });
+  });
+
+  testWidgets('o benefício mostra o que resta, não o que veio no mês', (
+    tester,
+  ) async {
+    await seedSalary();
+    final voucherId = await seedVoucher();
+    final repository = WalletRepository(database, DataChanges());
+    final now = DateTime.now();
+    await repository.saveBalanceCheck(
+      BalanceCheck(
+        walletId: voucherId,
+        amount: 210,
+        checkedAt: now.subtract(const Duration(minutes: 5)),
+      ),
+    );
+    await repository.saveOutflow(
+      Outflow(
+        walletId: voucherId,
+        description: 'Mercado',
+        amount: 99.70,
+        spentAt: now,
+      ),
+    );
+    await pumpApp(tester);
+
+    final card = find.ancestor(
+      of: find.text('VR'),
+      matching: find.byType(WalletCard),
+    );
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Resta ${formatMoney(110.30)}'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Saiu ${formatMoney(99.70)} neste mês'),
+      ),
+      findsOneWidget,
+    );
+    final bar = tester.widget<LinearProgressIndicator>(
+      find.descendant(of: card, matching: find.byType(LinearProgressIndicator)),
+    );
+    expect(bar.value, closeTo(110.30 / 210, 0.001));
+
+    final labels = tester
+        .widgetList<Text>(
+          find.descendant(of: card, matching: find.byType(Text)),
+        )
+        .map((text) => text.data)
+        .where(
+          (text) => const ['Gasto', 'Entrada', 'Informar saldo'].contains(text),
+        )
+        .toList();
+    expect(labels, ['Gasto', 'Entrada', 'Informar saldo']);
   });
 
   testWidgets('o gasto lançado num mês passado fica naquele mês', (

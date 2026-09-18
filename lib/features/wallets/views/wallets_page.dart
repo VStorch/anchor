@@ -58,21 +58,28 @@ class WalletsPage extends StatelessWidget {
     );
   }
 
-  Widget _addWalletButton(
+  /// A full-width row at the end of its section: an icon in the header sat
+  /// right under the floating button.
+  Widget _addRow(String label, VoidCallback onPressed) => TextButton.icon(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(
+      minimumSize: const Size.fromHeight(48),
+      alignment: Alignment.centerLeft,
+    ),
+    icon: const Icon(Icons.add),
+    label: Text(label),
+  );
+
+  VoidCallback _newWallet(
     BuildContext context,
     WalletsViewModel viewModel,
     WalletKind kind,
-  ) => IconButton.filledTonal(
-    onPressed: () => WalletFormPage.open(
-      context,
-      suggestedColorIndex: viewModel.summaries.length,
-      initialKind: kind,
-    ),
-    icon: const Icon(Icons.add),
-    tooltip: kind == WalletKind.salary
-        ? 'Adicionar salário'
-        : 'Adicionar benefício',
-  );
+  ) =>
+      () => WalletFormPage.open(
+        context,
+        suggestedColorIndex: viewModel.summaries.length,
+        initialKind: kind,
+      );
 
   Widget _content(BuildContext context, WalletsViewModel viewModel) {
     final salaries = viewModel.summariesOf(WalletKind.salary);
@@ -89,49 +96,22 @@ class WalletsPage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _TotalBalanceCard(viewModel: viewModel),
-        if (salaries.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          SectionHeader(
-            title: 'Salário',
-            trailing: _addWalletButton(context, viewModel, WalletKind.salary),
-          ),
-          ...salaries.map((summary) => _card(context, viewModel, summary)),
-        ],
-        if (benefits.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          SectionHeader(
-            title: 'Benefícios',
-            trailing: _addWalletButton(context, viewModel, WalletKind.benefit),
-          ),
-          ...benefits.map((summary) => _card(context, viewModel, summary)),
-        ] else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => WalletFormPage.open(
-                context,
-                suggestedColorIndex: viewModel.summaries.length,
-                initialKind: WalletKind.benefit,
-              ),
-              style: TextButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                alignment: Alignment.centerLeft,
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar VR, VA ou outro benefício'),
-            ),
-          ),
         const SizedBox(height: 20),
-        SectionHeader(
-          title: 'Cartões',
-          trailing: IconButton.filledTonal(
-            onPressed: () => Navigator.of(
-              context,
-            ).push(CardFormPage.route(wallets: viewModel.wallets)),
-            icon: const Icon(Icons.add),
-            tooltip: 'Adicionar cartão',
-          ),
+        const SectionHeader(title: 'Salário'),
+        ...salaries.map((summary) => _card(context, viewModel, summary)),
+        _addRow(
+          'Adicionar salário',
+          _newWallet(context, viewModel, WalletKind.salary),
         ),
+        const SizedBox(height: 20),
+        const SectionHeader(title: 'Benefícios'),
+        ...benefits.map((summary) => _card(context, viewModel, summary)),
+        _addRow(
+          'Adicionar benefício',
+          _newWallet(context, viewModel, WalletKind.benefit),
+        ),
+        const SizedBox(height: 20),
+        const SectionHeader(title: 'Cartões'),
         ...viewModel.cardOverview.map(
           (overview) => CardOverviewTile(
             overview: overview,
@@ -139,6 +119,12 @@ class WalletsPage extends StatelessWidget {
             wallets: viewModel.wallets,
             cards: viewModel.cards,
           ),
+        ),
+        _addRow(
+          'Adicionar cartão',
+          () => Navigator.of(
+            context,
+          ).push(CardFormPage.route(wallets: viewModel.wallets)),
         ),
         const SizedBox(height: 20),
         SectionHeader(

@@ -269,8 +269,10 @@ what `WalletSummary.countsInBalance` leaves out shows faded as "antes do saldo i
 
 Each wallet card carries the actions instead of hiding them: `WalletBalanceHeader` (the balance, then
 "R$ 850,00 informado em 15/09 · −R$ 99,90 depois" and "Setembro: entrou … · saiu …", both built from
-`WalletSummary`), `WalletActionButtons` (Gasto, Entrada, Informar saldo in a `Wrap`, ordered by
-`WalletKind`) and, for a benefit only, the usage bar under "Usou R$ 47,30 de R$ 600,00". Tapping the
+`WalletSummary`), `WalletActionButtons` (Gasto, Entrada, Informar saldo in a `Wrap`, in that order
+on every wallet) and, for a benefit only, "Resta R$ 110,30" over a bar of
+`WalletSummary.leftRatio` (balance over balance plus what left since the check) and "Saiu R$ 99,70
+neste mês" — the bar reads the balance, so it never shows more than there is. Tapping the
 card opens `WalletDetailPage` — the same header and buttons plus `MonthSwitcher` and the statement of
 the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
 `WalletFormPage`; deleting the wallet leaves `summaryFor` null and the page pops itself.
@@ -280,9 +282,10 @@ The tab's FAB is **"Novo gasto"** (`heroTag: 'new-spending'`, and the Resumo has
 opens the outflow sheet straight away, otherwise `SpendingSourceSheet` asks "De onde saiu o dinheiro?"
 and returns a `SpendingSource` — `WalletSource` (outflow), `CardSource` (the expense form on that
 card, "Entra na fatura de outubro" from `WalletsViewModel.invoiceMonthForToday`) or `BillSource` (the
-expense form with no source). Creating a wallet moved to the `SectionHeader`s of Salário and
-Benefícios, which open `WalletFormPage(initialKind:)`, plus a text button under the salaries while
-there is no benefit; the empty tab has no FAB, only "Cadastrar salário ou benefício".
+expense form with no source). The Salário, Benefícios and Cartões sections are always there and each
+ends with a full-width row — "Adicionar salário", "Adicionar benefício" (`WalletFormPage(initialKind:)`)
+and "Adicionar cartão" — instead of a "+" in the header, which sat under the FAB; the empty tab has no
+FAB, only "Cadastrar salário ou benefício".
 
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
@@ -478,7 +481,8 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   down, comes back on scrolling up, at the end, when the list cannot scroll or when `contentKey`
   changes (month, filter, layout, a reload — an empty state has nothing to scroll back up), shrinks
   to its icon once the list leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
-  collapsed button has no label. The month table keeps "Total" as a fixed footer inside the same
+  collapsed button has no label. Scroll metrics arrive during layout, so it applies their changes
+  after the frame. The month table keeps "Total" as a fixed footer inside the same
   horizontal scroll. Its headers say "Valor (R$)", "Pago (R$)" and "Falta (R$)", so no cell repeats
   the symbol: values and the Total go through `formatAmount`, and a cell is typed with
   `MoneyInputFormatter(symbol: false)`.

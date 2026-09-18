@@ -448,10 +448,10 @@ void main() {
 
     await bringIntoReach(
       tester,
-      find.byTooltip('Adicionar cartão'),
+      find.text('Adicionar cartão'),
       find.byType(Scrollable).first,
     );
-    await tester.tap(find.byTooltip('Adicionar cartão'));
+    await tester.tap(find.text('Adicionar cartão'));
     await tester.pumpAndSettle();
 
     await tester.enterText(
