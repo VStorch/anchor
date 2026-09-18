@@ -58,9 +58,12 @@ that has something to show, and each block reads as a sum: "Você tem hoje" (`st
 receber", "Contas a pagar", "Reserva do dia a dia" (split by month from `reserveShares` when the month
 on screen is a later one: "R$ 300 em setembro + R$ 600 em outubro"), "Contas sem carteira", and ends
 on "Vai sobrar/Vai faltar" with the figure the title shows. Once a reserve exists, "Reserva: R$ 600/mês"
-under the headline edits it. When a group has a reserve and this month's share of it is gone
-(`ForecastGroup.reserveUsedUp`), its part of the daily line reads "Reserva de setembro já usada"
-instead of "R$ 0,00 do salário". The card is outlined and coloured `MoneyColors.predicted`, and its
+under the headline edits it. `ForecastGroup.reserveState` (`ReserveState`) says what limits this
+month's share, from the two terms each wallet keeps (`reserveLeft`, `reservePace`): `usedUp` (the
+month's spending took the whole reserve — the daily line reads "Reserva de setembro já usada"),
+`paceExceeded` (today's spending passed the day's pace while the month still has reserve — "Hoje
+passou do ritmo da reserva"), `byDaysLeft` (the explanation says "13 dias de 30", "1 dia de 30") or
+`byWhatIsLeft` ("o que resta da reserva"). The card is outlined and coloured `MoneyColors.predicted`, and its
 headline and summary lines hold no real figure; "Como chegamos nisso" may start from "Você tem hoje"
 because today's balance is the base of the sum being explained, not a figure set beside a planned
 one. The Resumo's wallet strip

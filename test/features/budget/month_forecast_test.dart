@@ -409,6 +409,46 @@ void main() {
         expect(after.freeMoney.dailyAllowance, roundCents(235 / 13));
       });
 
+      test(
+        'no último dia, gastar mais que o dia passa do ritmo sem gastar a reserva',
+        () {
+          final forecast = forecastOf(
+            september,
+            now: DateTime(2026, 9, 30, 10),
+            wallets: [salary.copyWith(monthlyReserve: 600)],
+            outflows: [
+              Outflow(
+                walletId: 1,
+                description: 'Mercado',
+                amount: 50,
+                spentAt: DateTime(2026, 9, 30, 9),
+              ),
+            ],
+          )!;
+
+          expect(forecast.freeMoney.reserve, 0);
+          expect(forecast.freeMoney.reserveState, ReserveState.paceExceeded);
+          expect(forecast.freeMoney.daysLeftInCurrentMonth, 1);
+        },
+      );
+
+      test('gastar a reserva do mês inteira a marca como usada', () {
+        final forecast = forecastOf(
+          september,
+          wallets: [reserved],
+          outflows: [
+            Outflow(
+              walletId: 1,
+              description: 'Mercado',
+              amount: 500,
+              spentAt: DateTime(2026, 9, 5),
+            ),
+          ],
+        )!;
+
+        expect(forecast.freeMoney.reserveState, ReserveState.usedUp);
+      });
+
       test('o gasto não mexe na parte proporcional enquanto cabe nela', () {
         final forecast = forecastOf(
           september,

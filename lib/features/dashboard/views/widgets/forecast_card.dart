@@ -171,10 +171,7 @@ class ForecastCard extends StatelessWidget {
   String? _dailyLine() {
     final parts = [
       if (forecast.freeMoney.dailyAllowance case final free?)
-        '${forecast.freeMoney.reserveUsedUp ? 'Reserva de '
-                      '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} '
-                      'já usada' : '${formatMoney(free)} do salário'}'
-            '${_spentTodayNote(forecast.freeMoney)}',
+        '${_freeDaily(free)}${_spentTodayNote(forecast.freeMoney)}',
       if (forecast.benefits.dailyAllowance case final benefit?)
         '${formatMoney(benefit)} ${_benefitPlace()}',
     ];
@@ -183,6 +180,16 @@ class ForecastCard extends StatelessWidget {
     return 'Por dia até ${DateFormat('dd/MM').format(lastDay)}: '
         '${parts.join(' · ')}';
   }
+
+  /// The salary's part of the day: the figure, or why there is none — the
+  /// month's reserve is spent, or today's spending passed the day's pace.
+  String _freeDaily(double free) => switch (forecast.freeMoney.reserveState) {
+    ReserveState.usedUp =>
+      'Reserva de '
+          '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} já usada',
+    ReserveState.paceExceeded => 'Hoje passou do ritmo da reserva',
+    _ => '${formatMoney(free)} do salário',
+  };
 
   String _benefitPlace() {
     final wallets = forecast.benefits.wallets;
@@ -292,8 +299,16 @@ class _GroupBlock extends StatelessWidget {
   }
 
   /// "13 dias de 30": where this month's share of the reserve comes from.
-  static String _daysLabel(ForecastGroup group) =>
-      '${group.daysLeftInCurrentMonth} dias de ${group.daysInCurrentMonth}';
+  /// "13 dias de 30" when the days still ahead limit this month's share;
+  /// "o que resta da reserva" when the month's spending does.
+  static String _daysLabel(ForecastGroup group) {
+    final days = group.daysLeftInCurrentMonth;
+    return switch (group.reserveState) {
+      ReserveState.byWhatIsLeft ||
+      ReserveState.usedUp => 'o que resta da reserva',
+      _ => '$days ${days == 1 ? 'dia' : 'dias'} de ${group.daysInCurrentMonth}',
+    };
+  }
 
   /// "R$ 235,00 em setembro (13 dias de 30) + R$ 600,00 em outubro".
   static String _sharesLabel(ForecastGroup group, List<ReserveShare> shares) =>

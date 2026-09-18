@@ -10,6 +10,11 @@ import 'everyday_spending.dart';
 import 'month_summary.dart';
 import 'wallet_summary.dart';
 
+/// Where this month's share of the reserve stands: limited by the days
+/// still ahead, by what the month's spending left of it, gone because
+/// today's spending passed the day's pace, or gone for the month.
+enum ReserveState { none, byDaysLeft, byWhatIsLeft, paceExceeded, usedUp }
+
 /// The part of a reserve that one month takes.
 class ReserveShare {
   const ReserveShare({required this.month, required this.amount});
@@ -26,6 +31,8 @@ class WalletForecast {
     required this.toPay,
     this.reserveShares = const <ReserveShare>[],
     this.spentToday = 0,
+    this.reserveLeft = 0,
+    this.reservePace = 0,
   });
 
   final Wallet wallet;
@@ -35,6 +42,12 @@ class WalletForecast {
 
   /// Everyday spending dated today, which today's part of the reserve pays.
   final double spentToday;
+
+  /// The two terms of this month's share of the reserve: what the month's
+  /// spending left of it, and the days still ahead less today's spending.
+  /// The share is the smaller of the two, never below zero.
+  final double reserveLeft;
+  final double reservePace;
 
   /// The everyday spending set aside, month by month, up to the month on
   /// screen: what is left of this month's, then each later month whole.
@@ -136,9 +149,26 @@ class ForecastGroup {
     return roundCents(spendable / days);
   }
 
-  /// This month's share of the reserve is gone: the day's figure is zero
-  /// because the plan for the month is spent, not because money ran out.
-  bool get reserveUsedUp => daysLeft != null && hasReserve && reserve <= 0;
+  /// Where this month's share of the reserve stands, for the daily line and
+  /// the explanation. Only a group with a reserve has one.
+  ReserveState get reserveState {
+    if (!hasReserve) return ReserveState.none;
+    if (_reserveLeft <= 0) return ReserveState.usedUp;
+    if (_reservePace <= 0) return ReserveState.paceExceeded;
+    return _reservePace <= _reserveLeft
+        ? ReserveState.byDaysLeft
+        : ReserveState.byWhatIsLeft;
+  }
+
+  double get _reserveLeft => _sumReserved((wallet) => wallet.reserveLeft);
+
+  double get _reservePace => _sumReserved((wallet) => wallet.reservePace);
+
+  double _sumReserved(double Function(WalletForecast) term) => roundCents(
+    wallets
+        .where((forecast) => forecast.wallet.monthlyReserve != null)
+        .fold<double>(0, (total, wallet) => total + term(wallet)),
+  );
 
   bool get isEmpty => wallets.isEmpty && unassignedToPay <= 0;
 
@@ -221,6 +251,13 @@ class MonthForecast {
               spending: spending,
             ),
             spentToday: _spentOn(summary.wallet, today, spending),
+            reserveLeft: _reserveLeftOf(summary.wallet, today, spending),
+            reservePace: _reservePaceOf(
+              summary.wallet,
+              today,
+              daysLeft,
+              spending,
+            ),
           ),
       ],
       unassignedToPay: occurrences
@@ -274,14 +311,8 @@ class MonthForecast {
     }
 
     final currentMonth = Month.fromDate(today);
-    final spentThisMonth = spending
-        .where((item) => item.walletId == wallet.id)
-        .where((item) => item.month == currentMonth)
-        .fold<double>(0, (total, item) => total + item.amount);
-    final unspent = reserve - spentThisMonth;
-    final ahead =
-        reserve * daysLeft / currentMonth.lengthInDays -
-        _spentOn(wallet, today, spending);
+    final unspent = _reserveLeftOf(wallet, today, spending);
+    final ahead = _reservePaceOf(wallet, today, daysLeft, spending);
     final current = unspent < ahead ? unspent : ahead;
 
     return [
@@ -292,6 +323,35 @@ class MonthForecast {
       for (var later = currentMonth.next; later <= month; later = later.next)
         ReserveShare(month: later, amount: reserve),
     ];
+  }
+
+  static double _reserveLeftOf(
+    Wallet wallet,
+    DateTime today,
+    List<EverydaySpending> spending,
+  ) {
+    final reserve = wallet.monthlyReserve;
+    if (reserve == null || wallet.kind != WalletKind.salary) return 0;
+    final currentMonth = Month.fromDate(today);
+    final spentThisMonth = spending
+        .where((item) => item.walletId == wallet.id)
+        .where((item) => item.month == currentMonth)
+        .fold<double>(0, (total, item) => total + item.amount);
+    return roundCents(reserve - spentThisMonth);
+  }
+
+  static double _reservePaceOf(
+    Wallet wallet,
+    DateTime today,
+    int daysLeft,
+    List<EverydaySpending> spending,
+  ) {
+    final reserve = wallet.monthlyReserve;
+    if (reserve == null || wallet.kind != WalletKind.salary) return 0;
+    final days = Month.fromDate(today).lengthInDays;
+    return roundCents(
+      reserve * daysLeft / days - _spentOn(wallet, today, spending),
+    );
   }
 
   static double _spentOn(
