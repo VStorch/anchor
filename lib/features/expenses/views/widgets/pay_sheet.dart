@@ -11,6 +11,7 @@ import '../../../wallets/models/wallet.dart';
 import '../../../../core/utils/money.dart';
 import '../../models/expense_occurrence.dart';
 import '../../models/expense_payment.dart';
+import '../../models/expense_type.dart';
 import '../../models/payable.dart';
 import '../../viewmodels/expenses_view_model.dart';
 
@@ -129,11 +130,17 @@ class _PaySheetState extends State<PaySheet> {
   bool get _asksAmount => widget.amount != null;
 
   /// A loose bill paid with less than it owes: was the bill smaller, or is
-  /// this a part? Only a new payment asks; an invoice pays per purchase.
+  /// this a part? Only a new payment of a recurring or one-off bill off any
+  /// card asks: a purchase or a parcel costs what was agreed, so less is a
+  /// part.
   ExpenseOccurrence? get _partlyPaid {
     if (widget.isEdit || !_asksAmount || _amount <= 0) return null;
     final payable = widget.payable;
     if (payable is! ExpenseOccurrence || payable.offRule) return null;
+    final expense = payable.expense;
+    if (expense.cardId != null || expense.type == ExpenseType.installment) {
+      return null;
+    }
     return coversAmount(_amount, payable.remaining) ? null : payable;
   }
 
