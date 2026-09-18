@@ -145,6 +145,25 @@ void main() {
     expect(find.text('Cadastrar meu salário'), findsOneWidget);
   });
 
+  testWidgets('o Resumo lança um gasto pelo botão Novo gasto', (tester) async {
+    Finder fab() => find.byWidgetPredicate(
+      (widget) =>
+          widget is FloatingActionButton &&
+          widget.heroTag == 'dashboard-new-spending',
+    );
+
+    await pumpApp(tester);
+    expect(fab(), findsNothing, reason: 'sem carteira não há de onde sair');
+
+    await seedSalaryAndExpense();
+    await tester.pumpWidget(const SizedBox());
+    await pumpApp(tester);
+
+    await tester.tap(fab());
+    await tester.pumpAndSettle();
+    expect(find.text('Gasto em Salário'), findsOneWidget);
+  });
+
   testWidgets('a aba Carteiras vazia não tem botão de gasto', (tester) async {
     await pumpApp(tester);
     await tapTab(tester, Icons.account_balance_wallet_outlined);

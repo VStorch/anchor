@@ -5,11 +5,14 @@ import '../../../app/app_shell.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/utils/month.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/fab_clearance.dart';
 import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
+import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../expenses/views/widgets/expense_tile.dart';
 import '../../cards/views/payable_sheet.dart';
+import '../../wallets/views/wallet_actions.dart';
 import '../../wallets/views/wallet_form_page.dart';
 import '../../budget/models/month_summary.dart';
 import '../../wallets/models/wallet.dart';
@@ -30,22 +33,31 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<DashboardViewModel>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Anchor'),
-        actions: [
-          IconButton(
-            onPressed: () => MonthAgendaPage.open(context),
-            icon: const Icon(Icons.calendar_month_outlined),
-            tooltip: 'Agenda do mês',
-          ),
-        ],
+    return ScrollAwareFab(
+      heroTag: 'dashboard-new-spending',
+      icon: Icons.add,
+      label: 'Novo gasto',
+      onPressed: () => WalletActions.newSpending(context),
+      visible: !viewModel.isLoading && !viewModel.needsSetup,
+      contentKey: (viewModel.month, viewModel.snapshot),
+      builder: (context, fab) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Anchor'),
+          actions: [
+            IconButton(
+              onPressed: () => MonthAgendaPage.open(context),
+              icon: const Icon(Icons.calendar_month_outlined),
+              tooltip: 'Agenda do mês',
+            ),
+          ],
+        ),
+        floatingActionButton: fab,
+        body: viewModel.isLoading
+            ? const LoadingView()
+            : viewModel.needsSetup
+            ? _onboarding(context)
+            : _content(context, viewModel),
       ),
-      body: viewModel.isLoading
-          ? const LoadingView()
-          : viewModel.needsSetup
-          ? _onboarding(context)
-          : _content(context, viewModel),
     );
   }
 
@@ -92,7 +104,7 @@ class DashboardPage extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: viewModel.refresh,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
         children: [
           TodayCard(
             balance: snapshot.walletsBalance,

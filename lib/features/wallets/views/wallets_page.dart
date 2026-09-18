@@ -10,15 +10,12 @@ import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../cards/views/card_form_page.dart';
-import '../../expenses/views/expense_form_page.dart';
-import '../models/spending_source.dart';
 import '../models/wallet_kind.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_actions.dart';
 import 'wallet_detail_page.dart';
 import 'wallet_form_page.dart';
 import 'widgets/card_overview_tile.dart';
-import 'widgets/spending_source_sheet.dart';
 import 'widgets/movement_tile.dart';
 import 'widgets/wallet_card.dart';
 
@@ -33,7 +30,7 @@ class WalletsPage extends StatelessWidget {
       heroTag: 'new-spending',
       icon: Icons.add,
       label: 'Novo gasto',
-      onPressed: () => _newSpending(context, viewModel),
+      onPressed: () => WalletActions.newSpending(context),
       visible: !viewModel.isLoading && !viewModel.isEmpty,
       contentKey: (viewModel.month, viewModel.summaries),
       builder: (context, fab) => Scaffold(
@@ -46,49 +43,6 @@ class WalletsPage extends StatelessWidget {
             : _content(context, viewModel),
       ),
     );
-  }
-
-  /// With a single wallet and no card there is nothing to ask.
-  Future<void> _newSpending(
-    BuildContext context,
-    WalletsViewModel viewModel,
-  ) async {
-    if (viewModel.summaries.length == 1 && viewModel.cards.isEmpty) {
-      return WalletActions.registerOutflow(
-        context,
-        viewModel.summaries.single.wallet,
-      );
-    }
-
-    final source = await SpendingSourceSheet.show(
-      context,
-      wallets: viewModel.summaries,
-      cards: viewModel.cards,
-      invoiceMonthOf: viewModel.invoiceMonthForToday,
-    );
-    if (source == null || !context.mounted) return;
-
-    switch (source) {
-      case WalletSource(:final wallet):
-        await WalletActions.registerOutflow(context, wallet);
-      case CardSource(:final card):
-        await Navigator.of(context).push(
-          ExpenseFormPage.route(
-            referenceMonth: viewModel.month,
-            wallets: viewModel.wallets,
-            cards: viewModel.cards,
-            card: card,
-          ),
-        );
-      case BillSource():
-        await Navigator.of(context).push(
-          ExpenseFormPage.route(
-            referenceMonth: viewModel.month,
-            wallets: viewModel.wallets,
-            cards: viewModel.cards,
-          ),
-        );
-    }
   }
 
   Widget _emptyState(BuildContext context) {

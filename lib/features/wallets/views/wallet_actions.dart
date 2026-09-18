@@ -10,9 +10,12 @@ import '../models/receipt.dart';
 import '../models/wallet.dart';
 import '../models/wallet_movement.dart';
 import '../viewmodels/wallets_view_model.dart';
+import '../../expenses/views/expense_form_page.dart';
+import '../models/spending_source.dart';
 import 'widgets/balance_check_sheet.dart';
 import 'widgets/outflow_sheet.dart';
 import 'widgets/receipt_sheet.dart';
+import 'widgets/spending_source_sheet.dart';
 
 /// The sheets a wallet opens, shared by the Carteiras tab and the statement
 /// of a single wallet.
@@ -201,5 +204,44 @@ abstract final class WalletActions {
       amount: edit.amount,
       receivedAt: edit.receivedAt,
     );
+  }
+
+  /// With a single wallet and no card there is nothing to ask.
+  /// "Novo gasto", from Carteiras or the Resumo.
+  static Future<void> newSpending(BuildContext context) async {
+    final viewModel = context.read<WalletsViewModel>();
+    if (viewModel.summaries.length == 1 && viewModel.cards.isEmpty) {
+      return registerOutflow(context, viewModel.summaries.single.wallet);
+    }
+
+    final source = await SpendingSourceSheet.show(
+      context,
+      wallets: viewModel.summaries,
+      cards: viewModel.cards,
+      invoiceMonthOf: viewModel.invoiceMonthForToday,
+    );
+    if (source == null || !context.mounted) return;
+
+    switch (source) {
+      case WalletSource(:final wallet):
+        await registerOutflow(context, wallet);
+      case CardSource(:final card):
+        await Navigator.of(context).push(
+          ExpenseFormPage.route(
+            referenceMonth: viewModel.month,
+            wallets: viewModel.wallets,
+            cards: viewModel.cards,
+            card: card,
+          ),
+        );
+      case BillSource():
+        await Navigator.of(context).push(
+          ExpenseFormPage.route(
+            referenceMonth: viewModel.month,
+            wallets: viewModel.wallets,
+            cards: viewModel.cards,
+          ),
+        );
+    }
   }
 }

@@ -265,7 +265,8 @@ card opens `WalletDetailPage` — the same header and buttons plus `MonthSwitche
 the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
 `WalletFormPage`; deleting the wallet leaves `summaryFor` null and the page pops itself.
 
-The tab's FAB is **"Novo gasto"** (`heroTag: 'new-spending'`): with a single wallet and no card it
+The tab's FAB is **"Novo gasto"** (`heroTag: 'new-spending'`, and the Resumo has the same button as
+`'dashboard-new-spending'`, both through `WalletActions.newSpending`): with a single wallet and no card it
 opens the outflow sheet straight away, otherwise `SpendingSourceSheet` asks "De onde saiu o dinheiro?"
 and returns a `SpendingSource` — `WalletSource` (outflow), `CardSource` (the expense form on that
 card, "Entra na fatura de outubro" from `WalletsViewModel.invoiceMonthForToday`) or `BillSource` (the
@@ -460,7 +461,7 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
 - Every `FloatingActionButton` needs an explicit `heroTag` — pages stay alive in an `IndexedStack`.
   A list under an extended FAB ends with `fabClearance(context)` of bottom padding
   (`core/widgets/fab_clearance.dart`), which scales with the font. The add buttons of Despesas,
-  Carteiras and `WalletDetailPage` are `ScrollAwareFab` (`core/widgets/scroll_aware_fab.dart`),
+  Carteiras, the Resumo and `WalletDetailPage` are `ScrollAwareFab` (`core/widgets/scroll_aware_fab.dart`),
   which wraps the page's `Scaffold` and hands its `builder` the button for
   `Scaffold.floatingActionButton` — so the Scaffold still lifts it above the gesture bar and
   snackbars. At rest the button sits over the right column, so it slides away while the list scrolls
