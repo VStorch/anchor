@@ -16,6 +16,7 @@ import '../features/expenses/viewmodels/expenses_view_model.dart';
 import '../features/onboarding/services/onboarding_service.dart';
 import '../features/reminders/services/reminder_notifications.dart';
 import '../features/reminders/viewmodels/reminders_view_model.dart';
+import '../features/reminders/views/reminders_resume_watcher.dart';
 import '../features/settings/services/backup_files.dart';
 import '../features/settings/viewmodels/backup_view_model.dart';
 import '../features/settings/viewmodels/settings_view_model.dart';
@@ -140,7 +141,8 @@ class AnchorApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          builder: (context, child) => DismissFocus(child: child!),
+          builder: (context, child) =>
+              RemindersResumeWatcher(child: DismissFocus(child: child!)),
           home: const FirstRunGate(),
         ),
       ),

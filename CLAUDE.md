@@ -348,7 +348,9 @@ to remind, never on its own again; a refusal turns the switch in Ajustes off.
 `ReminderNotifications.areEnabled()` asks Android whether the app's notifications can show at all;
 when the switch is on and they cannot (`RemindersViewModel.systemBlocked`), Ajustes and the
 onboarding's Lembretes step show `NotificationsBlockedNotice`, which only says where to turn them on —
-opening the system settings would take another plugin. Scheduling is inexact
+opening the system settings would take another plugin. `RemindersResumeWatcher`, around the whole
+`MaterialApp`, calls `recheckSystem()` whenever the app resumes, so the notice goes away as soon as
+the user comes back from turning them on. Scheduling is inexact
 (`inexactAllowWhileIdle`), which needs no exact-alarm permission. The plugin requires core library
 desugaring in `android/app/build.gradle.kts` and the two receivers in `AndroidManifest.xml`.
 

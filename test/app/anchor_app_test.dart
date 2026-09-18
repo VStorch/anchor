@@ -703,4 +703,37 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('voltar ao app depois de ligar as notificações tira o aviso', (
+    tester,
+  ) async {
+    final notifications = FakeReminderNotifications(systemEnabled: false);
+    final settings = SettingsViewModel();
+    await settings.initialize();
+    await tester.pumpWidget(
+      AnchorApp(
+        reminderNotifications: notifications,
+        settings: settings,
+        database: database,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapTab(tester, Icons.tune_outlined);
+    expect(find.byType(NotificationsBlockedNotice), findsOneWidget);
+
+    notifications.systemEnabled = true;
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NotificationsBlockedNotice), findsNothing);
+  });
 }

@@ -114,6 +114,10 @@ class RemindersViewModel extends ChangeNotifier {
     return _notifications.requestPermission();
   }
 
+  /// The user may have turned the notifications on in Android's settings
+  /// and come back: `RemindersResumeWatcher` calls this when the app resumes.
+  Future<void> recheckSystem() => _checkSystem();
+
   Future<void> _checkSystem() async {
     final blocked = !await _notifications.areEnabled();
     if (_systemBlocked == blocked) return;
