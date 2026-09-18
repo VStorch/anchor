@@ -482,8 +482,10 @@ the fake clock. Seed with `tester.runAsync` and settle with `runAsync` + `pump` 
   changes (month, filter, layout, a reload — an empty state has nothing to scroll back up), shrinks
   to its icon once the list leaves the top, and is round from the start over the table. Tests find it by `heroTag`, since a
   collapsed button has no label. Scroll metrics arrive during layout, so it applies their changes
-  after the frame. The month table keeps "Total" as a fixed footer inside the same
-  horizontal scroll. Its headers say "Valor (R$)", "Pago (R$)" and "Falta (R$)", so no cell repeats
+  after the frame. The month table is one vertical scroll —
+  a `CustomScrollView` with the column titles in a `PinnedHeaderSliver`, every row, the Total as the
+  last row and `fabClearance` below — so no row hides in a smaller inner scroll; the three columns of
+  amounts scale with the font and scroll sideways together when the table is wider than the screen. Its headers say "Valor (R$)", "Pago (R$)" and "Falta (R$)", so no cell repeats
   the symbol: values and the Total go through `formatAmount`, and a cell is typed with
   `MoneyInputFormatter(symbol: false)`.
 - Every day, date or month picker calls `releaseFocus()` (`core/widgets/dismiss_focus.dart`) before

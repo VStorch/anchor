@@ -20,8 +20,6 @@ class MonthTable extends StatefulWidget {
   /// What the expense name keeps when the screen is narrow.
   static const double _minNameWidth = 100;
 
-  static const double _remainingWidth = 84;
-
   final List<ExpenseOccurrence> occurrences;
   final ValueChanged<ExpenseOccurrence> onOpen;
   final void Function(ExpenseOccurrence occurrence, double amount)
@@ -51,62 +49,60 @@ class _MonthTableState extends State<MonthTable> {
       0: const FlexColumnWidth(),
       1: FixedColumnWidth(amount),
       2: FixedColumnWidth(amount),
-      3: const FixedColumnWidth(MonthTable._remainingWidth),
+      3: FixedColumnWidth(amount),
     };
     final minWidth =
-        MonthTable._minNameWidth +
-        amount * 2 +
-        MonthTable._remainingWidth +
-        _sidePadding.horizontal;
+        MonthTable._minNameWidth + amount * 3 + _sidePadding.horizontal;
 
     return _layout(context, columns, minWidth);
   }
 
-  /// The total stays on screen as a footer: it scrolls sideways with the
-  /// table, being inside the same horizontal scroll, but never vertically.
+  /// One vertical scroll holds every row and ends on the Total, so no row
+  /// hides behind a smaller inner scroll; the column titles stay pinned on
+  /// top. The whole table scrolls sideways together when it is wider than
+  /// the screen, which keeps the three tables' columns aligned.
   Widget _layout(
     BuildContext context,
     Map<int, TableColumnWidth> columns,
     double minWidth,
   ) {
+    final theme = Theme.of(context);
+
+    Widget table(List<TableRow> rows) => Table(
+      columnWidths: columns,
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: rows,
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
           width: max(constraints.maxWidth, minWidth),
           height: constraints.maxHeight,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: _sidePadding.copyWith(top: 4, bottom: 8),
-                  child: Table(
-                    columnWidths: columns,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      _headerRow(context),
-                      ...widget.occurrences.map((o) => _row(context, o)),
-                    ],
+          child: CustomScrollView(
+            slivers: [
+              PinnedHeaderSliver(
+                child: ColoredBox(
+                  color: theme.colorScheme.surface,
+                  child: Padding(
+                    padding: _sidePadding,
+                    child: table([_headerRow(context)]),
                   ),
                 ),
               ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  border: Border(
-                    top: BorderSide(color: Theme.of(context).dividerColor),
-                  ),
-                ),
-                child: Padding(
-                  padding: _sidePadding,
-                  child: Table(
-                    columnWidths: columns,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [_totalsRow(context)],
-                  ),
+              SliverPadding(
+                padding: _sidePadding,
+                sliver: SliverToBoxAdapter(
+                  child: table([
+                    ...widget.occurrences.map((o) => _row(context, o)),
+                    _totalsRow(context),
+                  ]),
                 ),
               ),
-              SizedBox(height: fabClearance(context)),
+              SliverToBoxAdapter(
+                child: SizedBox(height: fabClearance(context)),
+              ),
             ],
           ),
         ),
@@ -208,6 +204,9 @@ class _MonthTableState extends State<MonthTable> {
     );
 
     return TableRow(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: theme.dividerColor)),
+      ),
       children: [
         _pad(Text('Total', style: style)),
         _pad(

@@ -486,26 +486,54 @@ void main() {
       expect(fabHidden(tester), isFalse);
     });
 
-    testWidgets('na tabela o total aparece sem rolar e o botão é redondo', (
-      tester,
-    ) async {
-      await openManyBills(tester);
-      await tester.tap(find.byTooltip('Ver como tabela'));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'a tabela rola inteira com os títulos presos e o total alinhado',
+      (tester) async {
+        await openManyBills(tester);
+        await tester.tap(find.byTooltip('Ver como tabela'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<FloatingActionButton>(fab()).isExtended, isFalse);
 
-      final total = find.text('Total');
-      expect(total, findsOneWidget);
-      expect(
-        tester.getRect(total).bottom,
-        lessThanOrEqualTo(tester.getRect(find.byType(NavigationBar)).top),
-      );
-      expect(
-        tester.getRect(total).bottom,
-        lessThanOrEqualTo(tester.getRect(fab()).top),
-      );
-      expect(tester.widget<FloatingActionButton>(fab()).isExtended, isFalse);
-      expect(find.text('Pago (R\$)'), findsOneWidget);
-    });
+        final table = find.byType(MonthTable);
+        final rows = find
+            .descendant(of: table, matching: find.byType(Scrollable))
+            .last;
+        final header = find.text('Pago (R\$)');
+        final headerTop = tester.getRect(header).top;
+
+        await tester.scrollUntilVisible(
+          find.text('Conta 14'),
+          200,
+          scrollable: rows,
+        );
+        await tester.drag(rows, const Offset(0, -400));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(find.text('Total')).top,
+          greaterThan(tester.getRect(find.text('Conta 14')).bottom),
+          reason: 'o total vem depois da última linha, na mesma rolagem',
+        );
+        expect(tester.getRect(header).top, headerTop, reason: 'título preso');
+        expect(
+          tester.getRect(find.text('Total')).bottom,
+          lessThanOrEqualTo(tester.getRect(find.byType(NavigationBar)).top),
+        );
+
+        final paidTotal = find.descendant(
+          of: find.ancestor(
+            of: find.text('Total'),
+            matching: find.byType(Table),
+          ),
+          matching: find.text(formatAmount(0)),
+        );
+        expect(
+          tester.getRect(paidTotal).right,
+          closeTo(tester.getRect(header).right, 1),
+          reason: 'o total do Pago fica na coluna do Pago',
+        );
+      },
+    );
   });
 
   testWidgets('tocar na célula da tabela e sair sem editar não fixa o mês', (
