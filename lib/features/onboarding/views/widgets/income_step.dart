@@ -28,31 +28,72 @@ class IncomeStep extends StatelessWidget {
           amountLabel: 'Salário',
         ),
         const SizedBox(height: 28),
-        YesNoQuestion(
-          question: 'Recebe VR, VA ou vale mercado?',
-          value: viewModel.hasBenefit,
-          onChanged: viewModel.setHasBenefit,
+        for (final benefit in viewModel.benefits)
+          _BenefitCard(
+            key: ValueKey('income-benefit-${benefit.key}'),
+            benefit: benefit,
+          ),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
+          onPressed: viewModel.addBenefit,
+          icon: const Icon(Icons.add),
+          label: const Text('Adicionar benefício (VR, VA, mercado…)'),
         ),
-        if (viewModel.hasBenefit == true) ...[
-          const SizedBox(height: 20),
-          TextFormField(
-            initialValue: viewModel.benefit.name,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Nome do benefício',
-              hintText: 'VR, VA, mercado...',
-            ),
-            onChanged: (value) =>
-                viewModel.edit(() => viewModel.benefit.name = value),
-          ),
-          const SizedBox(height: 16),
-          IncomeForm(
-            key: const ValueKey('income-benefit'),
-            income: viewModel.benefit,
-            amountLabel: 'Valor do benefício',
-          ),
-        ],
       ],
+    );
+  }
+}
+
+class _BenefitCard extends StatelessWidget {
+  const _BenefitCard({super.key, required this.benefit});
+
+  final IncomeDraft benefit;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.read<OnboardingViewModel>();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: benefit.name,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome do benefício',
+                      hintText: 'VR, VA, mercado...',
+                    ),
+                    onChanged: (value) =>
+                        viewModel.edit(() => benefit.name = value),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Remover benefício',
+                  onPressed: () => viewModel.removeBenefit(benefit),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IncomeForm(
+                income: benefit,
+                amountLabel: 'Valor do benefício',
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -71,7 +71,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(TodayCard),
-        matching: find.text(formatMoney(1060)),
+        matching: find.text(formatMoney(1150)),
       ),
       findsOneWidget,
     );
@@ -93,6 +93,12 @@ void main() {
       find.descendant(of: dashboard, matching: find.text('Aluguel')),
       findsNothing,
     );
+
+    final wallets = await WalletRepository(
+      database,
+      DataChanges(),
+    ).fetchWallets();
+    expect(wallets.map((wallet) => wallet.name), ['Salário', 'VR', 'VA']);
 
     final expenses = ExpenseRepository(database, DataChanges());
     final rent = (await expenses.fetchExpenses()).firstWhere(

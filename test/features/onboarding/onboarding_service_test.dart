@@ -147,6 +147,46 @@ void main() {
     },
   );
 
+  test('cada benefício vira uma carteira com o próprio saldo', () async {
+    await service.apply(
+      OnboardingDraft(
+        incomes: [
+          salary(balance: 850, arrived: true),
+          voucher(balance: 210, arrived: false),
+          IncomeDraft(kind: WalletKind.benefit, name: 'VA')
+            ..amount = 400
+            ..day = 25
+            ..balanceToday = 90,
+        ],
+      ),
+      now: now,
+    );
+
+    final snapshot = await budget.loadSnapshot(september, now: now);
+    expect(snapshot.wallets.map((wallet) => wallet.name), [
+      'Salário',
+      'VR',
+      'VA',
+    ]);
+    expect(snapshot.wallets.map((wallet) => wallet.payouts.single.amount), [
+      3200,
+      600,
+      400,
+    ]);
+    expect(snapshot.walletsBalance, 1150);
+    final balances = {
+      for (final summary in snapshot.walletSummaries)
+        summary.wallet.name: summary.balance,
+    };
+    expect(balances, {'Salário': 850, 'VR': 210, 'VA': 90});
+    expect(
+      snapshot.receipts
+          .where((receipt) => receipt.isPredicted)
+          .map((receipt) => receipt.amount),
+      [600],
+    );
+  });
+
   test('a reserva do dia a dia fica no salário e nunca no benefício', () async {
     await service.apply(
       OnboardingDraft(

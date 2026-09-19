@@ -39,8 +39,8 @@ class OnboardingViewModel extends ChangeNotifier {
     kind: WalletKind.salary,
     name: WalletKind.salary.label,
   );
-  final IncomeDraft benefit = IncomeDraft(kind: WalletKind.benefit);
-  bool? _hasBenefit;
+  final List<IncomeDraft> _benefits = <IncomeDraft>[];
+  int _benefitCount = 0;
   final List<BillDraft> _bills = <BillDraft>[];
   final List<InstallmentDraft> _installments = <InstallmentDraft>[];
   final CardDraft card = CardDraft();
@@ -65,7 +65,7 @@ class OnboardingViewModel extends ChangeNotifier {
   double get progress =>
       _step.index / (OnboardingStep.values.length - 1).toDouble();
 
-  bool? get hasBenefit => _hasBenefit;
+  List<IncomeDraft> get benefits => List<IncomeDraft>.unmodifiable(_benefits);
 
   bool? get hasCard => _hasCard;
 
@@ -81,7 +81,7 @@ class OnboardingViewModel extends ChangeNotifier {
       ? const <IncomeDraft>[]
       : [
           if (salary.isComplete) salary,
-          if (_hasBenefit == true && benefit.isComplete) benefit,
+          ..._benefits.where((benefit) => benefit.isComplete),
         ];
 
   bool isSuggestionPicked(String name) =>
@@ -101,14 +101,19 @@ class OnboardingViewModel extends ChangeNotifier {
   bool get canContinue => blocker == null && !_isSaving;
 
   String? get _incomeBlocker {
-    for (final income in [salary, if (_hasBenefit == true) benefit]) {
-      final name = income.kind == WalletKind.salary
-          ? 'do salário'
-          : 'do benefício';
+    final unnamed = _benefits.length > 1
+        ? _benefits.where((benefit) => benefit.name.trim().isEmpty)
+        : const <IncomeDraft>[];
+    for (final income in [salary, ..._benefits]) {
+      if (unnamed.contains(income)) return 'Dê um nome a cada benefício';
+      final name = switch (income.kind) {
+        WalletKind.salary => 'do salário',
+        _ when income.name.trim().isEmpty => 'do benefício',
+        _ => 'de ${income.displayName}',
+      };
       if (income.amount <= 0) return 'Informe o valor $name';
       if (income.day == null) return 'Escolha o dia $name';
     }
-    if (_hasBenefit == null) return 'Responda sobre o benefício';
     return null;
   }
 
@@ -157,7 +162,18 @@ class OnboardingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setHasBenefit(bool value) => edit(() => _hasBenefit = value);
+  /// Each benefit keeps the number it was added with, so its fields keep
+  /// their state when another one is removed.
+  void addBenefit() => edit(
+    () => _benefits.add(
+      IncomeDraft(kind: WalletKind.benefit, key: _benefitCount++),
+    ),
+  );
+
+  void removeBenefit(IncomeDraft benefit) => edit(() {
+    _benefits.remove(benefit);
+    if (card.payer == benefit) card.payer = incomes.firstOrNull;
+  });
 
   void setHasCard(bool value) => edit(() {
     _hasCard = value;
@@ -196,7 +212,7 @@ class OnboardingViewModel extends ChangeNotifier {
     if (_step == OnboardingStep.reminders) return;
     _skipped.add(_step);
     if (_step == OnboardingStep.balance) {
-      for (final income in [salary, benefit]) {
+      for (final income in [salary, ..._benefits]) {
         income.balanceToday = null;
         income.arrived = null;
         income.monthlyReserve = null;
@@ -250,7 +266,7 @@ class OnboardingViewModel extends ChangeNotifier {
       salary.day != null ||
       _bills.isNotEmpty ||
       _installments.isNotEmpty ||
-      _hasBenefit == true ||
+      _benefits.isNotEmpty ||
       _hasCard == true;
 
   /// Leaves the first run without saving anything.

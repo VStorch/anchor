@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Fills the first-run setup as the user from the usability test did, on
-/// 15/09/2026: salary on the 5th business day, VR on the 1st, rent already
+/// 15/09/2026: salary on the 5th business day, VR on the 1st, VA on the
+/// 25th, rent already
 /// paid, internet, a fridge in parcels and a card. [onFilled] runs on each
 /// step once it is filled, before moving on.
 Future<void> fillOnboarding(
@@ -30,20 +31,10 @@ Future<void> fillOnboarding(
     5,
   );
   expect(find.text('Em setembro cai ter, 8/set'), findsOneWidget);
-  await answer(tester, 'Recebe VR, VA ou vale mercado?', 'Sim');
-  await tester.enterText(
-    find.widgetWithText(TextFormField, 'Nome do benefício'),
-    'VR',
-  );
-  await tester.pumpAndSettle();
-  final voucher = find.byKey(const ValueKey('income-benefit'));
-  await typeMoney(tester, within: voucher, '600');
-  await pickDay(
-    tester,
-    find.descendant(of: voucher, matching: find.text('Dia em que cai')),
-    1,
-  );
+  await addBenefit(tester, 0, name: 'VR', amount: '600', day: 1);
   expect(find.text('Em setembro cai ter, 1/set'), findsOneWidget);
+  await addBenefit(tester, 1, name: 'VA', amount: '400', day: 25);
+  expect(find.text('Em setembro cai sex, 25/set'), findsOneWidget);
   await filled('renda');
   await tapVisible(tester, find.text('Continuar'));
 
@@ -57,6 +48,11 @@ Future<void> fillOnboarding(
     tester,
     within: find.widgetWithText(MoneyField, 'Tem em VR'),
     '210',
+  );
+  await typeMoney(
+    tester,
+    within: find.widgetWithText(MoneyField, 'Tem em VA'),
+    '90',
   );
   await answer(tester, 'O salário de 8/set já está nesse valor?', 'Sim');
   await answer(tester, 'O VR de 1/set já está nesse valor?', 'Ainda não caiu');
@@ -122,6 +118,30 @@ Future<void> fillOnboarding(
 
   expect(find.text('Lembretes'), findsOneWidget);
   await filled('lembretes');
+}
+
+Future<void> addBenefit(
+  WidgetTester tester,
+  int key, {
+  required String name,
+  required String amount,
+  required int day,
+}) async {
+  await tapVisible(tester, find.text('Adicionar benefício (VR, VA, mercado…)'));
+  final benefit = find.byKey(ValueKey('income-benefit-$key'));
+  final nameField = find.descendant(
+    of: benefit,
+    matching: find.widgetWithText(TextFormField, 'Nome do benefício'),
+  );
+  await tester.ensureVisible(nameField);
+  await tester.enterText(nameField, name);
+  await tester.pumpAndSettle();
+  await typeMoney(tester, within: benefit, amount);
+  await pickDay(
+    tester,
+    find.descendant(of: benefit, matching: find.text('Dia em que cai')),
+    day,
+  );
 }
 
 Finder cardOf(String name) =>

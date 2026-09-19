@@ -420,7 +420,8 @@ desugaring in `android/app/build.gradle.kts` and the two receivers in `AndroidMa
 the `AppShell`; otherwise it asks `OnboardingService.needsOnboarding(now)` once, which is
 `BudgetSnapshot.isBlank` (no wallets, expenses or cards) — someone who already has data, like a user
 updating from a version without onboarding, gets the flag saved and never sees it. `OnboardingPage`
-walks `OnboardingStep`: welcome, "Quanto você recebe?" (salary plus an optional VR/VA, amount, "Dia
+walks `OnboardingStep`: welcome, "Quanto você recebe?" (salary plus any number of benefits, each added with "Adicionar benefício",
+removable, keyed `income-benefit-<IncomeDraft.key>` and named once there are two; amount, "Dia
 fixo"/"Nº dia útil" with the CLT Saturday switch, day, and "Em setembro cai ter, 8/set"), "Quanto tem
 hoje?" (one amount per source; when the source's date this month has come,
 `IncomeDraft.isDueBy`, "O salário de 8/set já está nesse valor?" [Sim]/[Ainda não caiu], no default),
@@ -442,7 +443,8 @@ their payout (`createdAt = now`); `registerDuePayouts(now:)` creates this month'
 and each source with an amount gets `saveBalanceCheck` at `now`, confirming its receipt ("Sim", dated
 on the payout day, inside the check) or marking it `pending_at_check_id` ("Ainda não caiu"); with no
 amount the receipt stays predicted. Then the card, the bills (`recurring`, `startMonth` = current
-month) and the installments, all charged to the first source (the salary), and a payment for each
+month) and the installments, all charged to the first source (the salary); every source is its own wallet
+with its own payout, check and receipt, and a payment for each
 "already paid" one dated by `Payable.paidBefore(check)` — the due day at noon, inside the balance, so
 the amount typed is the amount shown. `markOnboardingDone` swaps the gate to the Resumo. Bills are not
 asked which wallet pays them; a partial failure leaves partial, editable data.

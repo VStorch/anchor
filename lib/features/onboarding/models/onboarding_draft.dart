@@ -6,9 +6,12 @@ import '../../wallets/models/wallet_kind.dart';
 /// A money source as the first run asks for it: one payout a month, and
 /// optionally what it holds today and whether this month's pay is in it.
 class IncomeDraft {
-  IncomeDraft({required this.kind, this.name = ''});
+  IncomeDraft({required this.kind, this.name = '', this.key = 0});
 
   final WalletKind kind;
+
+  /// Tells apart the sources of the same kind on screen.
+  final int key;
   String name;
   double amount = 0;
   PayoutSchedule schedule = PayoutSchedule.dayOfMonth;

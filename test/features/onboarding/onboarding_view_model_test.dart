@@ -70,31 +70,42 @@ void main() {
         ..schedule = PayoutSchedule.businessDay
         ..day = day;
     });
-    viewModel.setHasBenefit(false);
   }
 
-  test(
-    'o passo de renda só segue com valor, dia e a resposta do benefício',
-    () {
-      viewModel.next();
-      expect(viewModel.step, OnboardingStep.income);
-      expect(viewModel.blocker, 'Informe o valor do salário');
+  test('o passo de renda só segue com valor e dia de cada fonte', () {
+    viewModel.next();
+    expect(viewModel.step, OnboardingStep.income);
+    expect(viewModel.blocker, 'Informe o valor do salário');
 
-      viewModel.edit(() => viewModel.salary.amount = 3200);
-      expect(viewModel.blocker, 'Escolha o dia do salário');
+    viewModel.edit(() => viewModel.salary.amount = 3200);
+    expect(viewModel.blocker, 'Escolha o dia do salário');
 
-      viewModel.edit(() => viewModel.salary.day = 5);
-      expect(viewModel.blocker, 'Responda sobre o benefício');
+    viewModel.edit(() => viewModel.salary.day = 5);
+    expect(viewModel.canContinue, isTrue);
 
-      viewModel.setHasBenefit(true);
-      expect(viewModel.blocker, 'Informe o valor do benefício');
+    viewModel.addBenefit();
+    expect(viewModel.blocker, 'Informe o valor do benefício');
 
-      viewModel.setHasBenefit(false);
-      expect(viewModel.canContinue, isTrue);
-      viewModel.next();
-      expect(viewModel.step, OnboardingStep.balance);
-    },
-  );
+    viewModel.addBenefit();
+    expect(viewModel.blocker, 'Dê um nome a cada benefício');
+
+    final [vr, va] = viewModel.benefits;
+    viewModel.edit(() {
+      vr
+        ..name = 'VR'
+        ..amount = 600
+        ..day = 1;
+      va.name = 'VA';
+    });
+    expect(viewModel.blocker, 'Informe o valor de VA');
+
+    viewModel.removeBenefit(va);
+    expect(viewModel.benefits, [vr]);
+    expect(viewModel.canContinue, isTrue);
+    expect(viewModel.incomes, [viewModel.salary, vr]);
+    viewModel.next();
+    expect(viewModel.step, OnboardingStep.balance);
+  });
 
   test('pergunta se o salário caiu só quando a data dele já chegou', () {
     fillSalary();
@@ -127,6 +138,58 @@ void main() {
     expect(viewModel.salary.balanceToday, isNull);
     expect(viewModel.salary.monthlyReserve, isNull);
     expect(viewModel.draft.incomes.single.monthlyReserve, isNull);
+  });
+
+  test('cada benefício pede o próprio saldo e vira uma fonte', () {
+    fillSalary(day: 20);
+    for (final (name, day) in [('VR', 1), ('VA', 25)]) {
+      viewModel.addBenefit();
+      viewModel.edit(() {
+        viewModel.benefits.last
+          ..name = name
+          ..amount = 500
+          ..day = day;
+      });
+    }
+    viewModel.next();
+    final [vr, va] = viewModel.benefits;
+
+    viewModel.edit(() {
+      viewModel.salary.balanceToday = 850;
+      vr.balanceToday = 210;
+    });
+    expect(viewModel.blocker, 'Responda se o dinheiro já caiu');
+    viewModel.edit(() => vr.arrived = false);
+    expect(viewModel.blocker, 'Informe quanto tem em VA');
+    viewModel.edit(() => va.balanceToday = 100);
+    expect(viewModel.canContinue, isTrue);
+
+    viewModel.skipStep();
+    expect(vr.balanceToday, isNull);
+    expect(vr.arrived, isNull);
+    expect(va.balanceToday, isNull);
+    expect(viewModel.draft.incomes.map((income) => income.displayName), [
+      'Salário',
+      'VR',
+      'VA',
+    ]);
+  });
+
+  test('remover o benefício que paga o cartão devolve a fatura ao salário', () {
+    fillSalary();
+    viewModel.addBenefit();
+    final vr = viewModel.benefits.single;
+    viewModel.edit(() {
+      vr
+        ..name = 'VR'
+        ..amount = 600
+        ..day = 1;
+      viewModel.card.payer = vr;
+    });
+
+    viewModel.removeBenefit(vr);
+
+    expect(viewModel.card.payer, viewModel.salary);
   });
 
   test('pular a renda pula também o saldo de hoje', () {
