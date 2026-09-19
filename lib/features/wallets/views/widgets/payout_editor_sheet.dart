@@ -125,7 +125,7 @@ class _PayoutEditorSheetState extends State<PayoutEditorSheet> {
             if (_schedule.isBusinessDay)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Se cair no sábado, contar como dia útil'),
+                title: const Text('Sábado conta como dia útil'),
                 value: _schedule == PayoutSchedule.businessDaySaturday,
                 onChanged: (countSaturday) => _changeSchedule(
                   countSaturday

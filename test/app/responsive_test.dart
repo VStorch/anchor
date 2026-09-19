@@ -574,11 +574,16 @@ void main() {
     await tester.pumpAndSettle();
 
     for (final (icon, page, item, heroTag) in [
-      (Icons.receipt_long_outlined, ExpensesPage, ExpenseTile, 'new-expense'),
+      (
+        Icons.receipt_long_outlined,
+        ExpensesPage,
+        find.byType(ExpenseTile),
+        'new-expense',
+      ),
       (
         Icons.account_balance_wallet_outlined,
         WalletsPage,
-        ListTile,
+        find.byWidgetPredicate((widget) => widget is TextButton),
         'new-spending',
       ),
     ]) {
@@ -603,10 +608,7 @@ void main() {
       await tester.fling(list, const Offset(0, -3000), 3000);
       await tester.pumpAndSettle();
 
-      final items = find.descendant(
-        of: find.byType(page),
-        matching: find.byType(item),
-      );
+      final items = find.descendant(of: find.byType(page), matching: item);
       final lastBottom = tester
           .widgetList(items)
           .map((tile) => tester.getRect(find.byWidget(tile)).bottom)

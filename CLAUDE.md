@@ -290,19 +290,22 @@ the everyday spending that drains a benefit card. It exists because an `expense`
 due day, which is the wrong shape for "gastei R$ 47 no mercado hoje". Outflows lower the wallet
 balance and `spentInMonth`, and count in `MonthSummary.totalSpent` (hence in `difference`), but never in
 `totalExpenses`/`totalPaid` — those stay about the bills, so `totalPending` keeps meaning "what is
-still owed on the rules". The Carteiras tab lists receipts, expense payments and outflows together
-as `WalletMovement`, with the balance checks; receipts, outflows and checks are editable there, and
+still owed on the rules". Each wallet's statement (`WalletDetailPage`, not the Carteiras tab, which
+has no movement list) shows its receipts, expense payments and outflows together as
+`WalletMovement`, with the balance checks; receipts, outflows and checks are editable there, and
 what `WalletSummary.countsInBalance` leaves out shows faded as "antes do saldo informado".
 
-Each wallet card carries the actions instead of hiding them: `WalletBalanceHeader` (the balance, then
-"R$ 850,00 informado em 15/09 · −R$ 99,90 depois" and "Setembro: entrou … · saiu …", both built from
-`WalletSummary`), `WalletActionButtons` (Gasto, Entrada, Informar saldo in a `Wrap`, in that order
-on every wallet) and, for a benefit only, a bar of `WalletSummary.leftRatio` — the balance over the
-balance plus `spentInCurrentMonth`, 0 with no balance — captioned "Saiu R$ 99,70 em setembro". Both
-speak of the month of the snapshot's `today` (`WalletSummary.currentMonth`), whatever month is on
-screen, so the bar neither repeats the balance the header shows nor drains with months long gone. Tapping the
-card opens `WalletDetailPage` — the same header and buttons plus `MonthSwitcher` and the statement of
-the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
+Each wallet card carries the actions instead of hiding them: `WalletBalanceHeader` (the balance and
+"Setembro: entrou … · saiu …", built from `WalletSummary`), `WalletActionButtons` (Gasto, Entrada,
+Saldo in a `Wrap`, in that order on every wallet; TalkBack reads "Informar saldo do Salário") and,
+for a benefit only, a bar of `WalletSummary.leftRatio` — the balance over the balance plus
+`spentInCurrentMonth`, 0 with no balance — with no caption: its semantics label says "Saiu R$ 99,70
+em setembro". The bar speaks of the month of the snapshot's `today` (`WalletSummary.currentMonth`),
+whatever month is on screen, so it neither repeats the balance the header shows nor drains with
+months long gone. Tapping the card opens `WalletDetailPage` — the same header, now with
+`showBalanceLine` on ("Saldo de 15/09, 9h04: R$ 850,00 · −R$ 99,90 depois", which the card leaves to
+the Resumo's "De onde vem esse valor" and to TalkBack), the same buttons, `MonthSwitcher` and the
+statement of the month on screen (`WalletsViewModel.movementsOf`), with the pencil in its AppBar for
 `WalletFormPage`; deleting the wallet leaves `summaryFor` null and the page pops itself.
 
 The tab's FAB is **"Novo gasto"** (`heroTag: 'new-spending'`, and the Resumo has the same button as
@@ -318,7 +321,7 @@ FAB, only "Cadastrar salário ou benefício".
 A payout is scheduled either by fixed day or by business day (`PayoutSchedule`, `Payout.dateIn(month)`),
 because the salary lands on the fifth business day. `Month.businessDay` counts Monday to Friday and skips the
 national holidays (`BrazilianHolidays`, where November 20 only counts from 2024); state and city holidays
-still need a manual correction. `PayoutSchedule.businessDaySaturday` ("Se cair no sábado, contar como dia útil", a
+still need a manual correction. `PayoutSchedule.businessDaySaturday` ("Sábado conta como dia útil", a
 switch under "Dia útil") counts Saturdays too, and a date that lands on one moves back to the bank business
 day before it. A position below 1 reads as 1; `schedule_kind` is TEXT, so a new schedule needs no migration.
 

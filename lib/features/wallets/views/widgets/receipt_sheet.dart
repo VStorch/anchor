@@ -119,15 +119,6 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
               'Entrada em ${widget.wallet.name}',
               isIncome: true,
             ),
-            if (_isPredicted) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Valor previsto pelo calendário. Corrija para o que caiu de verdade.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
             const SizedBox(height: 20),
             MoneyField(
               initialValue: _amount,

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/money_icons.dart';
 import '../../../budget/models/wallet_summary.dart';
 
-/// Gasto, Entrada and Informar saldo, in the same order on every wallet. A
-/// Wrap, because three buttons never fit a row at 320dp.
+/// Gasto, Entrada and Saldo, in the same order on every wallet. A Wrap,
+/// because three buttons may not fit a row at 320dp or a larger font.
 class WalletActionButtons extends StatelessWidget {
   const WalletActionButtons({
     super.key,
@@ -42,7 +42,7 @@ class WalletActionButtons extends StatelessWidget {
       onPressed: onCheck,
       style: _style,
       icon: const Icon(MoneyIcons.check, size: 18),
-      label: Text('Informar saldo', semanticsLabel: 'Informar saldo do $name'),
+      label: Text('Saldo', semanticsLabel: 'Informar saldo do $name'),
     );
 
     return Wrap(

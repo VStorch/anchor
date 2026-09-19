@@ -69,7 +69,11 @@ class WalletCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                WalletBalanceHeader(summary: summary, month: month),
+                WalletBalanceHeader(
+                  summary: summary,
+                  month: month,
+                  showBalanceLine: false,
+                ),
                 if (onConfirm != null && summary.unconfirmedInMonth > 0) ...[
                   const SizedBox(height: 12),
                   Row(
@@ -100,18 +104,13 @@ class WalletCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: summary.leftRatio,
                       minHeight: 6,
-                      semanticsLabel: 'Parte do saldo que ainda resta',
+                      semanticsLabel:
+                          'Parte do saldo que ainda resta. Saiu '
+                          '${formatMoney(summary.spentInCurrentMonth)} em '
+                          '${DateFormat.MMMM('pt_BR').format((summary.currentMonth ?? month).firstDay)}',
                       semanticsValue: '${(summary.leftRatio * 100).round()}%',
                       color: wallet.color,
                       backgroundColor: wallet.color.withValues(alpha: 0.15),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Saiu ${formatMoney(summary.spentInCurrentMonth)} em '
-                    '${DateFormat.MMMM('pt_BR').format((summary.currentMonth ?? month).firstDay)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

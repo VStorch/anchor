@@ -16,7 +16,6 @@ import 'wallet_actions.dart';
 import 'wallet_detail_page.dart';
 import 'wallet_form_page.dart';
 import 'widgets/card_overview_tile.dart';
-import 'widgets/movement_tile.dart';
 import 'widgets/wallet_card.dart';
 
 class WalletsPage extends StatelessWidget {
@@ -125,18 +124,6 @@ class WalletsPage extends StatelessWidget {
           () => Navigator.of(
             context,
           ).push(CardFormPage.route(wallets: viewModel.wallets)),
-        ),
-        const SizedBox(height: 20),
-        SectionHeader(
-          title: 'Movimentações do mês',
-          subtitle: viewModel.monthMovements.isEmpty ? 'Nada ainda' : null,
-        ),
-        ...viewModel.monthMovements.map(
-          (movement) => MovementTile(
-            movement: movement,
-            wallet: viewModel.walletById(movement.walletId),
-            onTap: () => WalletActions.openMovement(context, movement),
-          ),
         ),
       ],
     );

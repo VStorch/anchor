@@ -105,20 +105,12 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'O que tiver data até esse momento já está dentro do valor '
-              'informado.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
             if (_supersededBy case final latest?) ...[
               const SizedBox(height: 12),
               Text(
-                'Esse não é o saldo mais recente '
-                '(${DateFormat('dd/MM').format(latest.checkedAt)}): mudar o '
-                'valor não altera o saldo de hoje.',
+                'Há um saldo mais novo '
+                '(${DateFormat('dd/MM').format(latest.checkedAt)}). Este não '
+                'muda o de hoje.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.error,
                 ),
@@ -148,7 +140,7 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
             ),
             const SizedBox(height: 12),
             Text(
-              'O app calcula ${formatMoney(widget.calculatedBalance)}',
+              'Calculado: ${formatMoney(widget.calculatedBalance)}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

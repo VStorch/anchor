@@ -6,17 +6,23 @@ import '../../../../core/utils/money.dart';
 import '../../../../core/utils/month.dart';
 import '../../../budget/models/wallet_summary.dart';
 
-/// The wallet balance and the two lines that explain it: what was informed
-/// and what moved after it, then what the month on screen did.
+/// The wallet balance and the lines that explain it: what was informed and
+/// what moved after it (on the wallet's own page), then what the month on
+/// screen did.
 class WalletBalanceHeader extends StatelessWidget {
   const WalletBalanceHeader({
     super.key,
     required this.summary,
     required this.month,
+    this.showBalanceLine = true,
   });
 
   final WalletSummary summary;
   final Month month;
+
+  /// Off on the Carteiras tab, where the Resumo already explains the
+  /// balance; TalkBack still reads it with the figure.
+  final bool showBalanceLine;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +39,9 @@ class WalletBalanceHeader extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(
             formatMoney(summary.balance),
+            semanticsLabel: showBalanceLine
+                ? null
+                : '${formatMoney(summary.balance)}. $balanceLine',
             maxLines: 1,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
@@ -42,16 +51,18 @@ class WalletBalanceHeader extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(balanceLine, style: secondary),
+        if (showBalanceLine) ...[
+          const SizedBox(height: 4),
+          Text(balanceLine, style: secondary),
+        ],
         const SizedBox(height: 2),
         Text(monthLine, style: secondary),
       ],
     );
   }
 
-  /// "R$ 850,00 informado em 15/09 · −R$ 99,90 depois", or what stands in
-  /// for it when there is no check or nothing moved after it.
+  /// "Saldo de 15/09, 9h04: R$ 850,00 · −R$ 99,90 depois", or what stands
+  /// in for it when there is no check or nothing moved after it.
   String get balanceLine {
     final check = summary.latestCheck;
     final moved = _movedLabels;
@@ -60,13 +71,10 @@ class WalletBalanceHeader extends StatelessWidget {
       if (moved.isEmpty) return 'Nada lançado ainda';
       return 'Desde o cadastro: ${moved.join(' ')}';
     }
-    final informed =
-        '${formatMoney(check.amount)} informado '
-        'em ${_momentLabel(check.checkedAt)}';
-    if (moved.isEmpty) {
-      return 'Saldo informado em ${_momentLabel(check.checkedAt)}';
-    }
-    return '$informed · ${moved.join(' ')} depois';
+    final informed = 'Saldo de ${_momentLabel(check.checkedAt)}';
+    if (moved.isEmpty) return informed;
+    return '$informed: ${formatMoney(check.amount)} · '
+        '${moved.join(' ')} depois';
   }
 
   String get monthLine {

@@ -141,12 +141,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> openWalletForm(WidgetTester tester, String name) async {
+  /// The movements live on the wallet's own page, not on the tab.
+  Future<void> openStatement(WidgetTester tester, String name) async {
     await tester.tap(
       find.descendant(of: find.byType(WalletCard), matching: find.text(name)),
     );
     await tester.pumpAndSettle();
     expect(find.byType(WalletDetailPage), findsOneWidget);
+  }
+
+  Future<void> closeStatement(WidgetTester tester) async {
+    Navigator.of(tester.element(find.byType(WalletDetailPage))).pop();
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openWalletForm(WidgetTester tester, String name) async {
+    await openStatement(tester, name);
 
     await tester.tap(find.byTooltip('Editar carteira'));
     await tester.pumpAndSettle();
@@ -174,7 +184,7 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
-    await tester.tap(find.text('Informar saldo').first);
+    await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
     await tester.enterText(moneyInput(), '5200');
     await tester.pumpAndSettle();
@@ -210,6 +220,8 @@ void main() {
       find.descendant(of: card, matching: find.text(formatMoney(0))),
       findsOneWidget,
     );
+
+    await openStatement(tester, 'Salário');
     expect(find.textContaining('a confirmar'), findsWidgets);
 
     final predicted = tester.widget<Text>(find.text('+${formatMoney(3000)}'));
@@ -265,12 +277,12 @@ void main() {
     await seedSalary(amount: 3200);
     await pumpApp(tester);
 
-    await tester.tap(find.text('Informar saldo').first);
+    await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
 
     expect(find.byType(BalanceCheckSheet), findsOneWidget);
     expect(find.text('Saldo de Salário'), findsOneWidget);
-    expect(find.textContaining('O app calcula'), findsOneWidget);
+    expect(find.textContaining('Calculado: '), findsOneWidget);
 
     final arrived = find.byType(CheckboxListTile);
     expect(arrived, findsOneWidget);
@@ -298,8 +310,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('a confirmar'), findsNothing);
+
+    await openStatement(tester, 'Salário');
     expect(find.text('Saldo informado'), findsOneWidget);
     expect(find.textContaining('antes do saldo informado'), findsOneWidget);
+    await closeStatement(tester);
+    await tester.pumpAndSettle();
 
     final receipt = (await WalletRepository(
       database,
@@ -326,7 +342,7 @@ void main() {
     await seedSalary(amount: 3200);
     await pumpApp(tester);
 
-    await tester.tap(find.text('Informar saldo').first);
+    await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
@@ -336,18 +352,21 @@ void main() {
     await tester.pumpAndSettle();
 
     final walletCard = find.byType(WalletCard);
+    await openStatement(tester, 'Salário');
     expect(find.textContaining('a confirmar'), findsWidgets);
 
     await tester.tap(find.textContaining('a confirmar').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar recebimento'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('antes do saldo informado'), findsNothing);
+    await closeStatement(tester);
+    await tester.pumpAndSettle();
 
     expect(
       find.descendant(of: walletCard, matching: find.text(formatMoney(4050))),
       findsOneWidget,
     );
-    expect(find.textContaining('antes do saldo informado'), findsNothing);
   });
 
   group('gasto no dia do saldo informado', () {
@@ -452,7 +471,7 @@ void main() {
     );
     await pumpApp(tester);
 
-    await tester.tap(find.text('Informar saldo').first);
+    await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
     await tester.enterText(moneyInput(), '700');
     await tester.tap(
@@ -537,13 +556,14 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
-    await tester.tap(find.text('Informar saldo').first);
+    await tester.tap(find.text('Saldo').first);
     await tester.pumpAndSettle();
     await tester.enterText(moneyInput(), '-120');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar saldo'));
     await tester.pumpAndSettle();
 
+    await openStatement(tester, 'Salário');
     await tester.tap(find.text('Saldo informado'));
     await tester.pumpAndSettle();
     expect(find.byType(BalanceCheckSheet), findsOneWidget);
@@ -584,7 +604,6 @@ void main() {
     await tester.tap(find.text('Registrar gasto'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Mercado'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(WalletCard),
@@ -592,6 +611,8 @@ void main() {
       ),
       findsOneWidget,
     );
+    await openStatement(tester, 'Salário');
+    expect(find.text('Mercado'), findsOneWidget);
   });
 
   testWidgets('tocar no card abre o extrato, que lança o gasto pelo botão', (
@@ -600,6 +621,11 @@ void main() {
     await seedSalary();
     await pumpApp(tester);
 
+    expect(
+      find.text('Nada lançado ainda'),
+      findsNothing,
+      reason: 'a conta do saldo fica no extrato, não no card da aba',
+    );
     await tester.tap(
       find.descendant(
         of: find.byType(WalletCard),
@@ -611,6 +637,7 @@ void main() {
     expect(find.byType(WalletDetailPage), findsOneWidget);
     final monthName = DateFormat.MMMM('pt_BR').format(Month.current().firstDay);
     expect(find.text('Extrato de $monthName'), findsOneWidget);
+    expect(find.text('Nada lançado ainda'), findsOneWidget);
     expect(find.textContaining('a confirmar'), findsWidgets);
 
     await tester.tap(
@@ -825,25 +852,24 @@ void main() {
       reason: 'o saldo já está no topo do card',
     );
     expect(
-      find.descendant(
-        of: card,
-        matching: find.text('Saiu ${formatMoney(99.70)} em $monthName'),
-      ),
-      findsOneWidget,
+      find.descendant(of: card, matching: find.textContaining('Saiu R\$')),
+      findsNothing,
+      reason: 'a linha do mês já diz quanto saiu',
     );
-    final bar = tester.widget<LinearProgressIndicator>(
+    LinearProgressIndicator bar() => tester.widget<LinearProgressIndicator>(
       find.descendant(of: card, matching: find.byType(LinearProgressIndicator)),
     );
-    expect(bar.value, closeTo(110.30 / 210, 0.001));
+    expect(bar().value, closeTo(110.30 / 210, 0.001));
+    expect(
+      bar().semanticsLabel,
+      endsWith('Saiu ${formatMoney(99.70)} em $monthName'),
+    );
 
     await tester.tap(find.byTooltip('Mês anterior').first);
     await tester.pumpAndSettle();
     expect(
-      find.descendant(
-        of: card,
-        matching: find.text('Saiu ${formatMoney(99.70)} em $monthName'),
-      ),
-      findsOneWidget,
+      bar().semanticsLabel,
+      endsWith('Saiu ${formatMoney(99.70)} em $monthName'),
       reason: 'a barra fala do mês de hoje, não do mês na tela',
     );
 
@@ -852,11 +878,9 @@ void main() {
           find.descendant(of: card, matching: find.byType(Text)),
         )
         .map((text) => text.data)
-        .where(
-          (text) => const ['Gasto', 'Entrada', 'Informar saldo'].contains(text),
-        )
+        .where((text) => const ['Gasto', 'Entrada', 'Saldo'].contains(text))
         .toList();
-    expect(labels, ['Gasto', 'Entrada', 'Informar saldo']);
+    expect(labels, ['Gasto', 'Entrada', 'Saldo']);
   });
 
   testWidgets('o gasto lançado num mês passado fica naquele mês', (
@@ -910,6 +934,7 @@ void main() {
     await tester.tap(find.text('Registrar gasto'));
     await tester.pumpAndSettle();
 
+    await openStatement(tester, 'Salário');
     await tester.tap(find.text('Mercado'));
     await tester.pumpAndSettle();
 
@@ -972,7 +997,7 @@ void main() {
     await tester.tap(find.textContaining('3.000,00 · '));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Se cair no sábado, contar como dia útil'));
+    await tester.tap(find.text('Sábado conta como dia útil'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar recebimento'));
     await tester.pumpAndSettle();
