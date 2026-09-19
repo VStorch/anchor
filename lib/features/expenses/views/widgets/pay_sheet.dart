@@ -389,9 +389,15 @@ Future<DateTime?> choosePaidAt(
   final check = viewModel.checkCoveringDue(payable, walletId);
   if (check == null) return payable.suggestedPaidAt(DateTime.now());
 
+  final snapshot = viewModel.snapshot;
+  final walletName = snapshot.wallets.length > 1
+      ? snapshot.walletById(walletId)?.name
+      : null;
+
   final alreadyOut = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
+      title: walletName == null ? null : Text(walletName),
       content: Text(checkCoveringQuestion(payable, check)),
       actions: [
         TextButton(
