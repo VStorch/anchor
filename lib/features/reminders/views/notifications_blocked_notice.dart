@@ -16,8 +16,8 @@ class NotificationsBlockedNotice extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            'As notificações do Anchor estão desligadas no Android. Ative em '
-            'Ajustes do Android › Apps › Anchor › Notificações.',
+            'Notificações desligadas no Android. Ative em Ajustes › Apps › '
+            'Anchor.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.error,
             ),

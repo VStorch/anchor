@@ -816,7 +816,7 @@ void main() {
 
     expect(find.byType(NotificationsBlockedNotice), findsOneWidget);
     expect(
-      find.textContaining('Ajustes do Android › Apps › Anchor'),
+      find.textContaining('Ajustes › Apps › Anchor'),
       findsOneWidget,
     );
   });
