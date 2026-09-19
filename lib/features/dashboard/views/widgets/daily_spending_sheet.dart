@@ -15,7 +15,7 @@ class ReserveEdit {
   final double? amount;
 }
 
-/// "Quanto você gasta por mês fora das contas?": the everyday spending a
+/// "Reserva do dia a dia": the everyday spending a
 /// salary sets aside in the forecast.
 class DailySpendingSheet extends StatefulWidget {
   const DailySpendingSheet({
@@ -91,18 +91,9 @@ class _DailySpendingSheetState extends State<DailySpendingSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Quanto você gasta por mês fora das contas?',
+              'Reserva do dia a dia',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Mercado, transporte, lanche, farmácia. Esse valor sai da '
-              'previsão, e os gastos no ${_wallet.name} ou no cartão pago '
-              'por ele vão abatendo dele.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             if (widget.salaries.length > 1) ...[
@@ -128,6 +119,7 @@ class _DailySpendingSheetState extends State<DailySpendingSheet> {
               key: ValueKey<int>(_fieldVersion),
               initialValue: _amount,
               label: 'Por mês',
+              hint: 'Mercado, transporte, lanche',
               onChanged: (value) => _amount = value,
             ),
             if (average != null) ...[

@@ -43,7 +43,7 @@ Wiring is `provider`; persistence is `sqflite`.
 The dashboard stacks three blocks that never share a figure. **Você tem hoje** (`TodayCard`) is
 `BudgetSnapshot.walletsBalance`, the money that exists, whatever month is on screen; when the current
 month has receipts still `predicted` it adds a "Confirmar R$ X" button (`awaitingConfirmation`) that
-leads to Carteiras. **Previsão até o fim de <mês>** (`ForecastCard`) renders `BudgetSnapshot.forecast`,
+leads to Carteiras. **Até o fim de <mês>** (`ForecastCard`) renders `BudgetSnapshot.forecast`,
 a `MonthForecast` built in `features/budget` only for the current month or a later one: per wallet,
 today's balance plus what is still expected in (`predicted` receipts, overdue or not, and active
 payouts with no receipt yet) minus the `remaining` of the occurrences planned on it, over every month
@@ -51,28 +51,29 @@ from the current one to the one on screen; bills with no wallet go to `unassigne
 wallets are split by `WalletKind` into two `ForecastGroup`s — `freeMoney` (salaries, which also carry
 `unassignedToPay`) and `benefits` — and **the two groups are never added up on screen**: a meal
 voucher does not pay the rent. The headline is "Dinheiro livre vai sobrar/faltar R$ X" ("Nos
-benefícios vai sobrar" when there is no salary), the line under it "Nos benefícios: R$ X para usar"
-or "No VR vai faltar R$ X" (`shortBenefits`), then, for the current month only, "Por dia até 30/09:
-R$ X do salário · R$ Y no VR" (`dailyAllowance`). "Como chegamos nisso" opens one block per group
-that has something to show, and each block reads as a sum: "Você tem hoje" (`startBalance`), "A
-receber", "Contas a pagar", "Reserva do dia a dia" (split by month from `reserveShares` when the month
-on screen is a later one: "R$ 300 em setembro + R$ 600 em outubro"), "Contas sem carteira", and ends
-on "Vai sobrar/Vai faltar" with the figure the title shows. Once a reserve exists, "Reserva: R$ 600/mês"
+benefícios vai sobrar" when there is no salary), the line under it "Benefícios: R$ X"
+or "No VR vai faltar R$ X" (`shortBenefits`), then, for the current month only, "Por dia: R$ X ·
+R$ Y no VR" (`dailyAllowance`; the title already names the month). "Como chegamos nisso" opens one
+block per group that has something to show, and each block reads as a sum: "Você tem hoje"
+(`startBalance`), "A receber", "Contas a pagar", "Reserva" (split by month from `reserveShares` when
+the month on screen is a later one: "R$ 300 em setembro + R$ 600 em outubro"), "Contas sem carteira",
+and ends on "Vai sobrar/Vai faltar" with the figure the title shows; a term that is zero is left out,
+as in `TodayCard`. Once a reserve exists, "Reserva: R$ 600/mês"
 under the headline edits it. `ForecastGroup.reserveState` (`ReserveState`) says what limits this
 month's share, from the two terms each wallet keeps (`reserveLeft`, `reservePace`): `usedUp` (the
-month's spending took the whole reserve — the daily line reads "Reserva de setembro já usada"),
-`paceExceeded` (today's spending passed the day's pace while the month still has reserve — "Hoje
-passou do ritmo da reserva"), `byDaysLeft` (the explanation says "13 dias de 30", "1 dia de 30") or
-`byWhatIsLeft` ("o que resta da reserva"). The card is outlined and coloured `MoneyColors.predicted`, and its
+month's spending took the whole reserve — the daily line reads "Por dia: reserva de setembro usada"),
+`paceExceeded` (today's spending passed the day's pace while the month still has reserve — "Por
+dia: passou do ritmo hoje"), `byDaysLeft` (the explanation says "13 de 30 dias", "1 de 30 dias") or
+`byWhatIsLeft` ("o que resta"). The card is outlined and coloured `MoneyColors.predicted`, and its
 headline and summary lines hold no real figure; "Como chegamos nisso" may start from "Você tem hoje"
 because today's balance is the base of the sum being explained, not a figure set beside a planned
-one. The Resumo's wallet strip
+one, and may note "Hoje já saiu R$ 25,00" under the reserve as plain text, outside the sum. The Resumo's wallet strip
 shows balances only — no "a pagar" beside them. **<Mês> até agora** (current
 month) or **<Mês>** (past; hidden for a future month) is `MonthSoFarCard`: `Entrou` and `Saiu`,
 confirmed money only. `MonthSummary` carries no planned income; the payout calendar's total lives
 on `Wallet.monthlyIncome` and is shown only on the Carteiras tab, labelled "por mês". **Never put a planned figure next to a
-real one in the same block** — the only real figure a forecast shows is the starting term of its own
-explanation.
+real one in the same block** — the only real figures a forecast shows are inside its own explanation:
+the starting term and today's spending note.
 
 A salary may set aside a **reserve for everyday spending** (`wallets.monthly_reserve`, schema v13,
 null by default and never read for a benefit, whose balance already is what is left for food). It is
@@ -82,13 +83,13 @@ the screen can say where it comes from: in the current month
 — a reserve set on the 16th only takes the days still ahead (`daysLeft` counts today), and a spending
 launched today comes out of today's part instead of being counted on top of it — plus the whole
 reserve for every later month up to the one on screen. The explanation says where the current share
-comes from with `daysLeftInCurrentMonth`/`daysInCurrentMonth` ("Reserva do dia a dia · 13 dias de
-30", or "R$ 235 em setembro (13 dias de 30) + R$ 600 em outubro"), and `ForecastGroup.spentToday`
-adds "(hoje já saiu R$ 25,00)" to the salary's part of the daily line. Everyday spending is `EverydaySpending.collect`: the wallet's
+comes from with `daysLeftInCurrentMonth`/`daysInCurrentMonth` ("Reserva · 13 de 30 dias", or
+"R$ 235 em setembro (13 de 30 dias) + R$ 600 em outubro"), and `ForecastGroup.spentToday` adds
+"Hoje já saiu R$ 25,00" under that line — in the explanation, never beside the daily figure. Everyday spending is `EverydaySpending.collect`: the wallet's
 outflows and the one-off (`single`) card purchases whose card is paid by that wallet, on their
 `purchased_at` day — a purchase in parcels was planned, so it stays a bill. While no salary has one,
 `ForecastGroup.lacksReserve` shows "Reservar gasto do dia a dia" under the headline; the
-`DailySpendingSheet` saves it through `WalletRepository.saveMonthlyReserve` (one UPDATE, one publish;
+`DailySpendingSheet` ("Reserva do dia a dia", the same name the wallet form and the onboarding use) saves it through `WalletRepository.saveMonthlyReserve` (one UPDATE, one publish;
 "Sai de" with two or more salaries, "Não usar reserva" clears it) and suggests "Usar a média" from
 `OutflowAverage` (`BudgetSnapshot.outflowAverageOf`): the last three complete months before the
 current one with any everyday spending, months before the wallet was created included. The wallet form and the onboarding's "Quanto tem hoje?"
@@ -104,14 +105,15 @@ leftover — then divides by `daysLeft`; never below zero.
 The two real blocks reconcile with the balance instead of contradicting it. `TodayCard` opens
 "De onde vem esse valor" and reads each wallet's balance as
 `checkAmount + receivedSinceCheck - spentSinceCheck` (`WalletSummary`, the same folds that build
-`balance`, so the invariant holds by construction): "Saldo informado em 15/09, 9h04" — the hour only
+`balance`, so the invariant holds by construction): "Saldo de 15/09, 9h04" — the hour only
 when the check does not close the day (`closesDay`) — then "Entrou depois" and "Saiu depois", a zero
-line dropped and "Nada lançado depois" when both are. A wallet with no check starts at "Desde o
-cadastro em 13/09". `MonthSoFarCard` shows a third figure, `MonthReconciliation.balanceChange`
+line dropped and "Nada lançado depois" when both are. A wallet with no check starts at "Cadastro
+em 13/09". `MonthSoFarCard` shows a third figure, `MonthReconciliation.balanceChange`
 ("Somou ao saldo"/"Tirou do saldo"), **only when nothing of the month is inside an informed balance**
 — a payment counts in the month of the bill, so with a check inside the month the subtraction would
-count money twice. Otherwise it shows the note with `receivedBeforeCheck`/`spentBeforeCheck` and the
-`coveringChecks` that hold them. `MonthReconciliation` (`features/budget/models/`) is built by
+count money twice. Otherwise it shows one line with `receivedBeforeCheck`/`spentBeforeCheck` and the
+`coveringChecks` that hold them: "Já no saldo de 15/09: entrou R$ X · saiu R$ Y" ("Já nos saldos de
+12/09 (VR) e 15/09 (Salário): …" when the checks fall on different days). `MonthReconciliation` (`features/budget/models/`) is built by
 `BudgetService` from the `WalletSummary` list — `MonthSummary` knows nothing of wallets or checks —
 and `MonthSummary.difference` stays for the tests only: no view reads it.
 

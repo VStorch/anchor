@@ -10,6 +10,7 @@ class MoneyField extends StatefulWidget {
     this.label = 'Valor',
     this.autofocus = false,
     this.allowNegative = false,
+    this.hint = r'R$ 0,00',
   });
 
   final double initialValue;
@@ -17,6 +18,7 @@ class MoneyField extends StatefulWidget {
   final String label;
   final bool autofocus;
   final bool allowNegative;
+  final String hint;
 
   @override
   State<MoneyField> createState() => _MoneyFieldState();
@@ -64,7 +66,7 @@ class _MoneyFieldState extends State<MoneyField> {
       ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
       decoration: InputDecoration(
         labelText: widget.label,
-        hintText: r'R$ 0,00',
+        hintText: widget.hint,
         suffixIcon: widget.allowNegative
             ? IconButton(
                 tooltip: 'Trocar sinal',

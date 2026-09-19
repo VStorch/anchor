@@ -65,8 +65,6 @@ class DashboardPage extends StatelessWidget {
     return EmptyState(
       icon: Icons.anchor_outlined,
       title: 'Vamos ancorar seu mês',
-      message:
-          'Cadastre de onde vem o seu dinheiro e o saldo se atualiza a cada pagamento.',
       action: FilledButton.icon(
         onPressed: () => WalletFormPage.open(context),
         icon: const Icon(Icons.add),

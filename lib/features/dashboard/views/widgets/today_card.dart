@@ -193,12 +193,12 @@ class _WalletBreakdown extends StatelessWidget {
 
   String _checkLabel(DateTime at) {
     final day = DateFormat('dd/MM').format(at);
-    if (closesDay(at)) return 'Saldo informado em $day';
-    return 'Saldo informado em $day, ${DateFormat("H'h'mm").format(at)}';
+    if (closesDay(at)) return 'Saldo de $day';
+    return 'Saldo de $day, ${DateFormat("H'h'mm").format(at)}';
   }
 
   String _sinceCreationLabel() =>
-      'Desde o cadastro em '
+      'Cadastro em '
       '${DateFormat('dd/MM').format(summary.wallet.createdAt)}';
 }
 

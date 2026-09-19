@@ -201,7 +201,7 @@ void main() {
     expect(
       find.descendant(
         of: forecast,
-        matching: find.text('Previsão até o fim de $monthName'),
+        matching: find.text('Até o fim de $monthName'),
       ),
       findsOneWidget,
     );
@@ -374,7 +374,7 @@ void main() {
     Finder inCard(String text) =>
         find.descendant(of: card, matching: find.text(text));
 
-    expect(inCard('Saldo informado em 15/09, 9h04'), findsNWidgets(2));
+    expect(inCard('Saldo de 15/09, 9h04'), findsNWidgets(2));
     expect(inCard('Saiu depois'), findsNWidgets(2));
     expect(inCard('Salário'), findsOneWidget);
     expect(inCard(formatMoney(750.10)), findsOneWidget);
@@ -399,7 +399,7 @@ void main() {
     expect(
       find.descendant(
         of: forecast,
-        matching: find.text('Nos benefícios: ${formatMoney(162.70)} para usar'),
+        matching: find.text('Benefícios: ${formatMoney(162.70)}'),
       ),
       findsOneWidget,
     );
@@ -407,8 +407,7 @@ void main() {
       find.descendant(
         of: forecast,
         matching: find.text(
-          'Por dia até 30/09: ${formatMoney(46.88)} do salário · '
-          '${formatMoney(10.17)} no VR',
+          'Por dia: ${formatMoney(46.88)} · ${formatMoney(10.17)} no VR',
         ),
       ),
       findsOneWidget,
@@ -437,8 +436,8 @@ void main() {
     expect(find.text('Somou ao saldo'), findsNothing);
     expect(
       find.text(
-        '${formatMoney(3800)} do que entrou e ${formatMoney(1414)} do que '
-        'saiu já estavam no saldo que você informou em 15/09.',
+        'Já no saldo de 15/09: entrou ${formatMoney(3800)} · '
+        'saiu ${formatMoney(1414)}',
       ),
       findsOneWidget,
     );
@@ -456,10 +455,7 @@ void main() {
     expect(
       find.descendant(
         of: forecast,
-        matching: find.text(
-          'A previsão ainda não conta mercado, transporte e '
-          'lanches.',
-        ),
+        matching: find.text('Reservar gasto do dia a dia'),
       ),
       findsOneWidget,
     );
@@ -469,7 +465,10 @@ void main() {
 
     expect(find.byType(DailySpendingSheet), findsOneWidget);
     expect(
-      find.textContaining('gastos no Salário ou no cartão pago por ele'),
+      find.descendant(
+        of: find.byType(DailySpendingSheet),
+        matching: find.text('Reserva do dia a dia'),
+      ),
       findsOneWidget,
     );
     await tester.enterText(
@@ -494,13 +493,11 @@ void main() {
     );
     expect(find.text('Reservar gasto do dia a dia'), findsNothing);
 
-    final lastDay = DateFormat('dd/MM').format(month.dayOf(month.lengthInDays));
     expect(
       find.descendant(
         of: forecast,
         matching: find.text(
-          'Por dia até $lastDay: '
-          '${formatMoney(roundCents(reserveShare / daysLeft))} do salário',
+          'Por dia: ${formatMoney(roundCents(reserveShare / daysLeft))}',
         ),
       ),
       findsOneWidget,
@@ -510,7 +507,7 @@ void main() {
     await tester.pumpAndSettle();
     for (final line in [
       'Você tem hoje',
-      'Reserva do dia a dia · $daysLeft dias de ${month.lengthInDays}',
+      'Reserva · $daysLeft de ${month.lengthInDays} dias',
       'Vai sobrar',
     ]) {
       expect(
@@ -534,7 +531,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.textContaining('Por dia até'), findsNothing);
+    expect(find.textContaining('Por dia:'), findsNothing);
     await tester.tap(find.byTooltip('Mês anterior'));
     await tester.pumpAndSettle();
 
@@ -566,8 +563,9 @@ void main() {
 
     final forecast = find.byType(ForecastCard);
     expect(
-      find.descendant(of: forecast, matching: find.text('+ ${formatMoney(0)}')),
-      findsOneWidget,
+      find.descendant(of: forecast, matching: find.text('A receber')),
+      findsNothing,
+      reason: 'uma linha zerada não entra na conta',
     );
     expect(
       find.descendant(

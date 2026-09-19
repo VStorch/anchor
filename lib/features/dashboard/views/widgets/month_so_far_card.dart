@@ -92,28 +92,25 @@ class MonthSoFarCard extends StatelessWidget {
     final received = reconciliation.receivedBeforeCheck;
     final spent = reconciliation.spentBeforeCheck;
     final parts = <String>[
-      if (received > 0) '${formatMoney(received)} do que entrou',
-      if (spent > 0) '${formatMoney(spent)} do que saiu',
+      if (received > 0) 'entrou ${formatMoney(received)}',
+      if (spent > 0) 'saiu ${formatMoney(spent)}',
     ];
-    final verb = parts.length > 1 ? 'já estavam' : 'já estava';
-    return '${parts.join(' e ')} $verb ${_checksLabel()}.';
+    return '${_checksLabel()}: ${parts.join(' · ')}';
   }
 
+  /// "Já no saldo de 15/09", or "Já nos saldos de 12/09 (VR) e 15/09
+  /// (Salário)" when the month sits inside checks of different days.
   String _checksLabel() {
     final checks = reconciliation.coveringChecks;
     final day = DateFormat('dd/MM');
     final days = checks.map((covering) => day.format(covering.check.checkedAt));
-    if (days.toSet().length == 1) {
-      return 'no saldo que você informou em ${days.first}';
-    }
-    final named = checks
-        .map(
-          (covering) =>
-              '${covering.wallet.name} '
-              '${day.format(covering.check.checkedAt)}',
-        )
-        .join(', ');
-    return 'nos saldos que você informou ($named)';
+    if (days.toSet().length == 1) return 'Já no saldo de ${days.first}';
+    final named = [
+      for (final covering in checks)
+        '${day.format(covering.check.checkedAt)} (${covering.wallet.name})',
+    ];
+    final last = named.removeLast();
+    return 'Já nos saldos de ${named.join(', ')} e $last';
   }
 }
 

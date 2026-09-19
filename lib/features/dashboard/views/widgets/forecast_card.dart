@@ -49,7 +49,7 @@ class ForecastCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Previsão até o fim de $monthName',
+                    'Até o fim de $monthName',
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: colors.predicted,
                     ),
@@ -109,26 +109,11 @@ class ForecastCard extends StatelessWidget {
           if (free.lacksReserve && onEditReserve != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => onEditReserve!(null),
-                    style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Reservar gasto do dia a dia'),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      'A previsão ainda não conta mercado, transporte e '
-                      'lanches.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
+              child: TextButton.icon(
+                onPressed: () => onEditReserve!(null),
+                style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                icon: const Icon(Icons.add),
+                label: const Text('Reservar gasto do dia a dia'),
               ),
             ),
           Theme(
@@ -160,35 +145,26 @@ class ForecastCard extends StatelessWidget {
     );
   }
 
-  /// " (hoje já saiu R$ 25,00)", so a spending launched today is seen
-  /// inside the day's figure rather than on top of it.
-  static String _spentTodayNote(ForecastGroup group) => group.spentToday > 0
-      ? ' (hoje já saiu ${formatMoney(group.spentToday)})'
-      : '';
-
-  /// "Por dia até 30/09: R$ 20,00 do salário · R$ 7,35 no VR"; only for
-  /// the current month, where "today" means something.
+  /// "Por dia: R$ 20,00 · R$ 7,35 no VR"; only for the current month,
+  /// where "today" means something.
   String? _dailyLine() {
     final parts = [
-      if (forecast.freeMoney.dailyAllowance case final free?)
-        '${_freeDaily(free)}${_spentTodayNote(forecast.freeMoney)}',
+      if (forecast.freeMoney.dailyAllowance case final free?) _freeDaily(free),
       if (forecast.benefits.dailyAllowance case final benefit?)
         '${formatMoney(benefit)} ${_benefitPlace()}',
     ];
     if (parts.isEmpty) return null;
-    final lastDay = forecast.month.dayOf(forecast.month.lengthInDays);
-    return 'Por dia até ${DateFormat('dd/MM').format(lastDay)}: '
-        '${parts.join(' · ')}';
+    return 'Por dia: ${parts.join(' · ')}';
   }
 
   /// The salary's part of the day: the figure, or why there is none — the
   /// month's reserve is spent, or today's spending passed the day's pace.
   String _freeDaily(double free) => switch (forecast.freeMoney.reserveState) {
     ReserveState.usedUp =>
-      'Reserva de '
-          '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} já usada',
-    ReserveState.paceExceeded => 'Hoje passou do ritmo da reserva',
-    _ => '${formatMoney(free)} do salário',
+      'reserva de '
+          '${DateFormat.MMMM('pt_BR').format(forecast.month.firstDay)} usada',
+    ReserveState.paceExceeded => 'passou do ritmo hoje',
+    _ => formatMoney(free),
   };
 
   String _benefitPlace() {
@@ -220,9 +196,7 @@ class ForecastCard extends StatelessWidget {
     if (short.isEmpty) {
       return [
         (
-          text:
-              'Nos benefícios: ${formatMoney(forecast.benefits.endBalance)} '
-              'para usar',
+          text: 'Benefícios: ${formatMoney(forecast.benefits.endBalance)}',
           short: false,
         ),
       ];
@@ -262,19 +236,35 @@ class _GroupBlock extends StatelessWidget {
         const SizedBox(height: 4),
         if (group.wallets.isNotEmpty) ...[
           _Line(label: 'Você tem hoje', value: formatMoney(group.startBalance)),
-          _Line(label: 'A receber', value: '+ ${formatMoney(group.toReceive)}'),
-          _Line(
-            label: 'Contas a pagar',
-            value: '− ${formatMoney(group.toPay)}',
-          ),
+          if (group.toReceive > 0)
+            _Line(
+              label: 'A receber',
+              value: '+ ${formatMoney(group.toReceive)}',
+            ),
+          if (group.toPay > 0)
+            _Line(
+              label: 'Contas a pagar',
+              value: '− ${formatMoney(group.toPay)}',
+            ),
         ],
-        if (group.hasReserve)
+        if (group.hasReserve) ...[
           _Line(
             label: shares.length > 1
-                ? 'Reserva do dia a dia · ${_sharesLabel(group, shares)}'
-                : 'Reserva do dia a dia · ${_daysLabel(group)}',
+                ? 'Reserva · ${_sharesLabel(group, shares)}'
+                : 'Reserva · ${_daysLabel(group)}',
             value: '− ${formatMoney(group.reserve)}',
           ),
+          if (group.spentToday > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Text(
+                'Hoje já saiu ${formatMoney(group.spentToday)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
         if (group.unassignedToPay > 0)
           _Line(
             label: 'Contas sem carteira',
@@ -298,19 +288,17 @@ class _GroupBlock extends StatelessWidget {
     );
   }
 
-  /// "13 dias de 30": where this month's share of the reserve comes from.
-  /// "13 dias de 30" when the days still ahead limit this month's share;
-  /// "o que resta da reserva" when the month's spending does.
+  /// "13 de 30 dias" when the days still ahead limit this month's share;
+  /// "o que resta" when the month's spending does.
   static String _daysLabel(ForecastGroup group) {
     final days = group.daysLeftInCurrentMonth;
     return switch (group.reserveState) {
-      ReserveState.byWhatIsLeft ||
-      ReserveState.usedUp => 'o que resta da reserva',
-      _ => '$days ${days == 1 ? 'dia' : 'dias'} de ${group.daysInCurrentMonth}',
+      ReserveState.byWhatIsLeft || ReserveState.usedUp => 'o que resta',
+      _ => '$days de ${group.daysInCurrentMonth} dias',
     };
   }
 
-  /// "R$ 235,00 em setembro (13 dias de 30) + R$ 600,00 em outubro".
+  /// "R$ 235,00 em setembro (13 de 30 dias) + R$ 600,00 em outubro".
   static String _sharesLabel(ForecastGroup group, List<ReserveShare> shares) =>
       [
         for (final (index, share) in shares.indexed)

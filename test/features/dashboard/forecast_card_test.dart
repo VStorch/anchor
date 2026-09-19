@@ -74,14 +74,8 @@ void main() {
 
     await pump(tester, forecast);
 
-    expect(
-      find.text('Por dia até 30/09: Reserva de setembro já usada'),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Reserva do dia a dia · o que resta da reserva'),
-      findsOneWidget,
-    );
+    expect(find.text('Por dia: reserva de setembro usada'), findsOneWidget);
+    expect(find.text('Reserva · o que resta'), findsOneWidget);
   });
 
   testWidgets('passar do ritmo hoje não diz que a reserva acabou', (
@@ -92,14 +86,9 @@ void main() {
 
     await pump(tester, forecast);
 
-    expect(
-      find.text(
-        'Por dia até 30/09: Hoje passou do ritmo da reserva '
-        '(hoje já saiu ${formatMoney(25)})',
-      ),
-      findsOneWidget,
-    );
-    expect(find.textContaining('já usada'), findsNothing);
+    expect(find.text('Por dia: passou do ritmo hoje'), findsOneWidget);
+    expect(find.text('Hoje já saiu ${formatMoney(25)}'), findsOneWidget);
+    expect(find.textContaining('usada'), findsNothing);
   });
 
   testWidgets('limitada pelos dias, a reserva diz quantos dias faltam', (
@@ -110,11 +99,9 @@ void main() {
 
     await pump(tester, forecast);
 
-    expect(
-      find.text('Por dia até 30/09: ${formatMoney(20)} do salário'),
-      findsOneWidget,
-    );
-    expect(find.text('Reserva do dia a dia · 13 dias de 30'), findsOneWidget);
+    expect(find.text('Por dia: ${formatMoney(20)}'), findsOneWidget);
+    expect(find.text('Reserva · 13 de 30 dias'), findsOneWidget);
+    expect(find.textContaining('Hoje já saiu'), findsNothing);
   });
 
   testWidgets('limitada pelo que sobrou, a reserva não fala em dias', (
@@ -125,15 +112,12 @@ void main() {
 
     await pump(tester, forecast);
 
-    expect(
-      find.text('Reserva do dia a dia · o que resta da reserva'),
-      findsOneWidget,
-    );
+    expect(find.text('Reserva · o que resta'), findsOneWidget);
   });
 
-  testWidgets('no último dia fala em 1 dia, no singular', (tester) async {
+  testWidgets('no último dia fala em 1 de 30 dias', (tester) async {
     await pump(tester, forecastWith(left: 500, pace: 20, daysLeft: 1));
 
-    expect(find.text('Reserva do dia a dia · 1 dia de 30'), findsOneWidget);
+    expect(find.text('Reserva · 1 de 30 dias'), findsOneWidget);
   });
 }
