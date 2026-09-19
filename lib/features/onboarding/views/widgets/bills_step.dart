@@ -18,9 +18,7 @@ class BillsStep extends StatelessWidget {
       children: [
         const StepHeader(
           title: 'Contas de todo mês',
-          message:
-              'Toque nas que você tem. Cada uma pede o valor e o dia '
-              'em que vence.',
+          message: 'Toque nas que você tem.',
         ),
         Wrap(
           spacing: 8,

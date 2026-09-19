@@ -47,7 +47,7 @@ Future<void> fillOnboarding(
   await filled('renda');
   await tapVisible(tester, find.text('Continuar'));
 
-  expect(find.textContaining('Hoje, 15/set'), findsOneWidget);
+  expect(find.text('Quanto tem hoje?'), findsOneWidget);
   await typeMoney(
     tester,
     within: find.widgetWithText(MoneyField, 'Tem em Salário'),
@@ -112,7 +112,7 @@ Future<void> fillOnboarding(
     'Nubank',
   );
   await tester.pumpAndSettle();
-  expect(find.text('Estão na fatura ou no app do banco.'), findsOneWidget);
+  expect(find.text('Dia em que a fatura fecha'), findsOneWidget);
   await pickDay(tester, find.text('Dia em que a fatura fecha'), 3);
   await pickDay(tester, find.text('Dia em que a fatura vence'), 10);
   expect(find.text('Fecha dia 3'), findsOneWidget);

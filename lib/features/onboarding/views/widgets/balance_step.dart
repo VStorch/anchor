@@ -17,12 +17,7 @@ class BalanceStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        StepHeader(
-          title: 'Quanto tem hoje?',
-          message:
-              'Hoje, ${dayAndMonth(viewModel.today)}. Olhe o app do banco e '
-              'o saldo do cartão do benefício.',
-        ),
+        const StepHeader(title: 'Quanto tem hoje?'),
         for (final income in viewModel.incomes)
           Padding(
             key: ObjectKey(income),
@@ -97,22 +92,16 @@ class _ReserveQuestion extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Quanto costuma gastar por mês fora das contas? (opcional)',
+          'Reserva do dia a dia (opcional)',
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Mercado, transporte, lanches. Sai da previsão do salário.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 12),
         MoneyField(
           initialValue: salary.monthlyReserve ?? 0,
           label: 'Por mês',
+          hint: 'Mercado, transporte, lanche',
           onChanged: (value) => viewModel.edit(
             () => salary.monthlyReserve = value > 0 ? value : null,
           ),

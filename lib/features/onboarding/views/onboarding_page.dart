@@ -193,9 +193,7 @@ class _WelcomeStep extends StatelessWidget {
         StepHeader(
           title: 'Boas-vindas ao Anchor',
           message:
-              'Em poucos passos o Anchor fica sabendo quanto você recebe, '
-              'quanto tem hoje e quais contas vêm por aí. Pule o que quiser: '
-              'dá para completar depois.',
+              'Salário, saldo e contas em poucos passos. Pule o que quiser.',
         ),
       ],
     );

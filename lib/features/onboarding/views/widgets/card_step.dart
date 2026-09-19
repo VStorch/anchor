@@ -17,12 +17,7 @@ class CardStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepHeader(
-          title: 'Cartão de crédito',
-          message:
-              'As compras vão para a fatura, e ela vira uma conta do '
-              'mês no dia do vencimento.',
-        ),
+        const StepHeader(title: 'Cartão de crédito'),
         YesNoQuestion(
           question: 'Usa cartão de crédito?',
           value: viewModel.hasCard,
@@ -40,13 +35,6 @@ class CardStep extends StatelessWidget {
             onChanged: (value) => viewModel.edit(() => card.name = value),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Estão na fatura ou no app do banco.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
           DayButton(
             label: 'Fecha dia ${card.closingDay}',
             placeholder: 'Dia em que a fatura fecha',

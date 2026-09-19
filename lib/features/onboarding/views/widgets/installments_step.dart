@@ -20,9 +20,7 @@ class InstallmentsStep extends StatelessWidget {
       children: [
         const StepHeader(
           title: 'Compras parceladas',
-          message:
-              'Geladeira, celular, curso: o que ainda tem parcelas '
-              'para pagar fora do cartão.',
+          message: 'Fora do cartão.',
         ),
         for (final installment in viewModel.installments)
           _InstallmentCard(key: ObjectKey(installment), item: installment),

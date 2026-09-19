@@ -42,26 +42,6 @@ class RemindersStep extends StatelessWidget {
           onSelectionChanged: (selection) =>
               viewModel.setLead(selection.single),
         ),
-        const SizedBox(height: 20),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.notifications_outlined,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Os lembretes chegam como notificação. Se o celular pedir '
-                'permissão, toque em Permitir. Dá para mudar depois em Ajustes.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
-        ),
         if (context.watch<RemindersViewModel>().systemBlocked) ...[
           const SizedBox(height: 16),
           const NotificationsBlockedNotice(),
