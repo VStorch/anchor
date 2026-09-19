@@ -8,6 +8,8 @@ import '../../../core/widgets/loading_view.dart';
 import '../../../core/widgets/month_switcher.dart';
 import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/stat_tile.dart';
+import '../../settings/models/app_tip.dart';
+import '../../settings/views/widgets/tip_card.dart';
 import '../viewmodels/expenses_view_model.dart';
 import 'expense_form_page.dart';
 import '../../cards/views/payable_sheet.dart';
@@ -92,10 +94,11 @@ class ExpensesPage extends StatelessWidget {
   Widget _list(BuildContext context, ExpensesViewModel viewModel) {
     return ListView.separated(
       padding: EdgeInsets.fromLTRB(16, 8, 16, fabClearance(context)),
-      itemCount: viewModel.payables.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemCount: viewModel.payables.length + 1,
+      separatorBuilder: (_, index) => SizedBox(height: index == 0 ? 0 : 10),
       itemBuilder: (context, index) {
-        final payable = viewModel.payables[index];
+        if (index == 0) return const TipCard(tip: AppTip.expenses);
+        final payable = viewModel.payables[index - 1];
         return ExpenseTile(
           payable: payable,
           wallets: viewModel.snapshot.wallets,

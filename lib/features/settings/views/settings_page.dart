@@ -101,8 +101,28 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
+          const SectionHeader(title: 'Ajuda'),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.lightbulb_outline),
+              title: const Text('Rever dicas'),
+              subtitle: const Text('Mostra de novo a dica de cada aba'),
+              onTap: () => _resetTips(context, settings),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _resetTips(
+    BuildContext context,
+    SettingsViewModel settings,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await settings.resetTips();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('As dicas vão aparecer de novo')),
     );
   }
 

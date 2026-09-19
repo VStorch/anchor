@@ -443,11 +443,16 @@ their payout (`createdAt = now`); `registerDuePayouts(now:)` creates this month'
 and each source with an amount gets `saveBalanceCheck` at `now`, confirming its receipt ("Sim", dated
 on the payout day, inside the check) or marking it `pending_at_check_id` ("Ainda não caiu"); with no
 amount the receipt stays predicted. Then the card, the bills (`recurring`, `startMonth` = current
-month) and the installments, all charged to the first source (the salary); every source is its own wallet
-with its own payout, check and receipt, and a payment for each
+month) and the installments, all charged to the first source (the salary), and a payment for each
 "already paid" one dated by `Payable.paidBefore(check)` — the due day at noon, inside the balance, so
-the amount typed is the amount shown. `markOnboardingDone` swaps the gate to the Resumo. Bills are not
+the amount typed is the amount shown. Every source, each benefit included, is its own wallet with its
+own payout, check and receipt. `markOnboardingDone` swaps the gate to the Resumo. Bills are not
 asked which wallet pays them; a partial failure leaves partial, editable data.
+
+**Tips** (`AppTip`, `features/settings/`) are one line each at the top of Resumo, Despesas (list layout
+only, as its first scrolling item, so the table keeps its height) and Carteiras, never over an empty
+state. `TipCard` shows one until "Entendi"; `SettingsViewModel` keeps the seen ids in prefs
+`seen_tips`, shows none before `onboarding_done`, and "Rever dicas" in Ajustes clears them.
 
 ## Testing
 
@@ -459,7 +464,7 @@ below does not cross isolates) and it opens `libsqlite3.so.0` explicitly, becaus
 `test/app/` boots the whole app with `AnchorApp(database: …)` against that database, and must pass
 `reminderNotifications: FakeReminderNotifications()` — the real plugin has no platform side in tests.
 Its `setUp` calls `mockPreferences()` (`test/support/preferences.dart`), which sets `onboarding_done`
-so an empty database opens on the tabs instead of the first run; extra prefs go in its map
+so an empty database opens on the tabs instead of the first run, and marks every tip seen; extra prefs go in its map
 (`mockPreferences({'theme_mode': theme})`). `FakeReminderNotifications` grants the permission and
 reports the notifications enabled; `grantsPermission` and `systemEnabled` turn either off. `test/app/onboarding_flow_test.dart` starts without it and
 pins `AnchorApp(clock:)` to 15/09/2026; `test/support/onboarding_driver.dart` fills the whole setup

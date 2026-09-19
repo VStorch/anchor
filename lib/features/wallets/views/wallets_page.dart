@@ -10,6 +10,8 @@ import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../budget/models/wallet_summary.dart';
 import '../../cards/views/card_form_page.dart';
+import '../../settings/models/app_tip.dart';
+import '../../settings/views/widgets/tip_card.dart';
 import '../models/wallet_kind.dart';
 import '../viewmodels/wallets_view_model.dart';
 import 'wallet_actions.dart';
@@ -87,6 +89,7 @@ class WalletsPage extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
       children: [
+        const TipCard(tip: AppTip.wallets),
         MonthSwitcher(
           month: viewModel.month,
           onPrevious: viewModel.goToPreviousMonth,

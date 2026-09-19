@@ -12,6 +12,8 @@ import '../../../core/widgets/scroll_aware_fab.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../expenses/views/widgets/expense_tile.dart';
 import '../../cards/views/payable_sheet.dart';
+import '../../settings/models/app_tip.dart';
+import '../../settings/views/widgets/tip_card.dart';
 import '../../wallets/views/wallet_actions.dart';
 import '../../wallets/views/wallet_form_page.dart';
 import '../../budget/models/month_summary.dart';
@@ -104,6 +106,7 @@ class DashboardPage extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.fromLTRB(16, 0, 16, fabClearance(context)),
         children: [
+          const TipCard(tip: AppTip.dashboard),
           TodayCard(
             balance: snapshot.walletsBalance,
             wallets: snapshot.walletSummaries,

@@ -49,6 +49,11 @@ const List<_Screen> _screens = <_Screen>[
   _Screen('tela estreita com fonte ampliada', 320, 640, 1.3),
 ];
 
+/// Every tab's tip on screen, so the layout checks cover them too.
+const Map<String, Object> _showingTips = <String, Object>{
+  'seen_tips': <String>[],
+};
+
 void main() {
   late AppDatabase database;
 
@@ -190,6 +195,7 @@ void main() {
       tester.platformDispatcher.textScaleFactorTestValue = screen.textScale;
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      mockPreferences(_showingTips);
 
       await seed();
 
@@ -356,7 +362,7 @@ void main() {
       tester.view.physicalSize = const Size(411, 914);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      mockPreferences(<String, Object>{'theme_mode': theme});
+      mockPreferences(<String, Object>{'theme_mode': theme, ..._showingTips});
       final semantics = tester.ensureSemantics();
 
       await seed();
