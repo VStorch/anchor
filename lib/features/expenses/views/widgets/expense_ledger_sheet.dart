@@ -93,7 +93,7 @@ class _ExpenseLedgerSheetState extends State<ExpenseLedgerSheet> {
             Text(
               occurrence.offRule
                   ? 'Fora da regra atual'
-                  : 'Vence em ${DateFormat.yMMMMd('pt_BR').format(occurrence.dueDate)}'
+                  : 'Vence ${DateFormat('dd/MM').format(occurrence.dueDate)}'
                         '${occurrence.installmentLabel != null ? ' · parcela ${occurrence.installmentLabel}' : ''}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

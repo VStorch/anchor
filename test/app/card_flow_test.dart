@@ -483,7 +483,7 @@ void main() {
         findsOneWidget,
       );
 
-      final add = find.text('Adicionar à fatura de outubro');
+      final add = find.text('Salvar compra');
       await tester.scrollUntilVisible(
         add,
         200,

@@ -160,8 +160,9 @@ An **expense** is a rule, not a row per month. `Expense.occurrenceIn(Month)` pro
 A new installment expense assumes no count: "Total de parcelas" is a number field, empty until the
 user types it, and the save button reads "Informe o total de parcelas" meanwhile. It takes 2 to 480;
 anything else stays exactly as typed, with a field error and the button saying what is wrong, never
-clamped into another number. "Parcelas já pagas" and the total preview only show once the count is
-valid (`ExpenseFormViewModel.showsInstallmentPlan`). An expense on a
+clamped into another number. "Parcelas já pagas" and the total preview ("Ainda falta pagar", shown
+for installments only — for the other types it would repeat the amount typed) only show once the
+count is valid (`ExpenseFormViewModel.showsInstallmentPlan`). An expense on a
 card is a purchase (`ExpenseFormViewModel.isPurchase`): the fields read "O que comprou" and "Como
 pagou", the types "À vista" (`single`), "Parcelado" (`installment`) and "Todo mês" (`recurring`, a
 subscription on the card); a new one starts à vista, titled "Nova compra no Nubank" and saved with
@@ -205,7 +206,8 @@ mutated:
   payments, receipts, outflows, card purchases) stops at today. When the wallet's latest balance check
   was informed after the bill fell due and nothing was paid on it (`checkCoveringDue`), the one tap,
   the first amount typed in the table's "Pago" cell and the `PaySheet` (until a day is picked by
-  hand) all ask whether the money had already left; "Sim" dates it just inside the check
+  hand) all ask "Já tinha saído do saldo de 15/09?" ("do saldo das 9h04" when the bill is due today);
+  "Já tinha saído" (the other answer is "Paguei agora") dates it just inside the check
   (`Payable.paidBefore`), so the informed balance does not move.
 - **`expense_months`** holds the amount this particular month really cost (light bill, groceries). A
   missing row means "use the rule's amount"; deleting the row is the "back to the rule" action.

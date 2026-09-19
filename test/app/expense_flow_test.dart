@@ -836,9 +836,9 @@ void main() {
 
         await tester.tap(find.text('Marcar como paga'));
         await tester.pumpAndSettle();
-        expect(find.textContaining('O valor já tinha saído?'), findsOneWidget);
+        expect(find.textContaining('Já tinha saído do saldo'), findsOneWidget);
 
-        await tester.tap(find.text('Sim, já estava descontado'));
+        await tester.tap(find.text('Já tinha saído'));
         await tester.pumpAndSettle();
 
         expect(_inSheet('Quitada'), findsOneWidget);
@@ -862,14 +862,14 @@ void main() {
       expect(
         find.descendant(
           of: sheet,
-          matching: find.textContaining('O valor já tinha saído?'),
+          matching: find.textContaining('Já tinha saído do saldo'),
         ),
         findsOneWidget,
       );
       final launch = find.widgetWithText(FilledButton, 'Lançar');
       expect(tester.widget<FilledButton>(launch).onPressed, isNull);
 
-      await tester.tap(find.text('Sim, já estava descontado'));
+      await tester.tap(find.text('Já tinha saído'));
       await tester.pumpAndSettle();
       await tester.tap(launch);
       await tester.pumpAndSettle();
@@ -901,8 +901,8 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('O valor já tinha saído?'), findsOneWidget);
-      await tester.tap(find.text('Sim, já estava descontado'));
+      expect(find.textContaining('Já tinha saído do saldo'), findsOneWidget);
+      await tester.tap(find.text('Já tinha saído'));
       await tester.pumpAndSettle();
 
       final payment = (await ExpenseRepository(
@@ -955,7 +955,7 @@ void main() {
       expect(
         find.descendant(
           of: sheet,
-          matching: find.textContaining('O valor já tinha saído?'),
+          matching: find.textContaining('Já tinha saído do saldo'),
         ),
         findsNothing,
       );
@@ -1173,6 +1173,8 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).last,
       );
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
       await tester.tap(save);
       await tester.pumpAndSettle();
 

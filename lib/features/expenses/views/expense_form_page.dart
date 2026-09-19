@@ -211,20 +211,14 @@ class _ExpenseFormView extends StatelessWidget {
               onChanged: (text) =>
                   viewModel.setTotalInstallments(int.tryParse(text)),
             ),
-            const SizedBox(height: 12),
-            if (!viewModel.showsInstallmentPlan)
-              Text(
-                'Com o total, aparecem as parcelas já pagas e quanto falta.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              )
-            else
+            if (viewModel.showsInstallmentPlan) ...[
+              const SizedBox(height: 12),
               _InstallmentStepper(
                 label: 'Parcelas já pagas',
                 value: viewModel.settledInstallments,
                 onChanged: viewModel.setSettledInstallments,
               ),
+            ],
             if (viewModel.installmentPreview != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -275,7 +269,7 @@ class _ExpenseFormView extends StatelessWidget {
               onDaySelected: viewModel.setDueDay,
             ),
           ],
-          if (viewModel.showsInstallmentPlan) ...[
+          if (viewModel.isInstallment && viewModel.showsInstallmentPlan) ...[
             const SizedBox(height: 28),
             _TotalPreview(viewModel: viewModel),
           ],
@@ -292,8 +286,6 @@ class _ExpenseFormView extends StatelessWidget {
                   ? 'Escolha o dia do vencimento'
                   : viewModel.needsInstallmentCount
                   ? 'Informe o total de parcelas'
-                  : viewModel.leavesOpenedInvoice
-                  ? 'Adicionar à fatura de ${_monthName(viewModel.invoiceMonth!)}'
                   : viewModel.isEditing
                   ? 'Salvar alterações'
                   : viewModel.isNewPurchase
@@ -722,9 +714,7 @@ class _TotalPreview extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  viewModel.isInstallment
-                      ? 'Ainda falta pagar'
-                      : 'Impacto no mês',
+                  'Ainda falta pagar',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onPrimaryContainer,
                   ),
@@ -739,14 +729,6 @@ class _TotalPreview extends StatelessWidget {
                 if (viewModel.installmentPlan != null)
                   Text(
                     viewModel.installmentPlan!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                if (viewModel.card != null)
-                  Text(
-                    'Na fatura de '
-                    '${_monthName(viewModel.invoiceMonth ?? viewModel.startMonth)}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onPrimaryContainer,
                     ),

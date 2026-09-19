@@ -241,7 +241,7 @@ class _PaySheetState extends State<PaySheet> {
             if (_pendingCheck case final check?) ...[
               const SizedBox(height: 16),
               Text(
-                checkCoveringQuestion(widget.payable!, check, _walletName()),
+                checkCoveringQuestion(widget.payable!, check),
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),
@@ -250,12 +250,12 @@ class _PaySheetState extends State<PaySheet> {
                 runSpacing: 8,
                 children: [
                   ChoiceChip(
-                    label: const Text('Sim, já estava descontado'),
+                    label: const Text('Já tinha saído'),
                     selected: _alreadyOut == true,
                     onSelected: (_) => _answer(check, alreadyOut: true),
                   ),
                   ChoiceChip(
-                    label: const Text('Não, paguei agora'),
+                    label: const Text('Paguei agora'),
                     selected: _alreadyOut == false,
                     onSelected: (_) => _answer(check, alreadyOut: false),
                   ),
@@ -368,19 +368,13 @@ class RadioGroupChoice extends StatelessWidget {
 
 /// Whether the amount had already left when the balance was informed: a bill
 /// that fell due earlier is asked by day, one due today by the hour.
-String checkCoveringQuestion(
-  Payable payable,
-  BalanceCheck check,
-  String walletName,
-) {
+String checkCoveringQuestion(Payable payable, BalanceCheck check) {
   if (payable.dueState.isDueToday) {
-    return 'Essa conta vence hoje e você informou o saldo de $walletName às '
-        '${DateFormat("H'h'mm").format(check.checkedAt)}. '
-        'O valor já tinha saído?';
+    return 'Já tinha saído do saldo das '
+        '${DateFormat("H'h'mm").format(check.checkedAt)}?';
   }
-  return 'Essa conta venceu antes de você informar o saldo de $walletName '
-      '(${DateFormat('dd/MM').format(check.checkedAt)}). '
-      'O valor já tinha saído?';
+  return 'Já tinha saído do saldo de '
+      '${DateFormat('dd/MM').format(check.checkedAt)}?';
 }
 
 /// The day a one-tap payment is recorded with. When the wallet's balance was
@@ -395,19 +389,18 @@ Future<DateTime?> choosePaidAt(
   final check = viewModel.checkCoveringDue(payable, walletId);
   if (check == null) return payable.suggestedPaidAt(DateTime.now());
 
-  final walletName = viewModel.snapshot.walletById(walletId)?.name ?? '';
   final alreadyOut = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      content: Text(checkCoveringQuestion(payable, check, walletName)),
+      content: Text(checkCoveringQuestion(payable, check)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Não, paguei agora'),
+          child: const Text('Paguei agora'),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Sim, já estava descontado'),
+          child: const Text('Já tinha saído'),
         ),
       ],
     ),
