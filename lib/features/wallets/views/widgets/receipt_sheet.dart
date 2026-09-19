@@ -121,6 +121,7 @@ class _ReceiptSheetState extends State<ReceiptSheet> {
             ),
             const SizedBox(height: 20),
             MoneyField(
+              prominent: true,
               initialValue: _amount,
               label: 'Valor',
               autofocus: _receipt == null,

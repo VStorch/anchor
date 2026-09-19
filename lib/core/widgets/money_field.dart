@@ -11,6 +11,7 @@ class MoneyField extends StatefulWidget {
     this.autofocus = false,
     this.allowNegative = false,
     this.hint = r'R$ 0,00',
+    this.prominent = false,
   });
 
   final double initialValue;
@@ -19,6 +20,10 @@ class MoneyField extends StatefulWidget {
   final bool autofocus;
   final bool allowNegative;
   final String hint;
+
+  /// Large and bold, for the one amount a sheet is about; a form with
+  /// several fields keeps the regular text size.
+  final bool prominent;
 
   @override
   State<MoneyField> createState() => _MoneyFieldState();
@@ -61,9 +66,11 @@ class _MoneyFieldState extends State<MoneyField> {
       inputFormatters: [
         MoneyInputFormatter(allowNegative: widget.allowNegative),
       ],
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+      style: widget.prominent
+          ? Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)
+          : null,
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hint,

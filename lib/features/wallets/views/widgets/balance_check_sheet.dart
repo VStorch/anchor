@@ -118,6 +118,7 @@ class _BalanceCheckSheetState extends State<BalanceCheckSheet> {
             ],
             const SizedBox(height: 20),
             MoneyField(
+              prominent: true,
               initialValue: _amount,
               label: 'Quanto tem hoje?',
               autofocus: widget.check == null,

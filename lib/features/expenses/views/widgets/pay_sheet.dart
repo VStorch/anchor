@@ -202,6 +202,7 @@ class _PaySheetState extends State<PaySheet> {
             if (_asksAmount) ...[
               const SizedBox(height: 16),
               MoneyField(
+                prominent: true,
                 initialValue: _amount,
                 label: 'Valor pago',
                 onChanged: (value) => setState(() => _amount = value),

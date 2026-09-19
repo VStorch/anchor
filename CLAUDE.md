@@ -477,7 +477,8 @@ sign survives the formatter. The formatter tells three edits apart: typing or er
 by key; an edit in the middle drops the dots (never decimals in our own text) and joins the digits, so
 erasing the comma of "R$ 10,50" gives "R$ 1.050"; a paste into an empty field or over the whole selection
 is read as foreign text — a comma is the decimal, and with none a dot followed by one or two digits at the
-end is (`12.5` → "R$ 12,50"). The table cells never accept a negative amount.
+end is (`12.5` → "R$ 12,50"). The table cells never accept a negative amount. The typed value uses the theme's field text; `prominent`
+(large and bold) is only for the sheets about one amount: outflow, receipt, balance check and pay.
 
 A widget test that needs a real file database (`createFileDatabase`, as in `test/app/backup_test.dart`)
 must let real async I/O run: sqflite checks the file with `File.exists()`, which never completes on

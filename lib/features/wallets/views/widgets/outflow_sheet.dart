@@ -105,6 +105,7 @@ class _OutflowSheetState extends State<OutflowSheet> {
             ),
             const SizedBox(height: 20),
             MoneyField(
+              prominent: true,
               initialValue: _amount,
               label: 'Valor',
               autofocus: widget.outflow == null,
